@@ -1,0 +1,17 @@
+{
+  "description": "Connect (Impulsa/Viceri): no inicio de cada sessao restaura a identidade do operador, monta a matriz como atalho flat e carrega o contexto lazy da camada 1.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|fork",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.mjs\"",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  }
+}

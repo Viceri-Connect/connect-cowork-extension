@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "impulsa",
+  "description": "Marketplace da extensao Connect (programa Impulsa / Viceri Seidor).",
+  "owner": {
+    "name": "Impulsa / Viceri"
+  },
+  "plugins": [
+    {
+      "name": "connect",
+      "description": "No inicio de cada sessao restaura a identidade do operador, monta a matriz de contexto como atalho flat no workspace e carrega o contexto lazy da camada 1. Entrega sub-vaults sob demanda, resolvidos por conceito. Governanca que desce da matriz para os sub-vaults.",
+      "author": { "name": "Impulsa / Viceri" },
+      "category": "knowledge",
+      "source": "./plugins/connect"
+    }
+  ]
+}

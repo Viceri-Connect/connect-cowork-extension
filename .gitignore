@@ -1,0 +1,20 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# Build do bundle .plugin (caminho secundário)
+dist/
+*.plugin
+
+# Connect — estado local de sessão (nunca versionar)
+sessions/
+*.local
+connect.config.json
+plugins/connect/config/connect.config.json
+
+# Scaffolds efêmeros por sessão
+**/sessions/**
+
+# SO
+.DS_Store
+Thumbs.db
