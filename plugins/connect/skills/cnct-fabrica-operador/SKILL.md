@@ -1,12 +1,12 @@
 ---
-name: fabrica-operador
+name: cnct-fabrica-operador
 description: >
   Provisiona do ZERO, por elicitação, um vault de operador do dois-cérebros
   (identidade cross-cliente + delta de comportamento), materializando a forma
   genérica que o produto entrega. Dispara quando: instalação sem cérebro pessoal,
   operador aponta uma pasta em branco, pedidos como "criar meu vault", "configurar
-  meu cérebro pessoal", "provisionar operador", ou quando o connect-bootstrap
-  detecta ausência de vault de operador e delega. Convenção fabrica-<tipo>: esta é
+  meu cérebro pessoal", "provisionar operador", ou quando o cnct-nucleo-sessao
+  detecta ausência de vault de operador e delega. Convenção cnct-fabrica-<tipo>: esta é
   a fábrica do tipo "operador" (implementação de referência do padrão em FRAMEWORK.md).
   Roda no estado zero — não exige coletivo montado. Estado zero é gatilho de
   nascimento, não erro (D97/D105).
@@ -25,7 +25,7 @@ fábrica (`FRAMEWORK.md` §4).
 ## Princípio (por que é mecanismo no plugin)
 
 - Vault de operador é um **tipo** de sub-vault (D101); esta é a fábrica desse tipo
-  (convenção `fabrica-<tipo>`).
+  (convenção `cnct-fabrica-<tipo>`).
 - A **espinha** (protocolo de sessão, regra de escrita, calibração, check de
   atualizações, "antes de tocar código") já é provida pelo mecanismo em
   `config/protocolo-mecanismo.md` e injetada pelo hook. A fábrica materializa **só o
@@ -37,7 +37,7 @@ fábrica (`FRAMEWORK.md` §4).
 
 ## Quando disparar
 
-- `connect-bootstrap` detecta ausência de vault de operador (`configurar` sem
+- `cnct-nucleo-sessao` detecta ausência de vault de operador (`configurar` sem
   `cerebro_pessoal`, ou pasta apontada em branco) → **delega aqui**.
 - Operador pede: "criar meu vault", "configurar meu cérebro pessoal", "provisionar operador".
 - **Uma vez por operador.** Se já existe `_cerebro/meu-config.md` no destino, **não
@@ -111,4 +111,4 @@ Enquanto ela não existe, registrar os papéis em `meu-config.md` (já feito no 
   fábrica genérica** (D105): a versão do coletivo era a instância Viceri; a forma sobe para
   o produto.
 
-<!-- SKILL-END fabrica-operador v0.1.0 · L2 · ref. FRAMEWORK.md §4 -->
+<!-- SKILL-END cnct-fabrica-operador v0.1.0 · L2 · ref. FRAMEWORK.md §4 -->

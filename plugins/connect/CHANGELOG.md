@@ -3,17 +3,27 @@
 ## 0.6.0 — 2026-08-15
 - **Framework do catálogo de skills (`FRAMEWORK.md`).** Padrão único ao qual toda skill do
   Connect adere: anatomia executor × knowledge (corte D96), três camadas do catálogo
-  (L1 primitivos · L2 fábricas por tipo · L3 meta, D101), o padrão `fabrica-<tipo>` e a
-  **classificação do catálogo atual** (varredura D96 — resposta em princípio ao P58, com os
-  casos de split marcados para confirmação).
-- **Skill `fabrica-operador` (L2, referência).** Provisiona um vault de operador do zero por
-  elicitação, **self-contained** (roda no estado zero, sem coletivo montado). Materializa só
-  o **delta** (a espinha vem do `protocolo-mecanismo.md`, D104); templates genéricos em
-  `skills/fabrica-operador/templates/` (`meu-config.template.md`, `CLAUDE.template.md`).
+  (L1 primitivos · L2 fábricas por tipo · L3 meta, D101), o padrão `cnct-fabrica-<tipo>`, a
+  **convenção de nomes `cnct-<família>-<objeto>`** (§3.1) e a **classificação do catálogo
+  atual** (varredura D96 — resposta em princípio ao P58, com os casos de split marcados).
+- **Convenção de nomes aplicada — renomeação do catálogo de mecanismo.** As skills do plugin
+  passam a seguir `cnct-<família>-<objeto>`: `connect-bootstrap` → **`cnct-nucleo-sessao`**,
+  `connect-knowledge-mount` → **`cnct-nucleo-conhecimento`**, `fabrica-operador` →
+  **`cnct-fabrica-operador`**. Skills de conteúdo (família SDD) mantêm o nome de domínio.
+- **Skill `cnct-fabrica-operador` (L2, referência).** Provisiona um vault de operador do zero
+  por elicitação, **self-contained** (roda no estado zero, sem coletivo montado). Materializa
+  só o **delta** (a espinha vem do `protocolo-mecanismo.md`, D104); templates genéricos em
+  `skills/cnct-fabrica-operador/templates/` (`meu-config.template.md`, `CLAUDE.template.md`).
   Supersede o `Template-Onboarding-Vault-Individual` do coletivo (D105).
-- **`connect-bootstrap` 0.4.0 — delegação.** Ausência de vault de operador deixa de ser erro:
-  o bootstrap detecta a pasta em branco / `cerebro_pessoal` ausente e **delega à
-  `fabrica-operador`** (gatilho de nascimento, D97/D105).
+- **`cnct-nucleo-sessao` (era connect-bootstrap) — delegação + modelo de grafo.** (1) Ausência
+  de vault de operador deixa de ser erro: detecta a pasta em branco / `cerebro_pessoal`
+  ausente e **delega à `cnct-fabrica-operador`** (gatilho de nascimento, D97/D105). (2) Passo 4
+  reescrito para o modelo canônico de **grafo de manifestos** (D102): casamento na skill,
+  índice derivado (P60/D35), MCP só com o primitivo de mount — com nota do estado do código
+  (`resolver` v0.4.0 ainda lê `sub-vaults.json`; realinhamento = P61).
+- **`cnct-nucleo-conhecimento` (era connect-knowledge-mount) — alinhada ao modelo remodelado.**
+  Seção de sub-vault reescrita para grafo/manifesto derivado (D102/P60/P61); o `sub-vaults.json`
+  passa de contrato a **nota de estado do código** (comportamento vigente até o P61).
 
 ## 0.5.0 — 2026-08-15
 - **Garantia de protocolo executado (D104).** A espinha dorsal do dois-cérebros

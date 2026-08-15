@@ -1,5 +1,5 @@
 ---
-name: connect-bootstrap
+name: cnct-nucleo-sessao
 description: >
   Restaura o contexto coletivo do Connect no INÍCIO de qualquer trabalho e sempre
   que o operador mencionar uma tarefa, projeto, demanda, cliente, reunião, ticket,
@@ -11,7 +11,7 @@ description: >
   via a tool configurar. É o FALLBACK do hook de SessionStart quando ele não dispara
   no Cowork — o mecanismo é o mesmo, só muda o gatilho.
 metadata:
-  version: "0.4.0"
+  version: "0.5.0"
   program: "Impulsa / Viceri"
 ---
 
@@ -50,7 +50,7 @@ Chamar a tool `configurar` com `vault_matriz` e/ou `cerebro_pessoal`.
 - `home` (pasta fixa do Connect) usa o default do SO; só perguntar se o operador quiser mudar.
 - **Ausência de vault de operador não é erro — é gatilho de nascimento (D97/D105).** Se não
   há `cerebro_pessoal`, ou a pasta apontada está **em branco** (sem `_cerebro/meu-config.md`),
-  **delegar à skill `fabrica-operador`**: ela elicita a identidade e materializa o vault do
+  **delegar à skill `cnct-fabrica-operador`**: ela elicita a identidade e materializa o vault do
   zero, e ao final chama `configurar` por conta própria. Não tentar montar um vault que ainda
   não existe.
 
@@ -62,10 +62,18 @@ bloco como contexto ativo; referenciar tudo por caminho relativo (ex.: `./matriz
 **Passo 4 — Aprofundar sob demanda.**
 Seguir os **ponteiros lazy** da camada 1 (modelo-roteamento, convenção de skills,
 projetos, organização) conforme a necessidade. Quando a sessão precisar atuar num
-**conceito** com casa própria (ex.: "minha gestão", "finanças", "pensão"), chamar a
-tool `resolver` (`conceito`, `workspace_dir` = `estado_sessao.workspace`); ela monta
-o sub-vault declarado em `_cerebro/sub-vaults.json` como atalho e devolve sua camada 1.
-Para montagens ad-hoc por caminho, o primitivo `mount_junction` segue disponível.
+**sub-vault tipado** (um conceito/entidade com casa própria — um projeto, uma tribo,
+"minha gestão"), o modelo canônico é **grafo de manifestos** (D102): cada entidade é
+**manifesto** (frontmatter da própria nota, na matriz) + **acervo** (na fonte). O
+casamento conceito→origem acontece **na skill** (varredura de manifestos), e o índice
+de sub-vaults é **derivado** dos manifestos, nunca autorado (P60/D35); o MCP entrega só
+o **primitivo de mount** (`mount_junction`). Desmontar: `unmount_junction`.
+
+> ⚠️ **Estado do código (resolver v0.4.0):** a tool `resolver` ainda casa o conceito por
+> um registro **autorado** `_cerebro/sub-vaults.json` e monta a junction — comportamento
+> vigente até o realinhamento. O contrato-alvo acima (índice derivado + casamento na
+> skill) é o **P61**, aberto. Usar `resolver` como está hoje; não inventar o derivado
+> antes do código existir.
 
 ## Regras
 

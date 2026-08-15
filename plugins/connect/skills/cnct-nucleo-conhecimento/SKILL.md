@@ -1,5 +1,5 @@
 ---
-name: connect-knowledge-mount
+name: cnct-nucleo-conhecimento
 description: >
   This skill should be used when the user asks to "restaurar contexto", "iniciar
   sessao do Connect", "consultar a matriz", "ler o vault", "montar"/"desmontar"
@@ -9,7 +9,7 @@ description: >
   and for starting a session (iniciar_sessao) or mounting on demand via the
   connect MCP server.
 metadata:
-  version: "0.2.0"
+  version: "0.3.0"
   program: "Impulsa / Viceri"
 ---
 
@@ -41,24 +41,32 @@ chame a tool MCP `iniciar_sessao`.
 
 ## Sub-vault sob demanda (conceito → atalho)
 
-Quando uma skill declara que precisa de um sub-vault (um **conceito**, ex.: um
-delivery hub, um vault de squad, a gestão pessoal), o Connect o entrega como um novo
-atalho no workspace pela tool **`resolver`** (`conceito`, `workspace_dir`, `alias?`,
-`replace?`). O `resolver` lê o **registro declarativo** `_cerebro/sub-vaults.json`
-(no cérebro pessoal e/ou na matriz), casa o conceito por nome ou gatilho, monta a
-junction/symlink da origem e devolve a camada 1 do sub-vault. O primitivo de baixo
-nível (`mount_junction`) segue disponível para montagens ad-hoc por caminho.
-Desmontar: `unmount_junction`. Auditar: `list_mounts`.
+Quando uma skill precisa atuar num **sub-vault tipado** (um conceito/entidade com casa
+própria — um delivery hub, um vault de squad, a gestão pessoal), o Connect o entrega
+como um novo atalho no workspace. Modelo canônico (D102): cada entidade é **manifesto**
+(frontmatter da própria nota, na matriz) + **acervo** (na fonte da entidade); o grafo de
+dependências entre vaults é declarado nos manifestos, não numa árvore rígida.
 
-**Registro declarativo** (`_cerebro/sub-vaults.json`) — lista de entradas:
+- **Casamento conceito→origem acontece na skill**, não no servidor MCP (D93/P61): a
+  skill varre os manifestos, encontra a entidade e resolve a origem.
+- **Índice derivado**, nunca autorado (P60/D35): enumerar entidades é varredura de
+  manifestos; registro paralelo às notas está proibido (D97).
+- **O MCP entrega só o primitivo de mount** (`mount_junction` por caminho); `resolver` é
+  a interface de alto nível. Desmontar: `unmount_junction`. Auditar: `list_mounts`.
 
-```json
-[
-  { "conceito": "gestao-financeira", "origem": "D:\\caminho\\do\\sub-vault",
-    "alias": "gestao", "gatilhos": ["financas", "pensao", "orcamento"],
-    "nota": "minha gestao pessoal e financeira" }
-]
-```
+> ⚠️ **Estado do código (resolver v0.4.0):** hoje a tool `resolver` ainda casa o conceito
+> por um **registro autorado** `_cerebro/sub-vaults.json` (no cérebro pessoal e/ou na
+> matriz) e monta a junction. Esse é o comportamento vigente até o realinhamento — o alvo
+> acima (índice derivado + casamento na skill) é o **P61**, aberto. Enquanto o código não
+> muda, é `sub-vaults.json` que faz o `resolver` funcionar:
+>
+> ```json
+> [
+>   { "conceito": "gestao-financeira", "origem": "D:\\caminho\\do\\sub-vault",
+>     "alias": "gestao", "gatilhos": ["financas", "pensao", "orcamento"],
+>     "nota": "minha gestao pessoal e financeira" }
+> ]
+> ```
 
 ## Erros comuns
 

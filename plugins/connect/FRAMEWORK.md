@@ -46,16 +46,32 @@ O plugin entrega três camadas; só a terceira é opinativa.
 
 | Camada | O que é | Exemplos | Natureza |
 |---|---|---|---|
-| **L1 · Primitivos** | mount + manifesto + acervo; restauração de contexto. Agnóstico de tipo | `iniciar_sessao`, `resolver`, `mount_junction`, `connect-bootstrap`, `connect-knowledge-mount` | mecanismo, universal |
-| **L2 · Fábricas por tipo** (`fabrica-<tipo>`) | Uma por modelo conhecido de sub-vault: **operador**, tribo, controle pessoal, … Cada uma sabe **entrevistar** e **materializar** o seu tipo | `fabrica-operador` (referência) | mecanismo, plural e extensível |
-| **L3 · Meta** | Criação/edição de **templates** para tipos que ainda não existem — a empresa cria o seu modelo sem esperar release | *(a especificar — camada meta)* | mecanismo |
+| **L1 · Primitivos** | mount + manifesto + acervo; restauração de contexto. Agnóstico de tipo | `iniciar_sessao`, `resolver`, `mount_junction`, `cnct-nucleo-sessao`, `cnct-nucleo-conhecimento` | mecanismo, universal |
+| **L2 · Fábricas por tipo** (`cnct-fabrica-<tipo>`) | Uma por modelo conhecido de sub-vault: **operador**, tribo, controle pessoal, … Cada uma sabe **entrevistar** e **materializar** o seu tipo | `cnct-fabrica-operador` (referência) | mecanismo, plural e extensível |
+| **L3 · Meta** | Criação/edição de **templates** para tipos que ainda não existem — a empresa cria o seu modelo sem esperar release | `cnct-fabrica-tipos` *(a especificar)* | mecanismo |
 
 > A fábrica não constrói o vault — constrói as **fábricas de cada tipo de vault** (D01 num
 > nível acima). O produto hospeda a declaração; não prescreve o "como" (D98).
 
+### 3.1 Convenção de nomes — `cnct-<família>-<objeto>`
+
+Toda skill do catálogo Connect (mecanismo) nomeia-se `cnct-<família>-<objeto>`: prefixo
+`cnct-` (namespace do produto) · **família** = papel no framework · **objeto** = o que a
+skill atua. Nome semântico e em PT — diz a camada e o objeto sem abrir o arquivo.
+
+| Camada | Família | Exemplos |
+|---|---|---|
+| L1 · primitivos | `nucleo` | `cnct-nucleo-sessao`, `cnct-nucleo-conhecimento` |
+| L2 · fábricas por tipo | `fabrica` | `cnct-fabrica-operador`, `cnct-fabrica-tribo` |
+| L3 · meta | `fabrica` | `cnct-fabrica-tipos` (a fábrica que cria tipos) |
+
+> Skills de **conteúdo da empresa** (§5.3, família SDD: `discovery-intake`,
+> `refinement-technical`, …) **mantêm seus nomes de domínio** — viajam com o coletivo, não
+> com o plugin, e ficam fora do namespace `cnct-` do mecanismo.
+
 ---
 
-## 4. Padrão de fábrica (`fabrica-<tipo>`) — o "estilo framework"
+## 4. Padrão de fábrica (`cnct-fabrica-<tipo>`) — o "estilo framework"
 
 Toda skill de L2 segue o mesmo esqueleto. É o contrato que faz o catálogo se auto-replicar:
 
@@ -90,9 +106,9 @@ pelo hook (D104). Fábrica que reescreve espinha é defeito.
 
 | Skill | Escreve em | Camada | Confiança |
 |---|---|---|---|
-| `connect-bootstrap` | nada (restaura contexto) | L1 | alta |
-| `connect-knowledge-mount` | nada (monta) | L1 | alta |
-| `fabrica-operador` | scaffold do vault-alvo (self-contained, estado zero) | L2 | alta |
+| `cnct-nucleo-sessao` | nada (restaura contexto) | L1 | alta |
+| `cnct-nucleo-conhecimento` | nada (monta) | L1 | alta |
+| `cnct-fabrica-operador` | scaffold do vault-alvo (self-contained, estado zero) | L2 | alta |
 | `skill-creator` | fora de vault (utilitário de plataforma) | — (fora do catálogo) | alta |
 
 ### 5.2 Mecanismo com knowledge injetável (executor no plugin · knowledge no coletivo)
