@@ -21,6 +21,15 @@ export function renderContexto(report) {
     L.push('');
   }
 
+  // Protocolo do mecanismo (D104) — espinha dorsal entregue pelo produto,
+  // injetada verbatim para garantir execucao sem depender de arquivo do operador.
+  if (report.protocoloMecanismo) {
+    L.push('### Protocolo do mecanismo (garantido pelo Connect)');
+    L.push('');
+    L.push(report.protocoloMecanismo.trim());
+    L.push('');
+  }
+
   // Atalhos montados
   const ok = (report.mounts || []).filter((m) => m.status === 'mounted' || m.status === 'exists');
   if (ok.length) {
@@ -43,6 +52,22 @@ export function renderContexto(report) {
     }
     if (report.l1.projetos && report.l1.projetos.length) {
       L.push(`- Projetos na matriz: ${report.l1.projetos.map((p) => `\`${p.caminho}\``).join(', ')}`);
+    }
+    L.push('');
+  }
+
+  // Cerebro pessoal — Camada 0 (D104): hot cache pessoal (delta) + ponteiros.
+  const lp = report.l1Pessoal;
+  if (lp && (lp.hotCacheInline || (lp.ponteiros && lp.ponteiros.length))) {
+    L.push('### Cerebro pessoal — camada 0');
+    if (lp.hotCacheInline) {
+      L.push('');
+      L.push(lp.hotCacheInline.trim());
+    }
+    if (lp.ponteiros && lp.ponteiros.length) {
+      L.push('');
+      L.push('- Ler sob demanda (lazy):');
+      for (const p of lp.ponteiros) L.push(`  - \`${p.caminho}\` — ${p.nota}`);
     }
     L.push('');
   }

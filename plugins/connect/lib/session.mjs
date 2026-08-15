@@ -20,7 +20,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { mount, ensureDir, listMounts } from './mount.mjs';
-import { lerIdentidade, montarL1 } from './matriz.mjs';
+import { lerIdentidade, montarL1, montarL1Pessoal, lerProtocoloMecanismo } from './matriz.mjs';
 
 const ALIAS_MATRIZ = 'matriz';
 const ALIAS_PESSOAL = 'pessoal';
@@ -128,6 +128,21 @@ export function iniciarSessao({ sessionId, ...override } = {}) {
     l1 = montarL1(cfg.vaultMatriz, ALIAS_MATRIZ);
   }
 
+  // 4b. Camada 0 do cerebro pessoal (D104) — o handshake que faltava. Ate aqui
+  // o pessoal entrava so como mount + identidade; o hot cache pessoal (delta)
+  // nunca era carregado. Agora carrega sempre, junto do L1 da matriz.
+  let l1Pessoal = null;
+  if (cfg.cerebroPessoal && fs.existsSync(cfg.cerebroPessoal)) {
+    l1Pessoal = montarL1Pessoal(cfg.cerebroPessoal, ALIAS_PESSOAL);
+  }
+
+  // 4c. Espinha do mecanismo (D104/D96) — protocolo entregue pelo produto,
+  // injetado no bloco de sessao. Independe de arquivo do operador.
+  const protocoloMecanismo = lerProtocoloMecanismo();
+  if (!protocoloMecanismo) {
+    avisos.push('protocolo de mecanismo nao encontrado no pacote (config/protocolo-mecanismo.md) — a garantia de protocolo nao foi injetada.');
+  }
+
   return {
     sessionId: sid,
     workspace,
@@ -136,7 +151,9 @@ export function iniciarSessao({ sessionId, ...override } = {}) {
     configPath: cfg._configPath,
     mounts,
     identidade,
+    protocoloMecanismo,
     l1,
+    l1Pessoal,
     avisos,
   };
 }

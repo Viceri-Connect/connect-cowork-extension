@@ -1,5 +1,23 @@
 # Changelog — connect
 
+## 0.5.0 — 2026-08-15
+- **Garantia de protocolo executado (D104).** A espinha dorsal do dois-cérebros
+  (resolução lazy em camadas, regra de escrita/wikilinks, calibração "identificador
+  nunca vem sozinho", check de atualizações) deixa de depender do `CLAUDE.md` do
+  operador e passa a ser **entregue pelo produto**: novo `config/protocolo-mecanismo.md`,
+  lido por `lerProtocoloMecanismo()` e **injetado verbatim no bloco de sessão** pelo
+  `render.mjs`. Como é arquivo do plugin (pasta de mecanismo, D96), a garantia é
+  estrutural — não há "esquecer de ler" nem deletar do lado do usuário.
+- **Handshake do vault pessoal (D104).** `iniciarSessao` passa a carregar a **Camada 0
+  pessoal** via `montarL1Pessoal()` (hot cache `_cerebro/CLAUDE.md` inline + ponteiros
+  lazy para `CLAUDE.md` raiz, `_cerebro/memory`, `30-Áreas`, `TASKS.md`). Antes o
+  cérebro pessoal entrava só como mount + identidade (`meu-config.md`); o delta pessoal
+  nunca disparava.
+- `render.mjs`: duas seções novas no bloco de sessão — "Protocolo do mecanismo
+  (garantido pelo Connect)" e "Cerebro pessoal — camada 0". Testes existentes
+  (`spike-mecanismo`, `handshake-mcp`, `spike-resolver`, `spike-config-guiada`) seguem
+  verdes; comportamento novo verificado contra os vaults reais.
+
 ## 0.4.0 — 2026-08-15
 - **`resolver(conceito)` implementado** (era roadmap): entrega um sub-vault por
   CONCEITO como atalho flat no workspace. Lê um **registro declarativo**

@@ -16,6 +16,11 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// Raiz deste modulo — usada para achar a config de mecanismo do proprio plugin,
+// de forma robusta ao local de instalacao (nunca path absoluto de maquina).
+const HERE = path.dirname(fileURLToPath(import.meta.url));
 
 function readIfExists(p) {
   try {
@@ -108,4 +113,44 @@ export function montarL1(matrizRoot, aliasMatriz = 'matriz') {
     ponteiros,
     projetos,
   };
+}
+
+// ---------------------------------------------------------------------------
+// L1 do cerebro pessoal — Camada 0 do operador (D104).
+// O bootstrap montava so a identidade (`meu-config.md`) e ignorava o hot cache
+// pessoal; esta funcao carrega a Camada 0 pessoal SEMPRE, junto do L1 da matriz.
+// A espinha do mecanismo NAO vem daqui — vem de `lerProtocoloMecanismo()` (e do
+// produto). Aqui fica so o DELTA pessoal (o que sobra no `_cerebro/CLAUDE.md`
+// depois do corte: interpretacao pessoal, projetos-exemplo, indice de memoria).
+// ---------------------------------------------------------------------------
+export function montarL1Pessoal(cerebroPessoalRoot, aliasPessoal = 'pessoal') {
+  if (!cerebroPessoalRoot) return null;
+  const hotCache = readIfExists(path.join(cerebroPessoalRoot, '_cerebro', 'CLAUDE.md'));
+
+  const ponteiros = [];
+  const addPtr = (rel, nota) => {
+    if (fs.existsSync(path.join(cerebroPessoalRoot, rel))) {
+      ponteiros.push({ caminho: `./${aliasPessoal}/${rel}`, nota });
+    }
+  };
+  addPtr('CLAUDE.md', 'camada 0 minima da raiz do cerebro pessoal');
+  addPtr('_cerebro/memory', 'memoria profunda (indice)');
+  addPtr('30-Áreas', 'interpretacao pessoal de papeis/metodologias (delta do coletivo)');
+  addPtr('TASKS.md', 'kanban pessoal');
+
+  return {
+    hotCacheInline: hotCache, // _cerebro/CLAUDE.md pessoal (delta), inline por ser curto
+    ponteiros,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Protocolo do mecanismo — a espinha dorsal do dois-cerebros, entregue pelo
+// PRODUTO (D104/D96). Vive no proprio plugin (`config/protocolo-mecanismo.md`)
+// e e injetada no bloco de sessao pelo render — garantia estrutural de que o
+// protocolo executa, sem depender de arquivo do operador. Retorna o markdown
+// (ou null se, por algum motivo de empacotamento, o arquivo faltar).
+// ---------------------------------------------------------------------------
+export function lerProtocoloMecanismo() {
+  return readIfExists(path.join(HERE, '..', 'config', 'protocolo-mecanismo.md'));
 }
