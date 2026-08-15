@@ -5,23 +5,22 @@
 //
 // Superficie (decisao 2026-08-14 — sem entidade "cliente"):
 //   - iniciar_sessao   : bootstrap da sessao (scaffold + matriz + identidade + L1)
-//   - mount_junction   : primitivo de mount (usado pelo `resolver`, em construcao)
+//   - resolver         : entrega um sub-vault por CONCEITO (registro declarativo)
+//   - mount_junction   : primitivo de mount (base do resolver)
 //   - unmount_junction : remove um atalho
 //   - list_mounts      : auditoria dos atalhos do workspace
-//
-// Roadmap: `resolver(conceito, alias?)` — entrega um sub-vault por conceito,
-//   quando a tipologia de vaults (manifesto + molde da matriz) estiver definida.
 //
 // IMPORTANTE: stdout e reservado para o protocolo. Todo log vai para stderr.
 
 import readline from 'node:readline';
 import { mount, unmount, listMounts } from '../lib/mount.mjs';
 import { iniciarSessao, gravarConfig, estadoSessao } from '../lib/session.mjs';
+import { resolver } from '../lib/resolver.mjs';
 import { renderContexto } from '../lib/render.mjs';
 
 const log = (...a) => process.stderr.write(`[connect-mcp] ${a.join(' ')}\n`);
 
-const SERVER_INFO = { name: 'connect', version: '0.2.0' };
+const SERVER_INFO = { name: 'connect', version: '0.4.0' };
 let protocolVersion = '2025-06-18';
 
 const TOOLS = [
@@ -68,6 +67,25 @@ const TOOLS = [
         home: { type: 'string', description: 'Pasta fixa do Connect (fora do OneDrive). Opcional; default por SO.' },
       },
       required: [],
+    },
+  },
+  {
+    name: 'resolver',
+    description:
+      'Resolve um CONCEITO num sub-vault e o monta como atalho flat no workspace da sessao. ' +
+      'Le o registro declarativo (_cerebro/sub-vaults.json) do cerebro pessoal (e da matriz), ' +
+      'casa o conceito por nome ou gatilho, e monta a junction/symlink da origem. Use quando a ' +
+      'sessao precisar atuar num contexto especifico (ex.: "minha gestao", "financas", "pensao"). ' +
+      'Retorna status, alias, caminho relativo e a camada 1 do sub-vault.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        conceito: { type: 'string', description: 'Conceito ou gatilho a resolver (ex.: "gestao-financeira", "pensao").' },
+        workspace_dir: { type: 'string', description: 'Diretorio de trabalho da sessao (estado_sessao.workspace).' },
+        alias: { type: 'string', description: 'Sobrescreve o alias declarado no registro (opcional).' },
+        replace: { type: 'boolean', description: 'Se true, substitui um alias existente que aponte para outro destino.', default: false },
+      },
+      required: ['conceito', 'workspace_dir'],
     },
   },
   {
@@ -133,6 +151,10 @@ function handleToolCall(id, params) {
       }
       case 'estado_sessao':
         return ok(id, toolText(estadoSessao({ sessionId: args.session_id })));
+      case 'resolver': {
+        const r = resolver({ conceito: args.conceito, workspaceDir: args.workspace_dir, alias: args.alias, replace: !!args.replace });
+        return ok(id, { content: [{ type: 'text', text: JSON.stringify(r, null, 2) }], structuredContent: r });
+      }
       case 'configurar':
         return ok(id, toolText(gravarConfig({ vaultMatriz: args.vault_matriz, cerebroPessoal: args.cerebro_pessoal, home: args.home })));
       case 'mount_junction':

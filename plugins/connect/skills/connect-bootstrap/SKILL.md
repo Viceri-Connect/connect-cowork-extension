@@ -56,8 +56,11 @@ bloco como contexto ativo; referenciar tudo por caminho relativo (ex.: `./matriz
 
 **Passo 4 — Aprofundar sob demanda.**
 Seguir os **ponteiros lazy** da camada 1 (modelo-roteamento, convenção de skills,
-projetos, organização) conforme a necessidade. Para expor um sub-vault específico
-como atalho, usar o primitivo `mount_junction` (até o `resolver` por conceito existir).
+projetos, organização) conforme a necessidade. Quando a sessão precisar atuar num
+**conceito** com casa própria (ex.: "minha gestão", "finanças", "pensão"), chamar a
+tool `resolver` (`conceito`, `workspace_dir` = `estado_sessao.workspace`); ela monta
+o sub-vault declarado em `_cerebro/sub-vaults.json` como atalho e devolve sua camada 1.
+Para montagens ad-hoc por caminho, o primitivo `mount_junction` segue disponível.
 
 ## Regras
 

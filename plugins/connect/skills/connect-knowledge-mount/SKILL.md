@@ -42,10 +42,23 @@ chame a tool MCP `iniciar_sessao`.
 ## Sub-vault sob demanda (conceito → atalho)
 
 Quando uma skill declara que precisa de um sub-vault (um **conceito**, ex.: um
-delivery hub, um vault de squad), o Connect deve entregá-lo como um novo atalho no
-workspace. O mecanismo dedicado (`resolver`) está em construção; enquanto isso, o
-primitivo é a tool `mount_junction` (`workspace_dir`, `alias`, `source_dir`,
-`replace?`). Desmontar: `unmount_junction`. Auditar: `list_mounts`.
+delivery hub, um vault de squad, a gestão pessoal), o Connect o entrega como um novo
+atalho no workspace pela tool **`resolver`** (`conceito`, `workspace_dir`, `alias?`,
+`replace?`). O `resolver` lê o **registro declarativo** `_cerebro/sub-vaults.json`
+(no cérebro pessoal e/ou na matriz), casa o conceito por nome ou gatilho, monta a
+junction/symlink da origem e devolve a camada 1 do sub-vault. O primitivo de baixo
+nível (`mount_junction`) segue disponível para montagens ad-hoc por caminho.
+Desmontar: `unmount_junction`. Auditar: `list_mounts`.
+
+**Registro declarativo** (`_cerebro/sub-vaults.json`) — lista de entradas:
+
+```json
+[
+  { "conceito": "gestao-financeira", "origem": "D:\\caminho\\do\\sub-vault",
+    "alias": "gestao", "gatilhos": ["financas", "pensao", "orcamento"],
+    "nota": "minha gestao pessoal e financeira" }
+]
+```
 
 ## Erros comuns
 

@@ -1,5 +1,18 @@
 # Changelog — connect
 
+## 0.4.0 — 2026-08-15
+- **`resolver(conceito)` implementado** (era roadmap): entrega um sub-vault por
+  CONCEITO como atalho flat no workspace. Lê um **registro declarativo**
+  (`_cerebro/sub-vaults.json`) no cérebro pessoal e/ou na matriz (pessoal vence),
+  casa o conceito por nome ou gatilho, monta a junction/symlink da origem e carrega
+  a camada 1 do sub-vault (quando ele tem forma de vault). Novo `lib/resolver.mjs`
+  (zero-dep) e tool MCP `resolver` (`conceito`, `workspace_dir`, `alias?`, `replace?`).
+- Registro declarativo `_cerebro/sub-vaults.json`: lista de
+  `{ conceito, origem, alias?, gatilhos?[], nota? }` — o "ponteiro declarativo" que
+  deixa a próxima sessão saber o caminho de cada contexto.
+- Teste `spike-resolver` (casar por conceito/gatilho/substring, montar, ler através
+  do atalho, origem intacta, L1, idempotência, não-encontrado).
+
 ## 0.3.0 — 2026-08-14
 - Repo tratado como **marketplace** (`impulsa`) instalável no Cowork pela **URL do
   repo git**; `.plugin` de um clique mantido como caminho secundário
