@@ -11,7 +11,7 @@ description: >
   via a tool configurar. É o FALLBACK do hook de SessionStart quando ele não dispara
   no Cowork — o mecanismo é o mesmo, só muda o gatilho.
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
   program: "Impulsa / Viceri"
 ---
 
@@ -48,6 +48,11 @@ Chamar a tool `configurar` com `vault_matriz` e/ou `cerebro_pessoal`.
 - Se vier `invalidos` (path não existe / placeholder OneDrive não sincronizado),
   explicar e **re-perguntar** só o que faltou — nunca assumir um caminho.
 - `home` (pasta fixa do Connect) usa o default do SO; só perguntar se o operador quiser mudar.
+- **Ausência de vault de operador não é erro — é gatilho de nascimento (D97/D105).** Se não
+  há `cerebro_pessoal`, ou a pasta apontada está **em branco** (sem `_cerebro/meu-config.md`),
+  **delegar à skill `fabrica-operador`**: ela elicita a identidade e materializa o vault do
+  zero, e ao final chama `configurar` por conta própria. Não tentar montar um vault que ainda
+  não existe.
 
 **Passo 3 — Restaurar o contexto coletivo.**
 Chamar a tool `iniciar_sessao` (com o `session_id`, se conhecido). Ela devolve o

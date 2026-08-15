@@ -1,5 +1,20 @@
 # Changelog — connect
 
+## 0.6.0 — 2026-08-15
+- **Framework do catálogo de skills (`FRAMEWORK.md`).** Padrão único ao qual toda skill do
+  Connect adere: anatomia executor × knowledge (corte D96), três camadas do catálogo
+  (L1 primitivos · L2 fábricas por tipo · L3 meta, D101), o padrão `fabrica-<tipo>` e a
+  **classificação do catálogo atual** (varredura D96 — resposta em princípio ao P58, com os
+  casos de split marcados para confirmação).
+- **Skill `fabrica-operador` (L2, referência).** Provisiona um vault de operador do zero por
+  elicitação, **self-contained** (roda no estado zero, sem coletivo montado). Materializa só
+  o **delta** (a espinha vem do `protocolo-mecanismo.md`, D104); templates genéricos em
+  `skills/fabrica-operador/templates/` (`meu-config.template.md`, `CLAUDE.template.md`).
+  Supersede o `Template-Onboarding-Vault-Individual` do coletivo (D105).
+- **`connect-bootstrap` 0.4.0 — delegação.** Ausência de vault de operador deixa de ser erro:
+  o bootstrap detecta a pasta em branco / `cerebro_pessoal` ausente e **delega à
+  `fabrica-operador`** (gatilho de nascimento, D97/D105).
+
 ## 0.5.0 — 2026-08-15
 - **Garantia de protocolo executado (D104).** A espinha dorsal do dois-cérebros
   (resolução lazy em camadas, regra de escrita/wikilinks, calibração "identificador
