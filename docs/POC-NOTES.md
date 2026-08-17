@@ -1,5 +1,9 @@
 # Connect — notas do POC (fatia 1: iniciar_sessao)
 
+> ⚠️ **Notas internas de dogfooding.** Caminhos concretos (`D:\Impulsa`, nomes de vault,
+> e-mails) são da **máquina do autor** durante o POC — **exemplos**, não configuração do
+> produto. O produto é agnóstico à matriz; nada aqui é forçado para outra instância.
+
 > Objetivo desta fatia: provar, na máquina real, que o bootstrap da sessão funciona
 > ponta a ponta no Cowork — restaura identidade, monta a matriz como atalho flat,
 > carrega a camada 1 — e matar as premissas 1, 2 e 3 da SPEC-V1.

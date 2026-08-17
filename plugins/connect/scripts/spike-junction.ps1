@@ -5,7 +5,7 @@
 # Não exige privilégio de administrador (junction, não symlink).
 # Uso:
 #   powershell -ExecutionPolicy Bypass -File .\spike-junction.ps1 `
-#       -Matriz "C:\Users\voce\Viceri Seidor\viceri-vault" `
+#       -Matriz "C:\Users\voce\Sua Empresa\sua-matriz" `
 #       -Home   "$env:LOCALAPPDATA\Connect"
 
 param(

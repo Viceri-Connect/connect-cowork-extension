@@ -45,7 +45,7 @@ fs.writeFileSync(path.join(pessoal, '_cerebro', 'meu-config.md'), [
   '# Minha Config — Gabriel',
   '## Identidade (cross-cliente)',
   '- nome: "Gabriel Vasconcelos Guilhem"',
-  '- email-viceri: "gabriel.guilhem@viceri.com.br"',
+  '- emails: "gabriel.guilhem@viceri.com.br"',
   '- papeis-estaveis: ["Tech Lead", "Arquiteto"]',
 ].join('\n'));
 

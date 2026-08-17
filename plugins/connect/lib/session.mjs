@@ -104,22 +104,30 @@ export function iniciarSessao({ sessionId, ...override } = {}) {
     avisos.push('CONNECT_VAULT_MATRIZ nao definido — matriz nao montada. Configure o caminho da matriz.');
   }
 
-  // 3. cerebro pessoal (identidade) como ./pessoal — opcional
+  // 3. vault pessoal (ENRIQUECIMENTO OPCIONAL) — montado como ./pessoal se o
+  // operador tiver um e o configurar. Deixou de ser requisito: a espinha vem do
+  // produto (D104) e a identidade, do perfil gerido no CONNECT_HOME (passo 3b).
+  // Um vault Obsidian proprio do usuario CONVIVE — nunca condiciona o mecanismo.
   if (cfg.cerebroPessoal) {
     try {
       mounts.push(mount({ workspaceDir: workspace, alias: ALIAS_PESSOAL, source: cfg.cerebroPessoal, replace: true }));
     } catch (e) {
-      avisos.push(`cerebro pessoal nao montado: ${e.message}`);
+      avisos.push(`vault pessoal (opcional) nao montado: ${e.message}`);
     }
   }
 
-  // 3b. le a identidade direto da origem (robusto a premissa 2 no bootstrap)
-  let identidade = null;
-  if (cfg.cerebroPessoal) {
-    identidade = lerIdentidade(cfg.cerebroPessoal);
-    if (identidade && identidade._ausente) avisos.push(`identidade nao encontrada em ${identidade._origem}`);
-  } else {
-    avisos.push('CONNECT_CEREBRO_PESSOAL nao definido — identidade do operador nao restaurada.');
+  // 3b. identidade do operador — perfil GERIDO PELO CONNECT ({CONNECT_HOME}/operador),
+  // com fallback para o vault pessoal (back-compat). O perfil no CONNECT_HOME e o que
+  // torna o vault pessoal dispensavel: sem ele, a identidade ainda e restaurada.
+  const perfilOperador = path.join(cfg.home, 'operador');
+  let identidade = lerIdentidade(perfilOperador);
+  if (identidade && identidade._ausente && cfg.cerebroPessoal) {
+    const alt = lerIdentidade(cfg.cerebroPessoal);
+    if (alt && !alt._ausente) identidade = alt;
+  }
+  if (!identidade || identidade._ausente) {
+    identidade = null;
+    avisos.push('perfil do operador ainda nao provisionado ({CONNECT_HOME}/operador) — rode a cnct-fabrica-operador para materializa-lo (D105). O vault pessoal Obsidian e opcional.');
   }
 
   // 4. carga L1 da matriz
@@ -128,11 +136,13 @@ export function iniciarSessao({ sessionId, ...override } = {}) {
     l1 = montarL1(cfg.vaultMatriz, ALIAS_MATRIZ);
   }
 
-  // 4b. Camada 0 do cerebro pessoal (D104) — o handshake que faltava. Ate aqui
-  // o pessoal entrava so como mount + identidade; o hot cache pessoal (delta)
-  // nunca era carregado. Agora carrega sempre, junto do L1 da matriz.
+  // 4b. Camada 0 do operador (D104) — hot cache/delta. Prefere o perfil gerido no
+  // CONNECT_HOME; se ausente, cai no vault pessoal montado (quando houver). A espinha
+  // NAO vem daqui (vem de lerProtocoloMecanismo) — aqui e so o delta do operador.
   let l1Pessoal = null;
-  if (cfg.cerebroPessoal && fs.existsSync(cfg.cerebroPessoal)) {
+  if (fs.existsSync(perfilOperador)) {
+    l1Pessoal = montarL1Pessoal(perfilOperador, ALIAS_PESSOAL);
+  } else if (cfg.cerebroPessoal && fs.existsSync(cfg.cerebroPessoal)) {
     l1Pessoal = montarL1Pessoal(cfg.cerebroPessoal, ALIAS_PESSOAL);
   }
 

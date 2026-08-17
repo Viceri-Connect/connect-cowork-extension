@@ -20,7 +20,7 @@ fs.writeFileSync(path.join(matriz, '_cerebro', 'vault-config.md'),
   '## Identidade\n- empresa: "Viceri Seidor"\n- contexto: "interno-viceri"\n');
 fs.mkdirSync(path.join(pessoal, '_cerebro'), { recursive: true });
 fs.writeFileSync(path.join(pessoal, '_cerebro', 'meu-config.md'),
-  '- nome: "Gabriel Vasconcelos Guilhem"\n- email-viceri: "gabriel.guilhem@viceri.com.br"\n');
+  '- nome: "Gabriel Vasconcelos Guilhem"\n- emails: "gabriel.guilhem@viceri.com.br"\n');
 
 // isola: sem env apontando paths; so CONNECT_HOME
 process.env.CONNECT_HOME = home;

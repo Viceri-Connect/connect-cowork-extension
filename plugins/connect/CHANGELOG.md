@@ -1,5 +1,54 @@
 # Changelog — connect
 
+## 0.8.1 — 2026-08-17
+- **Passe de agnosticismo (produto ≠ matriz do MVP).** Remove vazamento do contexto de
+  dogfooding do código e das docs normativas, mantendo só a **proveniência** (author
+  "Impulsa / Viceri", marketplace `impulsa`) — regra: branding ≠ contexto forçado.
+  - **Código:** `lib/matriz.mjs` lê identidade por campo **genérico** (`emails`/`email`),
+    não mais `email-viceri` (campo específico de empresa). Alinha com o template `meu-config`.
+  - **Docs de produto** com exemplos **100% genéricos** (Empresa X, tribo-a, cliente-a):
+    `contrato-manifesto.md`, `CONCEITOS.md`, `FRAMEWORK.md` (§5 marcada como "exemplo —
+    instância de dogfooding", não catálogo do produto).
+  - **Config/comentários:** `connect.config.example.json`, comentários de `resolver.mjs` e
+    `spike-junction.ps1` genéricos; `docs/POC-NOTES.md` com disclaimer de dogfooding.
+  - Testes atualizados ao campo genérico; suíte 5/5 verde.
+
+## 0.8.0 — 2026-08-17
+- **Taxonomia canônica (`CONCEITOS.md`).** Documenta sem ambiguidade: **instância** (uma mente
+  = 1 matriz + N sub-vaults; "mais de uma matriz" = mais de uma instância), **matriz** (a
+  espinha dorsal, define o que é filho — 1 por instância), **sub-vault** (contexto-filho; **a
+  MAPFRE é sub-vault, NÃO matriz**), **vault pessoal** (opcional) e **CONNECT_HOME** (estado do
+  Connect: config + perfil + sessões).
+- **Vault pessoal deixa de ser obrigatório; perfil do operador vive no CONNECT_HOME.** O
+  `iniciarSessao` restaura a identidade de `{CONNECT_HOME}/operador` (perfil gerido pelo
+  produto), com fallback para o vault pessoal (back-compat). Sem perfil e sem vault → aviso que
+  delega à `cnct-fabrica-operador` (estado zero). O vault Obsidian próprio do usuário passa a
+  ser **enriquecimento** montado como `./pessoal`, nunca condição do mecanismo — os dois
+  coexistem. Removido o aviso duro "CONNECT_CEREBRO_PESSOAL não definido".
+- **`cnct-fabrica-operador` aponta o destino para `{CONNECT_HOME}/operador`** (Passos 1 e 4);
+  o perfil é auto-descoberto pelo mecanismo, sem `configurar` para o perfil. Novo teste
+  `spike-perfil-operador.mjs` (7 checks: identidade sem vault pessoal + delegação no estado
+  zero). Suíte: 5 arquivos verdes.
+
+## 0.7.0 — 2026-08-17
+- **Contrato de manifesto de entidade (`config/contrato-manifesto.md`).** Materializa o
+  contrato mínimo (CH-01/CH-02) que até agora vivia só como decisão (D97/D99): o schema de
+  frontmatter de todo manifesto — `tipo`, `papel`, `governanca`, `fonte[]`, `depende-de` — as
+  invariantes (registro autorado proibido, índice **derivado em runtime**, cliente fora da
+  árvore, acervo nunca expandido no render, ponteiro tipado resolve-on-touch), o **grafo de
+  dependências com arestas bidirecionais** (D102) e a **face de verificação** que o
+  `vault-audit` passa a checar. É a exigência que o realinhamento do `resolver` (P59/P60/P61)
+  vai consumir no lugar do `sub-vaults.json`.
+- **`resolver` realinhado ao índice derivado (P61 fechada).** `lib/resolver.mjs` deixa de ler
+  o registro autorado `_cerebro/sub-vaults.json` (**removido** — proibido pelo contrato §3) e
+  passa a **derivar o índice dos manifestos** em runtime: varre o frontmatter (`tipo` + `fonte`),
+  casa o conceito por slug/`tags`, e resolve a `fonte` (relativa ao OneDrive) para caminho
+  absoluto via `onedrive-rel` do `vault-config` da matriz (âncora por-máquina, D35). Novos
+  helpers exportados: `parseManifesto`, `onedriveRoot`. Novo status: `origem-nao-resolvida`.
+  Teste `spike-resolver.mjs` reescrito para o modelo derivado (19 checks); suíte verde.
+- **Notas de estado das skills `cnct-nucleo-*` atualizadas** — de "resolver ainda lê
+  sub-vaults.json (P61 aberta)" para "índice derivado (P61 fechada)".
+
 ## 0.6.0 — 2026-08-15
 - **Framework do catálogo de skills (`FRAMEWORK.md`).** Padrão único ao qual toda skill do
   Connect adere: anatomia executor × knowledge (corte D96), três camadas do catálogo

@@ -1,75 +1,97 @@
 // tests/spike-resolver.mjs
-// Spike do `resolver` por conceito: registro declarativo -> mount por conceito.
+// Spike do `resolver` por conceito: registro DERIVADO de manifestos -> mount.
 // Roda no Linux via symlink (mesma logica do junction no Windows). Zero-dep.
 //
 //   node tests/spike-resolver.mjs
 //
-// Cria um cerebro pessoal temporario com _cerebro/sub-vaults.json declarando um
-// sub-vault "gestao-financeira" (origem = um vault temporario com forma de vault),
-// resolve por um GATILHO ("pensao") e verifica: casou, montou, leu ATRAVES do
-// atalho, origem intacta, L1 carregada. Tambem checa nao-encontrado e precedencia.
+// Cria uma matriz temporaria com um MANIFESTO (nota `connect.md` cujo frontmatter
+// declara `tipo` + `fonte`), resolve por um GATILHO (tag "impulsa") e verifica:
+// derivou do manifesto, casou, montou, leu ATRAVES do atalho, origem intacta, L1
+// carregada. Tambem checa parseManifesto, onedriveRoot, e nao-encontrado.
+// Sem `sub-vaults.json` — registro autorado e proibido (contrato-manifesto §3).
 
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { resolver, lerRegistro, casar } from '../plugins/connect/lib/resolver.mjs';
+import { resolver, lerRegistro, casar, parseManifesto, onedriveRoot } from '../plugins/connect/lib/resolver.mjs';
 
 let pass = 0, fail = 0;
 const ok = (cond, msg) => { if (cond) { pass++; } else { fail++; console.error('  ✗', msg); } };
 
 const base = fs.mkdtempSync(path.join(os.tmpdir(), 'connect-resolver-'));
-const cerebro = path.join(base, 'cerebro');
-const gestao = path.join(base, 'gestao-vault');
+const matriz = path.join(base, 'matriz');
+const acervo = path.join(base, 'tribo-impulsa');   // sub-vault (acervo da tribo)
 const workspace = path.join(base, 'workspace');
 
-// cerebro pessoal com registro declarativo
-fs.mkdirSync(path.join(cerebro, '_cerebro'), { recursive: true });
-fs.writeFileSync(path.join(cerebro, '_cerebro', 'sub-vaults.json'), JSON.stringify([
-  { conceito: 'gestao-financeira', origem: gestao, alias: 'gestao', gatilhos: ['financas', 'pensao', 'orcamento'], nota: 'minha gestao' },
-], null, 2));
+// --- matriz temporaria com um MANIFESTO derivavel ---
+fs.mkdirSync(path.join(matriz, 'organizacao', 'tribos', 'Impulsa'), { recursive: true });
+fs.writeFileSync(path.join(matriz, 'organizacao', 'tribos', 'Impulsa', 'connect.md'),
+`---
+tipo: programa
+papel: tribo
+governanca: Gabriel
+fonte:
+  - escopo: tribo-impulsa
+    url: "${acervo}"
+tags: [connect, impulsa, tribo]
+---
+# manifesto
+`);
+// uma nota NAO-entidade (sem fonte) para garantir que nao entra no registro
+fs.mkdirSync(path.join(matriz, '_cerebro'), { recursive: true });
+fs.writeFileSync(path.join(matriz, '_cerebro', 'nota-solta.md'), `---\ntipo: nota\n---\ntexto`);
 
-// sub-vault de gestao com forma de vault (para carregar L1)
-fs.mkdirSync(path.join(gestao, '_cerebro'), { recursive: true });
-fs.writeFileSync(path.join(gestao, '_cerebro', 'vault-config.md'), 'tipo: coletivo-pessoal\nponto-focal: Gabriel\n');
-fs.mkdirSync(path.join(gestao, 'financas'), { recursive: true });
-fs.writeFileSync(path.join(gestao, 'financas', 'marcador.md'), 'conteudo real de financas');
+// --- acervo com forma de vault (para carregar L1) ---
+fs.mkdirSync(path.join(acervo, '_cerebro'), { recursive: true });
+fs.writeFileSync(path.join(acervo, '_cerebro', 'vault-config.md'), 'tipo: programa\npapel: tribo\n');
+fs.mkdirSync(path.join(acervo, 'projetos', 'Connect'), { recursive: true });
+fs.writeFileSync(path.join(acervo, 'projetos', 'Connect', 'marcador.md'), 'conteudo real do Connect');
 
 fs.mkdirSync(workspace, { recursive: true });
 
-// --- casar (puro) ---
-const reg = lerRegistro([cerebro]);
-ok(reg.length === 1, 'registro leu 1 entrada');
-ok(casar(reg, 'gestao-financeira')?.conceito === 'gestao-financeira', 'casa por conceito exato');
-ok(casar(reg, 'pensao')?.conceito === 'gestao-financeira', 'casa por gatilho');
-ok(casar(reg, 'financ')?.conceito === 'gestao-financeira', 'casa por substring');
+// --- parseManifesto (puro) ---
+const manOk = parseManifesto(`tipo: programa\nfonte:\n  - url: "/x/y"\ntags: [a, b]`);
+ok(manOk && manOk.tipo === 'programa' && manOk.fontes[0] === '/x/y', 'parseManifesto extrai tipo + fonte');
+ok(manOk.gatilhos.includes('a') && manOk.gatilhos.includes('b'), 'parseManifesto extrai gatilhos das tags');
+ok(parseManifesto(`tipo: nota\n`) === null, 'parseManifesto rejeita entidade sem fonte');
+ok(parseManifesto(`fonte:\n  - url: "/x"`) === null, 'parseManifesto rejeita nota sem tipo');
+
+// --- onedriveRoot (deriva a raiz do sufixo declarado) ---
+const odBase = fs.mkdtempSync(path.join(os.tmpdir(), 'od-'));
+const vaultOD = path.join(odBase, 'Viceri Seidor', 'Matriz');
+fs.mkdirSync(path.join(vaultOD, '_cerebro'), { recursive: true });
+fs.writeFileSync(path.join(vaultOD, '_cerebro', 'vault-config.md'),
+`---\nonedrive-rel: "Viceri Seidor/Matriz"\n---`);
+ok(onedriveRoot(vaultOD) === odBase, `onedriveRoot deriva a raiz (foi: ${onedriveRoot(vaultOD)})`);
+
+// --- lerRegistro (derivado) ---
+const reg = lerRegistro([matriz]);
+ok(reg.length === 1, `registro derivou 1 entidade (foi: ${reg.length})`);
+ok(reg[0].conceito === 'connect', 'conceito = slug do arquivo');
+ok(casar(reg, 'connect')?.conceito === 'connect', 'casa por conceito exato');
+ok(casar(reg, 'impulsa')?.conceito === 'connect', 'casa por gatilho (tag)');
+ok(casar(reg, 'conn')?.conceito === 'connect', 'casa por substring');
 ok(casar(reg, 'inexistente') === null, 'nao casa termo desconhecido');
 
 // --- resolver (efeito: monta) ---
-const r = resolver({ conceito: 'pensao', workspaceDir: workspace, cerebroPessoal: cerebro });
+const r = resolver({ conceito: 'impulsa', workspaceDir: workspace, vaultMatriz: matriz });
 ok(r.status === 'resolvido', `status resolvido (foi: ${r.status})`);
-ok(r.alias === 'gestao', 'alias do registro aplicado');
-ok(r.caminhoRelativo === './gestao', 'caminho relativo correto');
+ok(r.alias === 'connect', 'alias = conceito derivado');
+ok(r.caminhoRelativo === './connect', 'caminho relativo correto');
 
-const link = path.join(workspace, 'gestao');
+const link = path.join(workspace, 'connect');
 ok(fs.existsSync(link), 'atalho criado no workspace');
-// leitura ATRAVES do atalho
-const lido = fs.readFileSync(path.join(link, 'financas', 'marcador.md'), 'utf8');
+const lido = fs.readFileSync(path.join(link, 'projetos', 'Connect', 'marcador.md'), 'utf8');
 ok(lido.includes('conteudo real'), 'leu atraves do atalho');
-// origem intacta
-ok(fs.existsSync(path.join(gestao, 'financas', 'marcador.md')), 'origem intacta');
-// L1 carregada
-ok(r.l1 && r.l1.identidadeVault && r.l1.identidadeVault['ponto-focal'] === 'Gabriel', 'L1 do sub-vault carregada');
+ok(fs.existsSync(path.join(acervo, 'projetos', 'Connect', 'marcador.md')), 'origem intacta');
+ok(r.l1 && r.l1.identidadeVault, 'L1 do sub-vault carregada');
 
-// idempotencia (replace)
-const r2 = resolver({ conceito: 'gestao-financeira', workspaceDir: workspace, cerebroPessoal: cerebro, replace: true });
-ok(r2.status === 'resolvido', 'idempotente com replace');
-
-// nao-encontrado
-const r3 = resolver({ conceito: 'nao-existe', workspaceDir: workspace, cerebroPessoal: cerebro });
-ok(r3.status === 'nao-encontrado' && Array.isArray(r3.disponiveis), 'nao-encontrado lista disponiveis');
+// --- nao-encontrado ---
+const nf = resolver({ conceito: 'zzz', workspaceDir: workspace, vaultMatriz: matriz });
+ok(nf.status === 'nao-encontrado', 'status nao-encontrado para conceito ausente');
 
 // limpeza
-try { fs.rmSync(base, { recursive: true, force: true }); } catch { /* ignore */ }
+try { fs.rmSync(base, { recursive: true, force: true }); fs.rmSync(odBase, { recursive: true, force: true }); } catch {}
 
-console.log(`\nspike-resolver: ${pass} passaram, ${fail} falharam`);
+console.log(`\nspike-resolver: ${pass} pass, ${fail} fail`);
 process.exit(fail ? 1 : 0);

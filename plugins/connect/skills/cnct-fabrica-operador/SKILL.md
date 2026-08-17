@@ -46,10 +46,17 @@ fábrica (`FRAMEWORK.md` §4).
 ## Protocolo
 
 **Passo 1 — Localizar a pasta destino.**
-Perguntar onde o vault de operador vai morar (idealmente uma pasta sincronizada —
-OneDrive/Drive — para sobreviver à máquina). Pasta inexistente ou em branco é o **caso
-normal** (estado zero), não erro. Guardar como `{DESTINO}`. No Cowork, **conceder
-acesso** a essa pasta antes de escrever.
+O **destino padrão é o perfil gerido pelo Connect**: `{CONNECT_HOME}/operador` (decisão
+2026-08-17 — ver `CONCEITOS.md` §5). É ele que torna o **vault pessoal Obsidian opcional**:
+o mecanismo lê a identidade daí, sem exigir vault do usuário. Resolver `{CONNECT_HOME}` via
+`estado_sessao` (campo `home`) e usar `{CONNECT_HOME}/operador` como `{DESTINO}`. Pasta
+inexistente é o **caso normal** (estado zero), não erro. No Cowork, **conceder acesso** antes
+de escrever.
+
+> Se o operador **também** mantém um vault Obsidian próprio (com protocolos/`CLAUDE.md`
+> próprios), ele **coexiste** como enriquecimento opcional — registrado à parte via
+> `configurar cerebro_pessoal`, **nunca** como condição do mecanismo. O perfil do operador
+> não vive no vault do usuário; vive no CONNECT_HOME.
 
 **Passo 2 — Elicitação mínima (banco destilado do caso-zero).**
 Coletar, **uma pergunta por vez**, em linguagem simples — cada pergunta explica em uma
@@ -85,8 +92,11 @@ Se o Passo 2.4 trouxe um coletivo: semear `_cerebro/clientes/{slug}/config.md` c
 `estado.md`/`repos.md` como stubs vazios.
 
 **Passo 4 — Registrar o handshake com o mecanismo.**
-Chamar a tool `configurar` com `cerebro_pessoal = {DESTINO}` para o Connect passar a
-resolver este vault. Confirmar com `estado_sessao` (deve reportar `configurado = true`).
+Sendo o destino `{CONNECT_HOME}/operador`, o mecanismo **já descobre o perfil sozinho** — o
+`iniciarSessao` lê `{CONNECT_HOME}/operador` para restaurar identidade + Camada 0 (nenhum
+`configurar` necessário para o perfil). Confirmar com `estado_sessao`. Só chamar `configurar
+cerebro_pessoal = {VAULT_OBSIDIAN}` se o operador tiver um vault pessoal **próprio** a montar
+como enriquecimento (`./pessoal`) — isso é opcional e independente do perfil.
 
 **Passo 5 — Moldagem de papel (delegar).**
 Para cada papel estável coletado, a **moldagem de papel** materializa a estrutura mínima

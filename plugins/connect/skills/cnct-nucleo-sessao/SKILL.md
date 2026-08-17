@@ -69,11 +69,10 @@ casamento conceito→origem acontece **na skill** (varredura de manifestos), e o
 de sub-vaults é **derivado** dos manifestos, nunca autorado (P60/D35); o MCP entrega só
 o **primitivo de mount** (`mount_junction`). Desmontar: `unmount_junction`.
 
-> ⚠️ **Estado do código (resolver v0.4.0):** a tool `resolver` ainda casa o conceito por
-> um registro **autorado** `_cerebro/sub-vaults.json` e monta a junction — comportamento
-> vigente até o realinhamento. O contrato-alvo acima (índice derivado + casamento na
-> skill) é o **P61**, aberto. Usar `resolver` como está hoje; não inventar o derivado
-> antes do código existir.
+> ✅ **Estado do código (resolver v0.7.0):** a tool `resolver` **deriva o índice dos
+> manifestos** em runtime (varre `tipo` + `fonte` no frontmatter, casa por conceito/tags,
+> resolve a `fonte` via `onedrive-rel` da matriz). Registro autorado `sub-vaults.json`
+> **removido** (contrato-manifesto §3). P61 fechada.
 
 ## Regras
 

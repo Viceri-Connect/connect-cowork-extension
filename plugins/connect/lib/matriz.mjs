@@ -69,16 +69,23 @@ export function lerIdentidade(cerebroPessoalRoot) {
   if (!md) return { _origem: cfgPath, _ausente: true };
 
   const kv = parseKeyValues(md);
-  const papeis = (kv['papeis-estaveis'] || '')
+  const asList = (v) => (v || '')
     .replace(/^\[|\]$/g, '')
     .split(',')
     .map((s) => s.replace(/["']/g, '').trim())
     .filter(Boolean);
 
+  const papeis = asList(kv['papeis-estaveis']);
+  // Campo generico (agnostico de empresa): `emails` (lista) ou `email` (escalar).
+  // NUNCA um campo especifico de empresa (ex.: `email-viceri`) — isso e conteudo
+  // da instancia, nao contrato do produto.
+  const emails = asList(kv['emails'] || kv['email']);
+
   return {
     _origem: cfgPath,
     nome: kv['nome'] || null,
-    email: kv['email-viceri'] || kv['email'] || null,
+    email: emails[0] || null,
+    emails,
     papeis,
   };
 }

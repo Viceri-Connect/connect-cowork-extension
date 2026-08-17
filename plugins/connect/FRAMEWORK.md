@@ -96,11 +96,15 @@ pelo hook (D104). Fábrica que reescreve espinha é defeito.
 
 ---
 
-## 5. Classificação do catálogo atual (varredura D96 — resposta ao P58)
+## 5. Classificação do catálogo (exemplo — instância de dogfooding)
 
-> P58 = pendência "taxonomia mecanismo-do-plugin × conteúdo-da-empresa". Critério fechado em
-> D96; abaixo, a aplicação. Confiança **alta** onde o destino de escrita é inequívoco;
-> **confirmar** onde a skill escreve nos dois lados (candidata a split) — é o fast-follow.
+> **Exemplo, não catálogo do produto.** O que é normativo é o **critério** (§2): onde a skill
+> escreve decide mecanismo × conteúdo. A tabela abaixo aplica o critério ao catálogo de **uma
+> instância concreta** (o dogfooding) — as skills de conteúdo nomeadas (`discovery-*`,
+> `apf-orcamento`, …) são dessa empresa, não do produto. Outra empresa terá outro catálogo de
+> conteúdo; só as skills `cnct-*` (mecanismo) viajam no plugin.
+> P58 = pendência "taxonomia mecanismo-do-plugin × conteúdo-da-empresa". Confiança **alta**
+> onde o destino de escrita é inequívoco; **confirmar** onde a skill escreve nos dois lados.
 
 ### 5.1 Mecanismo puro (viaja 100% no plugin)
 
@@ -132,7 +136,7 @@ seu knowledge vive no coletivo e viaja com o coletivo, não com o plugin.
 ### 5.4 A split de `elicitacao-captura` (o IP do próprio Connect, D02)
 
 O **mecanismo** de captura passiva (sinais, MODOs A/B/C, o eixo *atrito de dogfooding*) é do
-produto → candidato a mecanismo no plugin. O **capturado** (caso-zero da Viceri) é conteúdo
+produto → candidato a mecanismo no plugin. O **capturado** (o caso-zero da empresa) é conteúdo
 → fica no coletivo. É a evidência mais limpa de que o corte D96 é o certo: ele parte a skill
 exatamente na junta natural.
 

@@ -1,5 +1,5 @@
 {
-  "$comment": "Copie para {CONNECT_HOME}/connect.config.json OU configure via env (CONNECT_HOME, CONNECT_VAULT_MATRIZ, CONNECT_CEREBRO_PESSOAL). Env vence o arquivo. Caminhos sao locais desta maquina — nunca versionar o connect.config.json real.",
-  "vaultMatriz": "C:\\Users\\SEU_USUARIO\\Viceri Seidor\\viceri-vault",
-  "cerebroPessoal": "C:\\Users\\SEU_USUARIO\\Impulsa\\second brain"
+  "$comment": "Copie para {CONNECT_HOME}/connect.config.json OU configure via env (CONNECT_HOME, CONNECT_VAULT_MATRIZ, CONNECT_CEREBRO_PESSOAL). Env vence o arquivo. Caminhos sao locais desta maquina — nunca versionar o connect.config.json real. Valores abaixo sao exemplos genericos; troque pelos caminhos da SUA matriz e (opcional) vault pessoal.",
+  "vaultMatriz": "C:\\Users\\SEU_USUARIO\\Sua Empresa\\sua-matriz",
+  "cerebroPessoal": "C:\\Users\\SEU_USUARIO\\seu-vault-pessoal-opcional"
 }

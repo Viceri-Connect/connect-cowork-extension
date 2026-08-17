@@ -54,19 +54,12 @@ dependências entre vaults é declarado nos manifestos, não numa árvore rígid
 - **O MCP entrega só o primitivo de mount** (`mount_junction` por caminho); `resolver` é
   a interface de alto nível. Desmontar: `unmount_junction`. Auditar: `list_mounts`.
 
-> ⚠️ **Estado do código (resolver v0.4.0):** hoje a tool `resolver` ainda casa o conceito
-> por um **registro autorado** `_cerebro/sub-vaults.json` (no cérebro pessoal e/ou na
-> matriz) e monta a junction. Esse é o comportamento vigente até o realinhamento — o alvo
-> acima (índice derivado + casamento na skill) é o **P61**, aberto. Enquanto o código não
-> muda, é `sub-vaults.json` que faz o `resolver` funcionar:
->
-> ```json
-> [
->   { "conceito": "gestao-financeira", "origem": "D:\\caminho\\do\\sub-vault",
->     "alias": "gestao", "gatilhos": ["financas", "pensao", "orcamento"],
->     "nota": "minha gestao pessoal e financeira" }
-> ]
-> ```
+> ✅ **Estado do código (resolver v0.7.0):** o `resolver` **deriva o índice dos manifestos**
+> em runtime — varre o frontmatter das notas que declaram `tipo` + `fonte`, casa o conceito
+> (nome/slug ou `tags` como gatilhos) e resolve a `fonte` (relativa ao OneDrive) para caminho
+> absoluto usando a matriz como âncora (`onedrive-rel` do `vault-config`). O registro autorado
+> `sub-vaults.json` foi **removido** (proibido pelo contrato-manifesto §3). P61 fechada.
+> Contrato: `config/contrato-manifesto.md`.
 
 ## Erros comuns
 
