@@ -20,7 +20,7 @@ import { renderContexto } from '../lib/render.mjs';
 
 const log = (...a) => process.stderr.write(`[connect-mcp] ${a.join(' ')}\n`);
 
-const SERVER_INFO = { name: 'connect', version: '0.4.0' };
+const SERVER_INFO = { name: 'connect', version: '0.10.1' };
 let protocolVersion = '2025-06-18';
 
 const TOOLS = [
@@ -73,9 +73,10 @@ const TOOLS = [
     name: 'resolver',
     description:
       'Resolve um CONCEITO num sub-vault e o monta como atalho flat no workspace da sessao. ' +
-      'Le o registro declarativo (_cerebro/sub-vaults.json) do cerebro pessoal (e da matriz), ' +
-      'casa o conceito por nome ou gatilho, e monta a junction/symlink da origem. Use quando a ' +
-      'sessao precisar atuar num contexto especifico (ex.: "minha gestao", "financas", "pensao"). ' +
+      'O registro NAO e mais autorado (sub-vaults.json removido): e DERIVADO em runtime varrendo ' +
+      'os manifestos (frontmatter `tipo`+`fonte`) do cerebro pessoal e da matriz (contrato em ' +
+      'config/contrato-manifesto.md), casando o conceito por slug ou gatilho (`tags`). Use quando a ' +
+      'sessao precisar atuar num contexto especifico (ex.: uma tribo, um cliente, um sub-vault). ' +
       'Retorna status, alias, caminho relativo e a camada 1 do sub-vault.',
     inputSchema: {
       type: 'object',

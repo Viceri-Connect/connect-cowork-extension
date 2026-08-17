@@ -76,7 +76,7 @@ export function renderContexto(report) {
   L.push('### Protocolo desta sessao');
   L.push('1. Referencie conhecimento sempre por caminho relativo ao workspace (ex.: `./matriz/_cerebro/...`).');
   L.push('2. Mount da junction da o caminho estavel; ele NAO concede acesso de leitura — se o Cowork pedir, conceda acesso a origem correspondente.');
-  L.push('3. Quando uma skill declarar que precisa de um sub-vault (conceito), acione o Connect para entrega-lo num novo atalho no workspace (mecanismo `resolver`, em construcao).');
+  L.push('3. Quando uma skill declarar que precisa de um sub-vault (conceito), acione o Connect (`resolver`) — ele deriva o registro varrendo os manifestos da matriz (frontmatter `tipo`+`fonte`, contrato em `contrato-manifesto.md`), casa o conceito por slug/gatilho e monta manifesto + acervo so no toque.');
 
   // Avisos
   if (report.avisos && report.avisos.length) {

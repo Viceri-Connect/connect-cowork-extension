@@ -24,6 +24,7 @@ import { lerIdentidade, montarL1, montarL1Pessoal, lerProtocoloMecanismo } from 
 
 const ALIAS_MATRIZ = 'matriz';
 const ALIAS_PESSOAL = 'pessoal';
+const ALIAS_OPERADOR = 'operador';
 
 // Descarta valores vazios ou placeholders de env nao substituidos (ex.: quando
 // o .mcp.json declara "${CONNECT_HOME}" e o host nao tem essa env var — o
@@ -120,6 +121,19 @@ export function iniciarSessao({ sessionId, ...override } = {}) {
   // com fallback para o vault pessoal (back-compat). O perfil no CONNECT_HOME e o que
   // torna o vault pessoal dispensavel: sem ele, a identidade ainda e restaurada.
   const perfilOperador = path.join(cfg.home, 'operador');
+
+  // 3c. monta ./operador (SEMPRE) — superficie de escrita do estado do operador gerido
+  // pelo Connect (TASKS.md, delta de identidade). Nao e conteudo de vault (fora do
+  // contrato cnct-nucleo-escrita); precisa de alias proprio para o executor de
+  // encerramento (cnct-nucleo-encerramento) escrever la via file tools do Cowork —
+  // mesma exigencia de acesso de qualquer outro mount (nao concede leitura por si so).
+  try {
+    ensureDir(perfilOperador);
+    mounts.push(mount({ workspaceDir: workspace, alias: ALIAS_OPERADOR, source: perfilOperador, replace: true }));
+  } catch (e) {
+    avisos.push(`perfil do operador (./operador) nao montado: ${e.message}`);
+  }
+
   let identidade = lerIdentidade(perfilOperador);
   if (identidade && identidade._ausente && cfg.cerebroPessoal) {
     const alt = lerIdentidade(cfg.cerebroPessoal);

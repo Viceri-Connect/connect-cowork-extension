@@ -1,5 +1,84 @@
 # Changelog — connect
 
+## 0.10.1 — 2026-08-17
+- **Correção de território sobre a 0.10.0 (mesma sessão).** `cnct-fabrica-matriz` (skill +
+  `templates/vault-config.template.md`) **removida** — misturava dois territórios distintos:
+  (a) Connect↔Matriz, o plugin garantindo que a matriz cresça com a forma pra guardar
+  contexto global (empresa/áreas/clientes/processos/normas) — maior, ainda não desenhado,
+  não é uma fábrica-de-nascimento-única; (b) o stub de **conhecimento de uma skill do
+  plugin** na matriz (ex.: `cnct-nucleo-escrita.md`) — esse sim é o padrão certo, só que
+  pertence à própria skill que o consome, não a uma fábrica separada.
+  - `templates/cnct-nucleo-escrita.template.md` **movido** para dentro da skill que o usa:
+    `skills/cnct-nucleo-escrita/templates/`.
+  - `cnct-nucleo-escrita` (v0.3.0) ganhou o **Passo 2a**: se a matriz não tiver o contrato
+    ainda, materializa o stub do próprio template e avisa o operador que o índice de vaults
+    precisa ser personalizado — nunca sobrescreve se já existir.
+  - Território Matriz↔Sub-vaults (como um processo maduro, ex. SDD, desce com deltas e vira
+    skill customizada tipo `discovery-intake`) **não é mecanismo do plugin** — nasce no
+    vault, usa o empacotamento `.skill` já existente (`convencao-skills.md`). Fora de escopo
+    do Connect possuir essa skill.
+
+## 0.10.0 — 2026-08-17
+- **Realinhamento, correção de rumo (P66).** `cnct-nucleo-escrita`/`cnct-nucleo-encerramento`
+  tinham dois defeitos apontados pelo operador: (1) linguagem de "convive/coexiste com o
+  executor antigo" no próprio executor — mecanismo não precisa saber da "moda antiga" nem
+  contornar; (2) o executor **hardcoded** a convenção de onde a taxonomia de um sub-vault
+  mora — deveria ser só o contrato da matriz quem diz isso. Ambos corrigidos: executores
+  reescritos sem menção ao modelo antigo; Passo 3 de `cnct-nucleo-escrita` agora só segue o
+  que o contrato da matriz indicar, nunca deduz.
+- **Matriz e Tribo Impulsa alinhadas de verdade** (os dois vaults reais desta instância, não
+  só o mecanismo abstrato):
+  - `_inteligencia/skills/cnct-nucleo-escrita/cnct-nucleo-escrita.md` da matriz reescrito
+    como **índice real** dos vaults desta instância (matriz, Tribo Impulsa, MAPFRE) +
+    regras universais de escrita elevadas de conteúdo duplicado (histórico, Casa da
+    ADR/RNF, despromoção — já "equalizadas" entre coletivos, portanto mecanismo de fato).
+  - **Tribo Impulsa ganhou seu `_inteligencia/skills/vault-write/vault-write.md`** (não
+    existia) — taxonomia própria (`projetos/`, `squads/`), sem duplicar as regras
+    universais (aponta pro contrato da matriz).
+- **`cnct-fabrica-matriz` (L2, nova)** — provisiona matriz do zero por elicitação (empresa,
+  contexto, ponto focal, âncora `onedrive-rel` — perguntada já na elicitação, não descoberta
+  só quando um `resolver` falhar, achado do dogfooding desta sessão). Templates próprios
+  (`vault-config.template.md`, `cnct-nucleo-escrita.template.md`) fecham o ciclo: a matriz
+  real desta instância já reflete a mesma forma que o template gera.
+- Suíte de testes confirmada verde (nenhuma mudança de código, só knowledge/skills/templates).
+
+## 0.9.0 — 2026-08-17
+- **Realinhamento de protocolos, Passo 2/6 (P66) — primitivos de escrita/encerramento
+  multi-vault.** Duas skills novas no plugin, família `nucleo` (L1), **sem alterar** os
+  executores `vault-write`/`session-close` existentes (convivem — coletivo ainda não
+  migrado continua usando o antigo sem mudança nenhuma):
+  - **`cnct-nucleo-escrita`** — escrita governada em duas camadas: contrato universal na
+    matriz (`_inteligencia/skills/cnct-nucleo-escrita/cnct-nucleo-escrita.md`, novo,
+    mecanismo) + taxonomia específica do vault alvo (`_inteligencia/skills/vault-write/
+    vault-write.md`, existente, intocado — reaproveitado como conteúdo). Sem taxonomia no
+    vault alvo, reporta a lacuna — nunca herda de outro vault nem inventa.
+  - **`cnct-nucleo-encerramento`** — assume o papel operacional do `session-close`, mas
+    generalizado para **multi-vault**: enumera todos os aliases montados na sessão
+    (`list_mounts`), atribui cada item capturado ao vault a que pertence, e delega a
+    escrita a `cnct-nucleo-escrita` por vault — nunca assume "1 coletivo ativo".
+  - **`lib/session.mjs`: `./operador` passa a ser montado sempre** (novo `ALIAS_OPERADOR`),
+    expondo `{CONNECT_HOME}/operador/` como superfície de escrita do estado do operador
+    (`TASKS.md`, delta de identidade) — decisão desta sessão: TASKS.md do operador
+    centraliza no CONNECT_HOME por ora (não depende do vault pessoal Obsidian opcional);
+    segregar/conviver com vault separado fica como evolução futura. Mesma exigência de
+    acesso do Cowork que qualquer outro mount (não concede leitura por si só).
+  - Suíte de testes (5 arquivos) confirmada verde após a mudança de mount — nenhum spike
+    quebrou.
+
+## 0.8.2 — 2026-08-17
+- **Realinhamento de protocolos, Passo 1/6 (P66, roteiro-sessao-realinhamento-protocolos).** A espinha
+  injetada (`render.mjs` § "Protocolo desta sessao") ainda descrevia o `resolver` como **"em
+  construcao"** — defasado desde o P61/D110 (17/08), que já fechou o realinhamento do `resolver` ao
+  índice derivado de manifestos. Texto atualizado para refletir o modelo real (deriva do
+  `contrato-manifesto.md`, casa por slug/gatilho).
+  - **`plugin.json`:** description trocava "(roadmap) resolver conceitos" — mesma classe de drift,
+    corrigida.
+  - **`mcp/connect-mcp.mjs`:** description da tool `resolver` ainda citava o `_cerebro/sub-vaults.json`
+    removido (achado durante dogfooding desta sessão); `SERVER_INFO.version` estava travado em `0.4.0`
+    desde o 0.4.0, sem acompanhar os bumps do CHANGELOG — ambos corrigidos/sincronizados em `0.8.2`.
+  - `config/protocolo-mecanismo.md` conferido contra D109/D114 — já usa a linguagem "manifesto + acervo"
+    corretamente; nenhuma mudança necessária ali.
+
 ## 0.8.1 — 2026-08-17
 - **Passe de agnosticismo (produto ≠ matriz do MVP).** Remove vazamento do contexto de
   dogfooding do código e das docs normativas, mantendo só a **proveniência** (author
