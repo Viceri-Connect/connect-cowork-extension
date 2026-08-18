@@ -4,23 +4,24 @@
 // Zero dependencias externas (Node embarcado, sem npm install).
 //
 // Superficie (decisao 2026-08-14 — sem entidade "cliente"):
-//   - iniciar_sessao   : bootstrap da sessao (scaffold + matriz + identidade + L1)
-//   - resolver         : entrega um sub-vault por CONCEITO (registro declarativo)
-//   - mount_junction   : primitivo de mount (base do resolver)
-//   - unmount_junction : remove um atalho
-//   - list_mounts      : auditoria dos atalhos do workspace
+//   - iniciar_sessao           : bootstrap da sessao (scaffold + matriz + identidade + L1)
+//   - resolver                 : casa um CONCEITO no registro derivado; nunca guarda path
+//   - registrar_subvault_local : grava o path LOCAL de um conceito (por-maquina, D35)
+//   - mount_junction           : primitivo de mount (base do resolver)
+//   - unmount_junction         : remove um atalho
+//   - list_mounts              : auditoria dos atalhos do workspace
 //
 // IMPORTANTE: stdout e reservado para o protocolo. Todo log vai para stderr.
 
 import readline from 'node:readline';
 import { mount, unmount, listMounts } from '../lib/mount.mjs';
-import { iniciarSessao, gravarConfig, estadoSessao } from '../lib/session.mjs';
+import { iniciarSessao, gravarConfig, estadoSessao, registrarSubVaultLocal } from '../lib/session.mjs';
 import { resolver } from '../lib/resolver.mjs';
 import { renderContexto } from '../lib/render.mjs';
 
 const log = (...a) => process.stderr.write(`[connect-mcp] ${a.join(' ')}\n`);
 
-const SERVER_INFO = { name: 'connect', version: '0.10.1' };
+const SERVER_INFO = { name: 'connect', version: '0.11.0' };
 let protocolVersion = '2025-06-18';
 
 const TOOLS = [
@@ -72,12 +73,15 @@ const TOOLS = [
   {
     name: 'resolver',
     description:
-      'Resolve um CONCEITO num sub-vault e o monta como atalho flat no workspace da sessao. ' +
-      'O registro NAO e mais autorado (sub-vaults.json removido): e DERIVADO em runtime varrendo ' +
-      'os manifestos (frontmatter `tipo`+`fonte`) do cerebro pessoal e da matriz (contrato em ' +
-      'config/contrato-manifesto.md), casando o conceito por slug ou gatilho (`tags`). Use quando a ' +
-      'sessao precisar atuar num contexto especifico (ex.: uma tribo, um cliente, um sub-vault). ' +
-      'Retorna status, alias, caminho relativo e a camada 1 do sub-vault.',
+      'Resolve um CONCEITO numa entidade do registro derivado (varredura de manifestos — ' +
+      'frontmatter `tipo` do cerebro pessoal e da matriz; contrato em config/contrato-manifesto.md). ' +
+      'O manifesto NUNCA guarda path/url (D35) — so declara `externo` (tem acervo fora da matriz?) e ' +
+      '`criado-por`/`criado-em` (ja foi materializado?); o proprio `conceito` (chave de casamento) ' +
+      'tambem indexa o path local. O path fica so em connect.config.json (subVaults). Nunca pergunta ' +
+      'nada nem advinha path — devolve `status` pra ' +
+      'skill decidir: sem-acervo-externo, pendente-criacao (aciona fabrica), local-nao-configurado ' +
+      '(pergunte o diretorio e grave com registrar_subvault_local), origem-ausente, ou resolvido ' +
+      '(monta e devolve `entrada` pra pousar na nota certa).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -87,6 +91,23 @@ const TOOLS = [
         replace: { type: 'boolean', description: 'Se true, substitui um alias existente que aponte para outro destino.', default: false },
       },
       required: ['conceito', 'workspace_dir'],
+    },
+  },
+  {
+    name: 'registrar_subvault_local',
+    description:
+      'Grava, em connect.config.json (subVaults), o diretorio LOCAL (nesta maquina) onde um ' +
+      '`conceito` mora. Nunca vai pro vault — e por-operador, por-maquina (D35). Use depois que o ' +
+      '`resolver` devolver "local-nao-configurado" (pergunte o caminho ao operador antes de chamar) ' +
+      'ou quando uma fabrica acabou de materializar um sub-vault e ja sabe o path.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        conceito: { type: 'string', description: 'Conceito devolvido pelo resolver (ver status local-nao-configurado).' },
+        caminho: { type: 'string', description: 'Diretorio absoluto, nesta maquina, onde o acervo mora.' },
+        home: { type: 'string', description: 'Pasta fixa do Connect. Opcional; default por SO.' },
+      },
+      required: ['conceito', 'caminho'],
     },
   },
   {
@@ -156,6 +177,8 @@ function handleToolCall(id, params) {
         const r = resolver({ conceito: args.conceito, workspaceDir: args.workspace_dir, alias: args.alias, replace: !!args.replace });
         return ok(id, { content: [{ type: 'text', text: JSON.stringify(r, null, 2) }], structuredContent: r });
       }
+      case 'registrar_subvault_local':
+        return ok(id, toolText(registrarSubVaultLocal({ conceito: args.conceito, caminho: args.caminho, home: args.home })));
       case 'configurar':
         return ok(id, toolText(gravarConfig({ vaultMatriz: args.vault_matriz, cerebroPessoal: args.cerebro_pessoal, home: args.home })));
       case 'mount_junction':

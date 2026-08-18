@@ -15,6 +15,38 @@ especifica de um projeto/produto/decisao — nunca por precaucao (ADR-6).
 - **Camada 2** — comportamento: ao nomear um projeto/produto/decisao, descer direto na nota-fonte; resolver o sub-vault sob demanda (`resolver`), montando manifesto + acervo so no toque.
 - **Camada 3** — artefato de entrega da task + backlog do projeto. So dentro da task.
 
+## Camada 2 em detalhe — resolve-on-touch (disciplina obrigatoria)
+
+Regra permanente da sessao inteira, nao um fluxo de uma execucao so. Aplica-se a TODA nota
+aberta, esteja ela na matriz ou dentro de um sub-vault ja montado — recursivo, sem limite de
+profundidade (grafo, D102, nao arvore).
+
+1. **Tarefa nomeia um conceito** (projeto, cliente, area, tribo — termo literal do operador).
+   Primeiro passo, sempre: chamar `resolver(conceito)`. **Nunca** grep, varredura de pastas ou
+   adivinhacao como primeira tentativa — so como jamais. `resolver` casa por conceito exato,
+   por gatilho (tag) ou substring; um termo comum (ex.: nome de um projeto que vive dentro de
+   uma tribo) pode casar via tag da entidade-mae, sem precisar nomear a tribo.
+2. **Toda nota aberta** (matriz ou sub-vault) que tiver `tipo` no frontmatter e um agente for
+   seguir referencia dela: checar `externo`. Se `externo:true` e o sub-vault correspondente
+   ainda nao estiver montado nesta sessao, `resolver` antes de seguir — nunca ler alem da
+   fronteira sem resolver primeiro.
+3. **Status devolvido pelo `resolver` dita a acao — nunca contorno:**
+   - `sem-acervo-externo` — conteudo mora na propria matriz; seguir lendo normal.
+   - `pendente-criacao` — entidade existe, acervo nao. Oferecer a `cnct-fabrica-<tipo>` ao
+     operador; nunca criar nada sozinho.
+   - `local-nao-configurado` — esta maquina nunca resolveu esse `conceito`. Perguntar ao
+     operador o diretorio local, gravar com `registrar_subvault_local`, repetir o `resolver`.
+   - `origem-ausente` — path conhecido mas nao existe/nao sincronizado. Avisar; nunca tentar
+     outro caminho por adivinhacao.
+   - `resolvido` — pedir acesso ao Cowork ao diretorio de origem, montar, e se houver
+     `entrada`, pousar direto nessa nota (nunca tatear o diretorio procurando por onde comecar).
+4. **Uma vez resolvido, o alias e conhecido pro resto da sessao.** Nao chamar `resolver` de
+   novo pro mesmo `conceito`; navegacao dentro dele e path relativo normal
+   (`./alias/estrutura/arquivo.md`), igual a navegacao dentro da matriz.
+5. **Nenhum manifesto guarda path/url** (D35) — se um bloqueio parecer exigir adivinhar um
+   diretorio, o bloqueio e sinal de configuracao local faltante (`local-nao-configurado`),
+   nunca motivo para grep.
+
 ## Regra de escrita
 
 - Todo arquivo escrito ou atualizado no vault ganha `[[wikilinks]]` para os arquivos mencionados.

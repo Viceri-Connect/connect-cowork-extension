@@ -11,7 +11,7 @@ description: >
   via a tool configurar. É o FALLBACK do hook de SessionStart quando ele não dispara
   no Cowork — o mecanismo é o mesmo, só muda o gatilho.
 metadata:
-  version: "0.5.0"
+  version: "0.6.0"
   program: "Impulsa / Viceri"
 ---
 
@@ -59,20 +59,38 @@ Chamar a tool `iniciar_sessao` (com o `session_id`, se conhecido). Ela devolve o
 bloco "Connect — sessão iniciada" (identidade + `./matriz` + camada 1). Usar esse
 bloco como contexto ativo; referenciar tudo por caminho relativo (ex.: `./matriz/_cerebro/...`).
 
-**Passo 4 — Aprofundar sob demanda.**
+**Passo 4 — Aprofundar sob demanda (resolve-on-touch, disciplina fixa).**
 Seguir os **ponteiros lazy** da camada 1 (modelo-roteamento, convenção de skills,
-projetos, organização) conforme a necessidade. Quando a sessão precisar atuar num
-**sub-vault tipado** (um conceito/entidade com casa própria — um projeto, uma tribo,
-"minha gestão"), o modelo canônico é **grafo de manifestos** (D102): cada entidade é
-**manifesto** (frontmatter da própria nota, na matriz) + **acervo** (na fonte). O
-casamento conceito→origem acontece **na skill** (varredura de manifestos), e o índice
-de sub-vaults é **derivado** dos manifestos, nunca autorado (P60/D35); o MCP entrega só
-o **primitivo de mount** (`mount_junction`). Desmontar: `unmount_junction`.
+projetos, organização) conforme a necessidade. Ao nomear ou tocar num **sub-vault
+tipado** (um conceito/entidade com casa própria — um projeto, uma tribo, "minha
+gestão"), ou ao abrir qualquer nota que declare `tipo`+`externo:true` no frontmatter:
 
-> ✅ **Estado do código (resolver v0.7.0):** a tool `resolver` **deriva o índice dos
-> manifestos** em runtime (varre `tipo` + `fonte` no frontmatter, casa por conceito/tags,
-> resolve a `fonte` via `onedrive-rel` da matriz). Registro autorado `sub-vaults.json`
-> **removido** (contrato-manifesto §3). P61 fechada.
+1. Chamar `resolver(conceito)` **antes** de seguir qualquer referência pra dentro dela.
+   Nunca grep, nunca varredura de pastas, nunca adivinhação — nem como contorno.
+2. Tratar o `status` devolvido (nunca contornar):
+   - `sem-acervo-externo` → conteúdo mora na própria matriz, seguir lendo normal.
+   - `pendente-criacao` → entidade existe, acervo não. Oferecer a `cnct-fabrica-<tipo>`
+     ao operador — nunca criar nada sozinho.
+   - `local-nao-configurado` → esta máquina nunca resolveu esse `conceito`. Perguntar o
+     diretório ao operador, gravar com `registrar_subvault_local`, repetir.
+   - `origem-ausente` → path conhecido mas não existe/não sincronizado. Avisar.
+   - `resolvido` → pedir acesso ao Cowork, montar, e se houver `entrada`, pousar direto
+     nela.
+3. Uma vez resolvido, o alias vale pro resto da sessão — não repetir `resolver` pro
+   mesmo `conceito`; navegação dentro dele é path relativo normal.
+
+O modelo canônico é **grafo de manifestos** (D102): cada entidade é **manifesto**
+(frontmatter puro — nunca path/url, D35) + **acervo** (no diretório que cada operador
+informa). O casamento conceito→entrada acontece **no `resolver`**, e o índice é
+**derivado** dos manifestos, nunca autorado (P60/D35); o path local vive só em
+`connect.config.json` (`subVaults`), nunca no vault.
+
+> ✅ **Estado do código (resolver v0.11.0):** o manifesto não guarda mais `fonte`/`url`
+> em nenhum formato — só `externo`, `criado-por`/`criado-em`, `entrada` (e o `conceito`
+> já existente, reaproveitado como chave local). O
+> `resolver` nunca advinha nem pergunta; devolve `status` pra esta skill decidir. Registro
+> autorado `sub-vaults.json` continua **removido** (contrato-manifesto §3). Corte de raiz
+> sobre o P69: não existe mais path pra formatar errado no coletivo.
 
 ## Regras
 

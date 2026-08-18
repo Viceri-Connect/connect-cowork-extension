@@ -1,5 +1,8 @@
 {
-  "$comment": "Copie para {CONNECT_HOME}/connect.config.json OU configure via env (CONNECT_HOME, CONNECT_VAULT_MATRIZ, CONNECT_CEREBRO_PESSOAL). Env vence o arquivo. Caminhos sao locais desta maquina — nunca versionar o connect.config.json real. Valores abaixo sao exemplos genericos; troque pelos caminhos da SUA matriz e (opcional) vault pessoal.",
+  "$comment": "Copie para {CONNECT_HOME}/connect.config.json OU configure via env (CONNECT_HOME, CONNECT_VAULT_MATRIZ, CONNECT_CEREBRO_PESSOAL). Env vence o arquivo. Caminhos sao locais desta maquina — nunca versionar o connect.config.json real. Valores abaixo sao exemplos genericos; troque pelos caminhos da SUA matriz e (opcional) vault pessoal. `subVaults` e a tabela LOCAL de onde cada sub-vault (por `conceito` — o mesmo campo que o manifesto usa pra casar, default: slug do arquivo) mora nesta maquina — nunca vem do vault (D35); e gravada pelo handshake guiado ou por uma fabrica, via a tool registrar_subvault_local.",
   "vaultMatriz": "C:\\Users\\SEU_USUARIO\\Sua Empresa\\sua-matriz",
-  "cerebroPessoal": "C:\\Users\\SEU_USUARIO\\seu-vault-pessoal-opcional"
+  "cerebroPessoal": "C:\\Users\\SEU_USUARIO\\seu-vault-pessoal-opcional",
+  "subVaults": {
+    "tribo-a": "C:\\Users\\SEU_USUARIO\\Sua Empresa\\sub-vault-tribo-a"
+  }
 }

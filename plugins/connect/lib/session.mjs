@@ -65,6 +65,13 @@ export function resolveConfig(override = {}) {
     homeOrigem,
     vaultMatriz: override.vaultMatriz || clean(process.env.CONNECT_VAULT_MATRIZ) || clean(fileCfg.vaultMatriz),
     cerebroPessoal: override.cerebroPessoal || clean(process.env.CONNECT_CEREBRO_PESSOAL) || clean(fileCfg.cerebroPessoal),
+    // subVaults: { conceito: caminhoAbsoluto } — tabela LOCAL, por-maquina, de onde
+    // cada sub-vault mora nesta maquina (D35). Chave e o `conceito` do manifesto
+    // (mesmo campo usado pra casar — nunca inventamos um `escopo` novo, esse nome
+    // ja e usado em toda a matriz pra governanca/cliente, achado no dogfooding).
+    // Nunca vem do vault, so daqui. override vence arquivo (mesma precedencia dos
+    // demais campos).
+    subVaults: { ...(fileCfg.subVaults || {}), ...(override.subVaults || {}) },
     _configPath: fs.existsSync(cfgPath) ? cfgPath : null,
   };
 }
@@ -212,6 +219,38 @@ export function gravarConfig({ home, vaultMatriz, cerebroPessoal } = {}) {
   // grava UTF-8 sem BOM
   fs.writeFileSync(cfgPath, JSON.stringify(atual, null, 2) + '\n', 'utf8');
   return { configPath: cfgPath, gravados, invalidos, config: atual };
+}
+
+// ---------------------------------------------------------------------------
+// registrarSubVaultLocal — grava o path LOCAL (nesta maquina) de UM conceito na
+// tabela `subVaults` do connect.config.json. Nunca grava path/url no vault —
+// so aqui, por operador, por maquina (D35). Duas origens legitimas de chamada:
+//   1. handshake guiado — a skill perguntou ao operador onde o sub-vault mora
+//      e grava a resposta (resolver devolveu 'local-nao-configurado');
+//   2. fabrica — ao materializar um sub-vault do zero, ja sabe o path que
+//      acabou de criar e se auto-registra (nunca precisa perguntar de novo).
+// ---------------------------------------------------------------------------
+export function registrarSubVaultLocal({ home, conceito, caminho } = {}) {
+  if (!conceito) return { status: 'erro', motivo: 'conceito ausente' };
+
+  const p = caminho ? path.resolve(caminho) : null;
+  if (!p || !fs.existsSync(p) || !fs.statSync(p).isDirectory()) {
+    return { status: 'invalido', conceito, caminho, motivo: 'path nao existe ou nao e diretorio (se for OneDrive, sincronize "manter neste dispositivo")' };
+  }
+
+  const base = clean(home) || clean(process.env.CONNECT_HOME) || defaultConnectHome();
+  ensureDir(base);
+  const cfgPath = path.join(base, 'connect.config.json');
+
+  let atual = {};
+  try {
+    if (fs.existsSync(cfgPath)) atual = JSON.parse(fs.readFileSync(cfgPath, 'utf8').replace(/^﻿/, ''));
+  } catch { /* config corrompida e sobrescrita a partir daqui */ }
+
+  atual.subVaults = { ...(atual.subVaults || {}), [conceito]: p };
+
+  fs.writeFileSync(cfgPath, JSON.stringify(atual, null, 2) + '\n', 'utf8');
+  return { status: 'gravado', configPath: cfgPath, conceito, caminho: p };
 }
 
 // ---------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 {
   "name": "connect",
-  "version": "0.10.1",
-  "description": "Connect (Impulsa/Viceri): no inicio da sessao restaura a identidade do operador, monta a matriz como atalho flat no workspace e carrega o contexto lazy da camada 1. Expoe um MCP para iniciar a sessao e resolver conceitos em sub-vaults sob demanda (registro derivado da varredura de manifestos, sem sub-vaults.json). Governanca que desce da matriz para os sub-vaults.",
+  "version": "0.11.0",
+  "description": "Connect (Impulsa/Viceri): no inicio da sessao restaura a identidade do operador, monta a matriz como atalho flat no workspace e carrega o contexto lazy da camada 1. Expoe um MCP para iniciar a sessao e resolver conceitos em sub-vaults sob demanda (registro derivado da varredura de manifestos, sem sub-vaults.json, sem path/url no coletivo — path e sempre local por operador). Governanca que desce da matriz para os sub-vaults.",
   "author": {
     "name": "Impulsa / Viceri"
   },

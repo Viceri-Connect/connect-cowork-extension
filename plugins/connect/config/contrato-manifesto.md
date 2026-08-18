@@ -6,7 +6,7 @@
 > (quais entidades existem e o que preenchem). O produto não prescreve os eixos de conteúdo
 > nem a unidade do vault-filho (D98).
 >
-> Versão 0.1.0 · 2026-08-17 · Impulsa / Viceri
+> Versão 0.2.0 · 2026-08-17 · Impulsa / Viceri
 
 ---
 
@@ -17,34 +17,53 @@ operador — existe como duas partes, e o **corte de camada** decide onde cada u
 
 | Parte | O que é | Onde mora | Natureza |
 |---|---|---|---|
-| **Manifesto** | Leve. Declara que a entidade **existe**, quem a governa e onde está a fonte | **Frontmatter da própria nota** da entidade, na matriz | **mecanismo** |
-| **Acervo** | Pesado. O conhecimento em si | Na **fonte** da entidade (o SharePoint/OneDrive dela) | **conteúdo da empresa** |
+| **Manifesto** | Leve. Declara que a entidade **existe** e quem a governa — nunca *onde* no disco | **Frontmatter da própria nota** da entidade, no lugar natural do organograma (matriz) | **mecanismo** |
+| **Acervo** | Pesado. O conhecimento em si | No diretório local que **cada operador** informa (nunca no vault) | **conteúdo da empresa** |
 
 O manifesto mora no frontmatter e **não** em registro separado: registro paralelo cria um
 segundo lugar onde a entidade existe — a duplicação que o [[modelo-roteamento]] proíbe na
 primeira linha e que D35 condena como cache que apodrece.
 
+**Path é sempre por-operador, por-máquina — nunca conteúdo coletivo (D35, corte de raiz
+17/08).** O manifesto **não declara URL nem path, nem relativo.** Ele só declara o *fato* de
+que existe acervo fora da matriz (`externo`) — a chave pra achá-lo nesta máquina é o próprio
+`conceito` (campo que já existia, usado pra casar; não inventamos um `escopo` novo porque esse
+nome já é usado em toda a matriz pra governança/cliente, achado no dogfooding 17/08). O *onde*
+fica inteiramente em `connect.config.json` (`subVaults`), resolvido por cada operador, na
+própria máquina, nunca sincronizado. Isso elimina de raiz o problema de formato/âncora que o
+campo `onedrive-rel` carregava (P69): não existe mais path nenhum pra formatar errado no
+coletivo.
+
 **Permissionamento é herdado da fonte, nunca implementado pelo Connect.** Sem acesso à fonte,
 o mount falha — e a falha é resposta legítima (*"a entidade existe, você não alcança, procure
 quem governa"*), não erro. É o que o produto promete: tornar a ausência visível.
+
+**Nada nasce coletivo sozinho.** Uma entidade só existe no registro derivado quando um
+operador **declarou** que ela existe — na sessão em que a concebeu (fábrica) ou na sessão em
+que estruturou a organização. O agente nunca cria um manifesto por inferência.
 
 ---
 
 ## 2. Schema do manifesto (frontmatter)
 
-Campos que todo manifesto declara. `escopo`, `status`, `tags` seguem como já existem.
+Campos que todo manifesto declara. Frontmatter **puro** — nenhum path, nenhuma URL, nem
+relativa (corte de raiz 17/08, resposta à P69).
 
 | Campo | Obrigatório | Semântica | Fonte |
 |---|---|---|---|
 | `tipo` | **sim** | O que a entidade **é** (`organizacao`, `programa`, `squad`, `cliente`, `produto`, `operador`, …). A empresa declara; o produto não prescreve o conjunto | D98 |
 | `papel` | **sim** | Como a entidade **opera** / o que ela hospeda (ex.: `tribo`, `cliente-externo`). Distinto de `tipo`: uma entidade pode ser `tipo: programa` e, ao mesmo tempo, `papel: tribo` | D99.4 |
 | `governanca` | **sim** | Quem governa a entidade. É o que transforma a falha de mount de beco sem saída em ação; sem ele, D97 promete transparência e entrega erro | D99.3 |
-| `fonte` | **sim (lista)** | Os N acervos da entidade — um por tribo/SharePoint que a atende. Cada item: `{ escopo, url }`. A sessão monta o que o operador alcança | D99.2 |
+| `conceito` / `alias` | não (default: slug do arquivo) | Chave **estável** de casamento — já existia no contrato anterior. Reaproveitada: também indexa a tabela local `subVaults` (por-operador, por-máquina). Declare quando o slug do arquivo não for estável o bastante | corte 17/08 |
+| `externo` | não (default `false`) | Booleano: esta entidade tem acervo **fora** da matriz? `false`/omitido = conteúdo mora inline na própria matriz, nada a montar | corte 17/08 |
+| `criado-por` / `criado-em` | não | Quem e quando **declarou que o acervo já foi materializado**. Ausência dos dois = a entidade foi concebida mas o acervo ainda não nasceu (`pendente-criacao`) — nunca inferido, sempre um operador que preenche | corte 17/08 |
+| `entrada` | não | Nome da nota-hub **dentro do acervo** — só faz sentido com `externo:true`. É onde o mecanismo pousa assim que monta, sem tatear diretório | corte 17/08 |
 | `depende-de` | quando houver relação | Arestas do **grafo** (D102): relação declarada para outros vaults. Cada item: `{ alvo, relacao }`. **Bidirecional explícito** — os dois lados declaram a aresta (ver §4) | D102 |
 
-> `fonte` é **lista, não escalar**: uma entidade tem N acervos (D99.2). `fonte: [{escopo, url}]`
-> descreve os acervos da *mesma* entidade; multi-cliente é grafo de entidades distintas (§4),
-> não `fonte[]`.
+> **Onde foi `fonte`/`url`:** removido inteiro. Path é sempre por-operador, por-máquina —
+> nunca frontmatter de entidade (§1). `conceito` é a única chave que o coletivo declara; o
+> `resolver` casa essa chave contra `connect.config.json.subVaults` **nesta máquina**, nunca
+> contra nada escrito no vault.
 
 ---
 
@@ -63,7 +82,13 @@ Campos que todo manifesto declara. `escopo`, `status`, `tags` seguem como já ex
 - **Wikilink cross-acervo é ponteiro tipado resolve-on-touch** (D103): link para conteúdo num
   acervo ainda não montado **não é link morto** — carrega o conceito; navegá-lo dispara o
   `resolver` → mount → resolve. Dentro da matriz o link nunca quebra (todos os manifestos
-  moram lá, sempre montada), custo zero.
+  moram lá, sempre montada), custo zero. O diferenciador **não é sintaxe especial de
+  wikilink** — é o próprio manifesto: qualquer nota com `tipo`+`externo:true` é fronteira,
+  independente de onde no organograma ela morar (área, tribo, cliente, squad — o produto não
+  restringe a árvore, D98).
+- **Path nunca é conteúdo coletivo** (D35): nenhum manifesto guarda diretório nem URL, relativa
+  ou absoluta. O `resolver` nunca advinha nem pergunta por si só — devolve `status` pra a skill
+  decidir (perguntar ao operador, acionar fábrica, avisar ausência). Ver `lib/resolver.mjs`.
 
 ---
 
@@ -90,37 +115,53 @@ norma de simulação exige e onde uma árvore estrita quebraria.
 Cada exigência deste contrato tem uma verificação correspondente (par exigência→resposta→
 verificação, D29/D30/D99):
 
-1. Todo manifesto tem `tipo`, `papel`, `governanca`, `fonte` (≥1 item).
+1. Todo manifesto tem `tipo`, `papel`, `governanca`.
 2. Nenhum `_cerebro/sub-vaults.json` (ou índice autorado equivalente) existe no vault.
-3. Manifesto com `tipo: cliente` mora em `clientes/`, fora da árvore organizacional.
-4. **Consistência bidirecional do grafo:** para cada aresta `A → B`, existe a inversa
+3. Nenhum manifesto declara path/URL (frontmatter ou corpo) — `conceito`/`alias` são as
+   únicas chaves, e nenhuma delas é path.
+4. Manifesto com `tipo: cliente` mora em `clientes/`, fora da árvore organizacional.
+5. **Consistência bidirecional do grafo:** para cada aresta `A → B`, existe a inversa
    `B → A` com relação coerente. Aresta órfã (declarada de um lado só) é issue.
+6. `externo:true` sem `criado-por`/`criado-em` é estado válido (`pendente-criacao`), não é
+   issue por si só — mas vale sinalizar se ficar pendente por muito tempo (ver
+   `status-desatualizado-dias` do vault-audit).
 
 ---
 
 ## 6. Exemplos
 
 ```yaml
-# organizacao/tribos/tribo-a/tribo-a.md  — tribo (exemplo genérico)
+# organizacao/tribos/tribo-a/tribo-a.md  — tribo (exemplo genérico), acervo já materializado
 tipo: programa
 papel: tribo
 governanca: <responsável pela tribo>
-fonte:
-  - escopo: tribo-a
-    url: <acervo da tribo>       # OneDrive/SharePoint; null enquanto não formalizado
+externo: true
+criado-por: <quem materializou>
+criado-em: 2026-08-17
+entrada: hub-tribo-a          # nota-hub dentro do acervo — pousa direto nela
 depende-de:
   - alvo: cliente/cliente-a
     relacao: atende
+# conceito omitido: default = slug do arquivo ("tribo-a") — declare so se o slug
+# nao for estavel o bastante pra indexar subVaults
 ```
 
 ```yaml
-# clientes/cliente-a.md  — cliente, lar fora da árvore; acervo em vault separado
+# organizacao/areas/area-b/area-b.md  — área SEM acervo próprio (conteúdo inline na matriz)
+tipo: organizacao-area
+papel: area
+governanca: <responsável pela área>
+# externo omitido = false: esta área não tem sub-vault, o conteúdo mora aqui mesmo
+```
+
+```yaml
+# clientes/cliente-c.md  — entidade declarada, acervo AINDA NÃO materializado
 tipo: cliente
 papel: cliente-externo
 governanca: <responsável pelo cliente>
-fonte:
-  - escopo: cliente-a
-    url: <acervo do cliente>      # vault próprio do cliente (permissão herdada da fonte)
+externo: true
+# sem criado-por/criado-em: resolver devolve 'pendente-criacao' — aciona a fábrica,
+# nunca cria sozinho. O path local só entra na tabela subVaults DEPOIS de existir.
 depende-de:
   - alvo: tribo/tribo-a
     relacao: atendido-por

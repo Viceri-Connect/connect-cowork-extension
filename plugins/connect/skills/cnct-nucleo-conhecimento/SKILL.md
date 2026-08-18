@@ -9,7 +9,7 @@ description: >
   and for starting a session (iniciar_sessao) or mounting on demand via the
   connect MCP server.
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
   program: "Impulsa / Viceri"
 ---
 
@@ -47,23 +47,41 @@ como um novo atalho no workspace. Modelo canônico (D102): cada entidade é **ma
 (frontmatter da própria nota, na matriz) + **acervo** (na fonte da entidade); o grafo de
 dependências entre vaults é declarado nos manifestos, não numa árvore rígida.
 
-- **Casamento conceito→origem acontece na skill**, não no servidor MCP (D93/P61): a
-  skill varre os manifestos, encontra a entidade e resolve a origem.
+- **Casamento conceito→entidade acontece no `resolver`** (MCP), mas **quem decide o que
+  fazer com o `status`** é a skill (D93/P61) — o `resolver` nunca pergunta nada nem
+  advinha path, só devolve o fato.
 - **Índice derivado**, nunca autorado (P60/D35): enumerar entidades é varredura de
   manifestos; registro paralelo às notas está proibido (D97).
-- **O MCP entrega só o primitivo de mount** (`mount_junction` por caminho); `resolver` é
-  a interface de alto nível. Desmontar: `unmount_junction`. Auditar: `list_mounts`.
+- **Path é sempre por-operador, por-máquina** (D35): nenhum manifesto declara diretório
+  ou URL. O `resolver` casa a entidade (por `conceito`) e devolve `status`; o path local
+  mora só em `connect.config.json` (`subVaults`, indexado por `conceito`), gravado por
+  `registrar_subvault_local`.
+- **O MCP entrega o primitivo de mount** (`mount_junction` por caminho) e o primitivo de
+  registro local (`registrar_subvault_local`); `resolver` é a interface de alto nível que
+  os combina. Desmontar: `unmount_junction`. Auditar: `list_mounts`.
 
-> ✅ **Estado do código (resolver v0.7.0):** o `resolver` **deriva o índice dos manifestos**
-> em runtime — varre o frontmatter das notas que declaram `tipo` + `fonte`, casa o conceito
-> (nome/slug ou `tags` como gatilhos) e resolve a `fonte` (relativa ao OneDrive) para caminho
-> absoluto usando a matriz como âncora (`onedrive-rel` do `vault-config`). O registro autorado
-> `sub-vaults.json` foi **removido** (proibido pelo contrato-manifesto §3). P61 fechada.
-> Contrato: `config/contrato-manifesto.md`.
+## Resolve-on-touch — regra permanente, não fluxo de uma vez
+
+Vale pra **toda nota aberta**, na matriz ou já dentro de um sub-vault montado, em
+**qualquer** ponto da sessão — recursivo, sem limite de profundidade (grafo, D102, não
+árvore de profundidade 1). Nota com `tipo`+`externo:true` no frontmatter é fronteira:
+resolver antes de seguir referência pra dentro dela. Uma vez resolvido nesta sessão, o
+alias é conhecido e estável — não repetir `resolver` pro mesmo `conceito`.
+
+> ✅ **Estado do código (resolver v0.11.0):** o manifesto não guarda mais `fonte`/`url` —
+> só `externo` (bool), `criado-por`/`criado-em` (já materializado?) e `entrada` (nota-hub);
+> o `conceito` já existente (default: slug do arquivo) é reaproveitado como chave local
+> (não inventamos `escopo` — já usado em toda a matriz pra governança/cliente). Status
+> possíveis: `nao-encontrado`, `sem-acervo-externo`,
+> `pendente-criacao`, `local-nao-configurado`, `origem-ausente`, `sem-workspace`,
+> `erro-mount`, `resolvido`. Registro autorado `sub-vaults.json` continua **removido**
+> (contrato-manifesto §3). Contrato: `config/contrato-manifesto.md`.
 
 ## Erros comuns
 
 - **"item real (não-junction)"**: já existe uma pasta de verdade com o nome do
   alias. Escolha outro alias — o Connect nunca sobrescreve dados reais.
+- **`local-nao-configurado`**: esta máquina nunca resolveu esse `conceito` — pergunte o
+  diretório ao operador e grave com `registrar_subvault_local` antes de tentar montar.
 - **Origem não encontrada**: em projeto nuvem, o caminho da origem difere do
   caminho Windows; ajuste a origem para o caminho correspondente.

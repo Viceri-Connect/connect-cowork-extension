@@ -1,5 +1,46 @@
 # Changelog — connect
 
+## 0.11.0 — 2026-08-17
+- **Corte de raiz sobre o P69 (2ª rodada de dogfooding, mesma sessão): manifesto nunca mais
+  guarda path/url — nem relativo.** O fix da 0.10.2 (varrer o corpo inteiro por
+  `onedrive-rel`) tratava o sintoma; o operador cortou a causa: path é sempre por-operador,
+  por-máquina (D35), nunca conteúdo coletivo. Frontmatter agora é puro:
+  - `fonte`/`url` **removidos inteiros** do contrato de manifesto. Campos novos: `escopo`
+    (chave estável, nunca inferida do nome do arquivo), `externo` (bool — tem acervo fora da
+    matriz?), `criado-por`/`criado-em` (já foi materializado, ou é só intenção declarada?),
+    `entrada` (nota-hub dentro do acervo, pra pousar direto sem tatear).
+  - `lib/resolver.mjs` reescrito: `onedriveRoot()`/`resolverFonte()` removidos por completo
+    (zero aritmética de path). Path local mora só em `connect.config.json` (`subVaults:
+    {escopo: caminho}`), nova tabela em `lib/session.mjs` (`resolveConfig`) + primitivo
+    novo `registrarSubVaultLocal()`.
+  - Status novos do `resolver`: `sem-acervo-externo` (entidade sem `externo:true` — conteúdo
+    inline na matriz), `pendente-criacao` (declarada, acervo ainda não nasceu — aciona
+    fábrica), `local-nao-configurado` (escopo sem path nesta máquina — pergunta ao operador).
+    `resolvido` agora devolve `entrada` pra pousar na nota certa sem tatear diretório.
+  - Novo MCP tool `registrar_subvault_local` — grava o path local de um escopo; nunca no
+    vault.
+  - `config/protocolo-mecanismo.md` ganhou a seção "Camada 2 em detalhe — resolve-on-touch":
+    disciplina explícita (nunca grep como primeira tentativa, status dita a ação, alias
+    resolvido vale pro resto da sessão) — antes vivia só como entendimento implícito.
+  - `contrato-manifesto.md` (v0.2.0) e as skills `cnct-nucleo-sessao`/`cnct-nucleo-conhecimento`
+    realinhadas ao schema novo.
+  - Aresta `depende-de` área↔tribo (herança de processo) fica **fora de escopo desta rodada**
+    — deferida pelo operador.
+
+## 0.10.2 — 2026-08-17
+- **Bug real corrigido: `resolver()` não achava `onedrive-rel` em vault-config.md real.**
+  `onedriveRoot()` (`lib/resolver.mjs`) restringia a busca a `extrairFrontmatter()` (só o
+  bloco YAML entre os primeiros `---`), mas `onedrive-rel` mora no **corpo** do arquivo
+  (seção `## Sincronização`) em todo `vault-config.md` real (matriz e Tribo Impulsa) —
+  mesma convenção que `montarL1`/`parseKeyValues` (`matriz.mjs`) já respeitavam lendo o
+  arquivo inteiro. Sem o fix, `resolver()` falhava com `origem-nao-resolvida` para
+  **qualquer** sub-vault com fonte relativa — não era specific do Impulsa, era sistêmico.
+  - Fix: busca no conteúdo inteiro do arquivo, não só no frontmatter.
+  - Teste de regressão adicionado em `spike-resolver.mjs` (formato real, campo no corpo) —
+    suíte agora 20/20 (era 19/19).
+  - Achado e diagnosticado no dogfooding desta sessão (dia 17/08), tentando resolver a
+    Tribo Impulsa pela primeira vez.
+
 ## 0.10.1 — 2026-08-17
 - **Correção de território sobre a 0.10.0 (mesma sessão).** `cnct-fabrica-matriz` (skill +
   `templates/vault-config.template.md`) **removida** — misturava dois territórios distintos:

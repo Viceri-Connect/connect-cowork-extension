@@ -1,21 +1,28 @@
 // connect/lib/resolver.mjs
 // resolver(conceito) — entrega um SUB-VAULT por CONCEITO como atalho no workspace.
 //
-// Realinhado ao modelo de grafo de manifestos (D97/D102/P61): o registro NAO e
-// mais um arquivo autorado (`_cerebro/sub-vaults.json`, removido — reintroduzia a
-// duplicacao que D97 recusa). Ele e DERIVADO EM RUNTIME (P60) da varredura dos
-// manifestos — o frontmatter das notas que declaram uma entidade com `fonte`. Uma
-// sessao que precisa atuar num conceito (ex.: um cliente, uma tribo, um projeto)
-// chama `resolver(conceito)`; ele casa o conceito no registro derivado, resolve a
-// `fonte` (relativa ao OneDrive) para caminho absoluto usando a matriz como
-// ancora, monta a junction/symlink da origem e carrega a camada 1 do sub-vault.
+// Realinhado (17/08, 2a rodada — corte de raiz sobre P69): o manifesto NUNCA guarda
+// path/url de acervo, nem relativo. Path e por-maquina, por-operador (D35) — nunca
+// conteudo coletivo. O manifesto so declara FATOS coletivos:
+//   - `externo` (bool)   — esta entidade tem acervo fora da matriz? (default false)
+//   - `criado-por`/`criado-em` — alguem ja declarou que isso nasceu de verdade?
+//     (ausencia = intencao registrada, acervo ainda NAO existe — pendente-criacao)
+//   - `conceito`/`alias` — chave estavel (default: slug do arquivo), ja existia no
+//     contrato antigo como override de casamento — reaproveitada como chave da
+//     tabela local (nao inventamos um `escopo` novo: esse nome ja e usado em toda
+//     a matriz pra governanca/cliente e colidiria, achado no dogfooding 17/08)
+//   - `entrada`          — nome da nota-hub dentro do acervo (pra pousar direto)
 //
-// Contrato do manifesto: config/contrato-manifesto.md (plugin). Campos lidos aqui:
-// `tipo` (sinaliza que a nota e uma entidade), `fonte[].url` (acervo), `tags`
-// (gatilhos), `alias`/`conceito` (opcionais). Zero dependencias externas.
+// O path local (por operador, por maquina) mora SO em connect.config.json,
+// tabela `subVaults: { conceito: caminhoAbsoluto }` — nunca no vault. `resolver`
+// nunca pergunta nada sozinho (e MCP, burro por design); so devolve status pra
+// a skill decidir o proximo passo (perguntar ao operador, acionar fabrica, etc).
 //
-// Principios (SPEC): caminho relativo, mount != acesso, lazy antes de tudo,
-// governanca desce da matriz. Registro autorado = proibido (contrato §3).
+// Contrato do manifesto: config/contrato-manifesto.md (plugin). Zero dependencias
+// externas.
+//
+// Principios (SPEC): nunca path/url no coletivo, mount != acesso, lazy antes de
+// tudo, governanca desce da matriz. Registro autorado = proibido (contrato §3).
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -45,35 +52,18 @@ function extrairFrontmatter(text) {
 }
 
 const desaspar = (v) => v.replace(/\s+#.*$/, '').trim().replace(/^["'](.*)["']$/, '$1');
-const ehAbsoluto = (p) => /^([a-zA-Z]:[\\/]|\/|\\\\)/.test(p);
+const ehVerdadeiro = (v) => /^(true|sim|yes)$/i.test(String(v || '').trim());
 
-// Interpreta o frontmatter de um manifesto. Retorna null se nao for entidade
-// (sem `tipo`) ou se nao declarar `fonte`. Parser focado nos campos do contrato.
+// Interpreta o frontmatter PURO de um manifesto (D35: nunca path/url aqui).
+// Retorna null se a nota nao declarar `tipo` (nao e entidade).
 export function parseManifesto(fmText) {
   if (!fmText) return null;
-  const linhas = fmText.split(/\r?\n/);
   const top = {};
-  const fontes = [];
-  let emFonte = false;
-
-  for (const raw of linhas) {
-    // fim do bloco `fonte:` quando aparece uma chave de topo (sem indentacao)
-    if (emFonte && /^\S/.test(raw)) emFonte = false;
-
-    if (/^fonte\s*:/.test(raw)) { emFonte = true; continue; }
-
-    if (emFonte) {
-      const u = raw.match(/^\s*(?:-\s*)?url\s*:\s*(.+)$/);
-      if (u) { const v = desaspar(u[1]); if (v && v !== 'null') fontes.push(v); }
-      continue;
-    }
-
+  for (const raw of fmText.split(/\r?\n/)) {
     const kv = raw.match(/^([a-zA-Z0-9_.\-]+)\s*:\s*(.*)$/);
     if (kv && !(kv[1] in top)) top[kv[1]] = desaspar(kv[2]);
   }
-
-  if (!top.tipo) return null;
-  if (fontes.length === 0) return null;
+  if (!top.tipo) return null; // nao e manifesto de entidade
 
   const gatilhos = (top.tags || '')
     .replace(/^\[|\]$/g, '')
@@ -84,40 +74,22 @@ export function parseManifesto(fmText) {
   return {
     tipo: top.tipo,
     papel: top.papel || null,
+    externo: ehVerdadeiro(top.externo),
+    criadoPor: top['criado-por'] || null,
+    criadoEm: top['criado-em'] || null,
+    entrada: top.entrada || null,
     conceito: top.conceito || top.alias || null, // default (slug) resolvido no walk
     alias: top.alias || null,
-    fontes,
     gatilhos,
   };
 }
 
-// Deriva a raiz de sincronizacao (OneDrive) de um vault: seu vault-config declara
-// `onedrive-rel` (ex.: "Sua Empresa/Matriz"); a raiz e o path absoluto do vault
-// menos esse sufixo. Ancora estavel por-maquina (o path absoluto vem da config do
-// operador, D35) sem hardcodar path no vault.
-export function onedriveRoot(vaultAbs) {
-  const cfg = readHead(path.join(vaultAbs, '_cerebro', 'vault-config.md'), 8192);
-  const fm = extrairFrontmatter(cfg) || cfg || '';
-  const m = fm.match(/^\s*-?\s*onedrive-rel\s*:\s*(.+)$/m);
-  if (!m) return null;
-  const rel = desaspar(m[1]).replace(/[\\/]+/g, '/').replace(/\/+$/, '');
-  const absNorm = vaultAbs.replace(/[\\/]+/g, '/').replace(/\/+$/, '');
-  if (!rel || !absNorm.toLowerCase().endsWith(rel.toLowerCase())) return null;
-  return vaultAbs.slice(0, vaultAbs.length - rel.length).replace(/[\\/]+$/, '');
-}
-
-// Resolve a url declarada em `fonte` para caminho absoluto do acervo.
-function resolverFonte(url, rootAbs, odRoot) {
-  if (!url) return null;
-  if (ehAbsoluto(url)) return path.normalize(url);
-  if (odRoot) return path.normalize(path.join(odRoot, url));
-  return null; // relativa sem ancora — nao resolve; a skill avisa
-}
-
 // ---------------------------------------------------------------------------
-// lerRegistro — DERIVA os sub-vaults dos manifestos nas raizes informadas.
-// Ordem de precedencia: a primeira raiz vence em conceito repetido (pessoal
-// antes de matriz — o operador sobrepoe a governanca). Sem arquivo autorado.
+// lerRegistro — DERIVA as entidades dos manifestos nas raizes informadas.
+// Indexa QUALQUER nota com `tipo` (e manifesto, mesmo sem acervo externo) —
+// `externo` decide depois se ha algo a montar. Ordem de precedencia: a
+// primeira raiz vence em conceito repetido (pessoal antes de matriz — o
+// operador sobrepoe a governanca). Sem arquivo autorado (contrato §3).
 // ---------------------------------------------------------------------------
 export function lerRegistro(roots = []) {
   const out = [];
@@ -125,7 +97,6 @@ export function lerRegistro(roots = []) {
 
   for (const root of roots) {
     if (!root || !fs.existsSync(root)) continue;
-    const odRoot = onedriveRoot(root);
 
     for (const file of walkMd(root)) {
       const fm = extrairFrontmatter(readHead(file));
@@ -134,23 +105,22 @@ export function lerRegistro(roots = []) {
 
       const slug = path.basename(file, '.md').toLowerCase();
       const conceito = (man.conceito || slug).toLowerCase();
-      const k = conceito;
-      if (seen.has(k)) continue;
+      if (seen.has(conceito)) continue;
 
-      const origem = resolverFonte(man.fontes[0], root, odRoot);
       const gatilhos = Array.from(new Set([...man.gatilhos, slug].filter((g) => g && g !== conceito)));
 
-      seen.add(k);
+      seen.add(conceito);
       out.push({
         conceito,
-        origem,
+        externo: man.externo,
+        criado: !!(man.criadoPor && man.criadoEm),
+        entrada: man.entrada,
         alias: man.alias || conceito,
         gatilhos,
         tipo: man.tipo,
         papel: man.papel,
         nota: `${man.tipo}${man.papel ? '/' + man.papel : ''} — manifesto derivado`,
         _fonte: root,
-        _fonteUrl: man.fontes[0],
       });
     }
   }
@@ -178,26 +148,58 @@ function walkMd(root, maxDepth = 4) {
 
 // ---------------------------------------------------------------------------
 // casar — resolve um termo (conceito ou gatilho) para uma entrada do registro.
-// Ordem: conceito exato > gatilho exato > substring (conceito/gatilhos).
+// Ordem: conceito exato (qualquer entidade) > gatilho exato > substring —
+// as duas ultimas SO entre entidades com externo:true.
+//
+// Achado real testando contra o vault de producao (17/08): indexar QUALQUER
+// nota com `tipo` (pra sem-acervo-externo funcionar) tem um preco — tags
+// topicas genericas ("connect", "impulsa") aparecem em N documentos de
+// conteudo (metodologia, papeis, politicas) que nunca foram pensados como
+// alvo de mount. Sem essa restricao, `casar('connect')` colidia com 11
+// entidades e resolvia pra uma delas por ordem de travessia, nunca a tribo.
+// Fuzzy-match (gatilho/substring) so faz sentido entre quem TEM acervo pra
+// montar — e' literalmente o unico caso em que resolver tem o que fazer.
 // ---------------------------------------------------------------------------
 export function casar(registro, termo) {
   if (!termo) return null;
   const t = String(termo).toLowerCase().trim();
+
+  // conceito exato: qualquer entidade, mesmo sem acervo (precisa achar pra
+  // devolver 'sem-acervo-externo' quando alguem nomeia ela certinho).
   let hit = registro.find((e) => String(e.conceito).toLowerCase() === t);
   if (hit) return hit;
-  hit = registro.find((e) => e.gatilhos.some((g) => String(g).toLowerCase() === t));
+
+  // gatilho/substring: restrito a quem tem acervo — nunca deixar uma tag
+  // topica de doc de conteudo roubar o match de quem de fato monta algo.
+  const candidatas = registro.filter((e) => e.externo);
+  hit = candidatas.find((e) => e.gatilhos.some((g) => String(g).toLowerCase() === t));
   if (hit) return hit;
-  hit = registro.find((e) =>
+  hit = candidatas.find((e) =>
     String(e.conceito).toLowerCase().includes(t) ||
     e.gatilhos.some((g) => String(g).toLowerCase().includes(t)));
   return hit || null;
 }
 
 // ---------------------------------------------------------------------------
-// resolver — orquestra: config -> registro derivado -> casa -> monta -> L1.
-// Nunca lanca; devolve um relatorio com `status` para a skill decidir o proximo
-// passo. Status possiveis: 'resolvido' | 'nao-encontrado' | 'origem-ausente' |
-// 'origem-nao-resolvida' | 'sem-workspace' | 'erro-mount' | 'erro'.
+// resolver — orquestra: config -> registro derivado -> casa -> local -> monta -> L1.
+// Nunca lanca, nunca pergunta nada (MCP e burro por design — quem pergunta ao
+// operador e a skill, olhando o `status`). Nunca advinha path: so usa o que
+// a tabela local (`connect.config.json.subVaults`, indexada por `conceito`)
+// ja tiver.
+//
+// Status possiveis:
+//   'nao-encontrado'        — nenhum manifesto casa com o termo
+//   'sem-acervo-externo'    — entidade existe, mas `externo` != true (conteudo
+//                              mora na propria matriz; nada a montar)
+//   'pendente-criacao'      — `externo:true` mas sem criado-por/criado-em: a
+//                              entidade foi declarada, o acervo ainda nao nasceu
+//                              (aciona `cnct-fabrica-<tipo>`, nunca cria sozinho)
+//   'local-nao-configurado' — `conceito` ainda sem path nesta maquina (a skill
+//                              pergunta ao operador e grava com registrarSubVaultLocal)
+//   'origem-ausente'        — path local conhecido, mas o diretorio nao existe
+//   'sem-workspace'         — falta workspaceDir
+//   'erro-mount'            — falha ao criar a junction/symlink
+//   'resolvido'             — montado; usar `entrada` (se houver) pra pousar
 // ---------------------------------------------------------------------------
 export function resolver({ conceito, workspaceDir, alias, replace = false, ...override } = {}) {
   const cfg = resolveConfig(override);
@@ -212,20 +214,51 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, ...ov
   if (!entry) {
     return { status: 'nao-encontrado', conceito, disponiveis, avisos: [`nenhum manifesto casa com "${conceito}"`] };
   }
-  if (!entry.origem) {
-    return { status: 'origem-nao-resolvida', conceito: entry.conceito, fonteUrl: entry._fonteUrl, avisos: [`fonte "${entry._fonteUrl}" nao resolveu para caminho absoluto (falta ancora onedrive-rel no vault-config, ou url relativa sem raiz)`] };
+
+  if (!entry.externo) {
+    return {
+      status: 'sem-acervo-externo',
+      conceito: entry.conceito,
+      tipo: entry.tipo,
+      papel: entry.papel,
+      avisos: [`"${entry.conceito}" nao declara externo:true — o conteudo mora na propria matriz, nada a montar`],
+    };
   }
-  if (!fs.existsSync(entry.origem)) {
-    return { status: 'origem-ausente', conceito: entry.conceito, origem: entry.origem, avisos: [`origem nao existe: ${entry.origem} (se for OneDrive, sincronize "manter neste dispositivo"; sem acesso a fonte, procure quem governa — D97)`] };
+
+  if (!entry.criado) {
+    return {
+      status: 'pendente-criacao',
+      conceito: entry.conceito,
+      tipo: entry.tipo,
+      papel: entry.papel,
+      avisos: [`"${entry.conceito}" existe como manifesto mas ainda nao foi materializado (sem criado-por/criado-em) — ofereca a cnct-fabrica-${entry.tipo || '<tipo>'} ao operador, nunca crie sozinho`],
+    };
+  }
+
+  const caminhoLocal = cfg.subVaults?.[entry.conceito];
+  if (!caminhoLocal) {
+    return {
+      status: 'local-nao-configurado',
+      conceito: entry.conceito,
+      avisos: [`esta maquina ainda nao sabe onde "${entry.conceito}" mora localmente — pergunte ao operador o diretorio e grave com registrarSubVaultLocal({ conceito: "${entry.conceito}", caminho })`],
+    };
+  }
+  if (!fs.existsSync(caminhoLocal)) {
+    return {
+      status: 'origem-ausente',
+      conceito: entry.conceito,
+      origem: caminhoLocal,
+      avisos: [`origem nao existe: ${caminhoLocal} (se for OneDrive, sincronize "manter neste dispositivo"; sem acesso a fonte, procure quem governa — D97)`],
+    };
   }
   if (!workspaceDir) {
-    return { status: 'sem-workspace', conceito: entry.conceito, origem: entry.origem, avisos: ['workspaceDir ausente — informe o diretorio da sessao (estado_sessao.workspace)'] };
+    return { status: 'sem-workspace', conceito: entry.conceito, origem: caminhoLocal, avisos: ['workspaceDir ausente — informe o diretorio da sessao (estado_sessao.workspace)'] };
   }
 
   const aliasFinal = alias || entry.alias;
   let mountReport;
   try {
-    mountReport = mount({ workspaceDir, alias: aliasFinal, source: entry.origem, replace });
+    mountReport = mount({ workspaceDir, alias: aliasFinal, source: caminhoLocal, replace });
   } catch (e) {
     return { status: 'erro-mount', conceito: entry.conceito, alias: aliasFinal, avisos: [e.message] };
   }
@@ -233,8 +266,8 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, ...ov
   // Camada 1 do sub-vault (mesma forma da matriz), se ele tiver _cerebro/vault-config.md.
   let l1 = null;
   try {
-    if (fs.existsSync(path.join(entry.origem, '_cerebro', 'vault-config.md'))) {
-      l1 = montarL1(entry.origem, aliasFinal);
+    if (fs.existsSync(path.join(caminhoLocal, '_cerebro', 'vault-config.md'))) {
+      l1 = montarL1(caminhoLocal, aliasFinal);
     }
   } catch { /* sub-vault pode ainda nao ter forma de vault; segue sem L1 */ }
 
@@ -244,8 +277,9 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, ...ov
     tipo: entry.tipo,
     papel: entry.papel,
     alias: aliasFinal,
-    origem: entry.origem,
+    origem: caminhoLocal,
     caminhoRelativo: `./${aliasFinal}`,
+    entrada: entry.entrada || null,
     mount: mountReport,
     l1,
     nota: entry.nota,
