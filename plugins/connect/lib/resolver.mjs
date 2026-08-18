@@ -29,6 +29,7 @@ import path from 'node:path';
 import { mount } from './mount.mjs';
 import { resolveConfig } from './session.mjs';
 import { montarL1 } from './matriz.mjs';
+import { resolverEntrada } from './navegacao.mjs';
 
 // ---------------------------------------------------------------------------
 // Helpers de leitura / parse (zero-dep).
@@ -263,13 +264,24 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, ...ov
     return { status: 'erro-mount', conceito: entry.conceito, alias: aliasFinal, avisos: [e.message] };
   }
 
-  // Camada 1 do sub-vault (mesma forma da matriz), se ele tiver _cerebro/vault-config.md.
+  // Camada 1 do sub-vault — MESMA forma da matriz (corolario do D97: o interior
+  // tem o mesmo contrato em todos os niveis). Sempre montada: a carta de
+  // navegacao e o que orienta o agente dentro do acervo, e a AUSENCIA dela e
+  // informacao (lacuna anunciada), nao motivo para omitir a camada.
   let l1 = null;
   try {
-    if (fs.existsSync(path.join(caminhoLocal, '_cerebro', 'vault-config.md'))) {
-      l1 = montarL1(caminhoLocal, aliasFinal);
-    }
-  } catch { /* sub-vault pode ainda nao ter forma de vault; segue sem L1 */ }
+    l1 = montarL1(caminhoLocal, aliasFinal);
+  } catch { /* nunca derruba a resolucao por causa da camada 1 */ }
+
+  // Ponto de pouso — `entrada` do manifesto resolvida a CAMINHO real. Sem isso,
+  // pousar exigiria varrer o diretorio: exatamente o contorno que o protocolo
+  // proibe (o gap que o D120 deixou aberto).
+  const entradaResolvida = resolverEntrada(caminhoLocal, entry.entrada, aliasFinal);
+
+  const avisos = [
+    ...(l1?.avisos || []),
+    ...(entradaResolvida.avisos || []),
+  ];
 
   return {
     status: 'resolvido',
@@ -280,9 +292,10 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, ...ov
     origem: caminhoLocal,
     caminhoRelativo: `./${aliasFinal}`,
     entrada: entry.entrada || null,
+    entradaResolvida,
     mount: mountReport,
     l1,
     nota: entry.nota,
-    avisos: [],
+    avisos,
   };
 }

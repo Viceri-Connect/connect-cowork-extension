@@ -15,6 +15,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { iniciarSessao } from '../plugins/connect/lib/session.mjs';
+import { renderContexto } from '../plugins/connect/lib/render.mjs';
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'connect-spike-'));
 const home = path.join(tmp, 'connect-home');          // {CONNECT_HOME} (fora do "OneDrive")
@@ -38,6 +39,32 @@ fs.writeFileSync(path.join(matriz, '_cerebro', 'vault-config.md'), [
 ].join('\n'));
 fs.writeFileSync(path.join(matriz, '_cerebro', 'modelo-roteamento.md'), '# roteamento\n');
 fs.writeFileSync(path.join(matriz, '_inteligencia', 'convencao-skills.md'), '# skills\n');
+
+// carta de navegacao da matriz falsa — a camada 1 DECLARADA pelo vault (0.12.0).
+// Deliberadamente SEM a secao "Fronteiras": o spike verifica que o mecanismo
+// acusa secao obrigatoria faltante em vez de aceitar carta pela metade.
+fs.writeFileSync(path.join(matriz, '_cerebro', 'camada-1.md'), [
+  '---',
+  'tipo-artefato: camada-1',
+  'vault: Matriz de teste',
+  '---',
+  '',
+  '# Camada 1 — Matriz de teste',
+  '',
+  '## O que e este vault',
+  'Matriz da instancia de teste.',
+  '',
+  '## Estrutura',
+  '- `projetos/` — uma nota por projeto',
+  '',
+  '## Ordem de entrada',
+  '1. `_cerebro/modelo-roteamento.md`',
+  '',
+  '## Quando carregar',
+  '| Gatilho | Arquivo |',
+  '|---|---|',
+  '| roteamento de nota | `_cerebro/modelo-roteamento.md` |',
+].join('\n'));
 
 // --- cerebro pessoal falso ---
 fs.mkdirSync(path.join(pessoal, '_cerebro'), { recursive: true });
@@ -86,10 +113,13 @@ check('identidade: nome', r.identidade && r.identidade.nome === 'Gabriel Vasconc
 check('identidade: email', r.identidade && r.identidade.email === 'gabriel.guilhem@viceri.com.br');
 check('identidade: papeis', r.identidade && r.identidade.papeis.join(',') === 'Tech Lead,Arquiteto');
 
-// 5. L1 da matriz
+// 5. L1 da matriz — identidade do vault + carta de navegacao DECLARADA pelo vault
+// (0.12.0: o produto nao emite mais ponteiros presumidos; ver spike-navegacao)
 check('L1: empresa', r.l1 && r.l1.identidadeVault.empresa === 'Viceri Seidor');
-check('L1: ponteiro modelo-roteamento', r.l1 && r.l1.ponteiros.some((p) => p.caminho.endsWith('modelo-roteamento.md')));
-check('L1: projeto Connect listado', r.l1 && r.l1.projetos.some((p) => p.nome === 'Connect'));
+check('L1: nao prescreve ponteiros', r.l1 && !('ponteiros' in r.l1));
+check('L1: carta declarada pelo vault e lida', r.l1 && r.l1.carta && r.l1.carta.presente === true);
+check('L1: carta injetada verbatim no bloco', renderContexto(r).includes('## Quando carregar'));
+check('L1: lacuna de secao obrigatoria acusada', r.l1 && r.l1.carta.validacao && r.l1.carta.validacao.faltando.includes('fronteiras'));
 
 // 6. origem intacta (nada apagado)
 check('origem da matriz intacta', fs.existsSync(path.join(matriz, '_cerebro', 'vault-config.md')));

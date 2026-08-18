@@ -21,6 +21,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { mount, ensureDir, listMounts } from './mount.mjs';
 import { lerIdentidade, montarL1, montarL1Pessoal, lerProtocoloMecanismo } from './matriz.mjs';
+// Fonte unica de CONNECT_HOME e da escrita do config (nao reimplementar aqui:
+// duas resolucoes independentes do mesmo cfgPath divergem com o tempo).
+import { gravarChaveLocal, defaultConnectHome, caminhoConfig, lerConfigBruta, gravarConfigBruta } from './config-local.mjs';
 
 const ALIAS_MATRIZ = 'matriz';
 const ALIAS_PESSOAL = 'pessoal';
@@ -30,15 +33,6 @@ const ALIAS_OPERADOR = 'operador';
 // o .mcp.json declara "${CONNECT_HOME}" e o host nao tem essa env var — o
 // launcher pode deixar passar o literal em vez de omitir a chave).
 const clean = (v) => (typeof v === 'string' && v.trim() && !v.includes('${') ? v.trim() : null);
-
-function defaultConnectHome() {
-  if (process.platform === 'win32') {
-    const base = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
-    return path.join(base, 'Connect');
-  }
-  const base = process.env.XDG_STATE_HOME || path.join(os.homedir(), '.local', 'state');
-  return path.join(base, 'connect');
-}
 
 // Resolve a config a partir de env + arquivo local (env vence).
 export function resolveConfig(override = {}) {
@@ -72,6 +66,10 @@ export function resolveConfig(override = {}) {
     // Nunca vem do vault, so daqui. override vence arquivo (mesma precedencia dos
     // demais campos).
     subVaults: { ...(fileCfg.subVaults || {}), ...(override.subVaults || {}) },
+    // repos: { conceito: caminhoAbsoluto } — mesma natureza da tabela acima, para
+    // REPOSITORIO DE CODIGO (P64). Repo nunca e montado como junction (ver
+    // lib/repos.mjs); o primitivo devolve o caminho real da maquina.
+    repos: { ...(fileCfg.repos || {}), ...(override.repos || {}) },
     _configPath: fs.existsSync(cfgPath) ? cfgPath : null,
   };
 }
@@ -162,7 +160,11 @@ export function iniciarSessao({ sessionId, ...override } = {}) {
   // NAO vem daqui (vem de lerProtocoloMecanismo) — aqui e so o delta do operador.
   let l1Pessoal = null;
   if (fs.existsSync(perfilOperador)) {
-    l1Pessoal = montarL1Pessoal(perfilOperador, ALIAS_PESSOAL);
+    // ALIAS_OPERADOR (nao ALIAS_PESSOAL): o perfil gerido pelo Connect e montado
+    // como ./operador. Usar ./pessoal aqui gerava ponteiro morto — ou pior,
+    // apontava para o arquivo homonimo do vault Obsidian do operador, quando ele
+    // existisse (achado na revisao da 0.12.0).
+    l1Pessoal = montarL1Pessoal(perfilOperador, ALIAS_OPERADOR);
   } else if (cfg.cerebroPessoal && fs.existsSync(cfg.cerebroPessoal)) {
     l1Pessoal = montarL1Pessoal(cfg.cerebroPessoal, ALIAS_PESSOAL);
   }
@@ -196,14 +198,20 @@ export function iniciarSessao({ sessionId, ...override } = {}) {
 // informadas cujo path exista como diretorio; reporta as invalidas para re-perguntar.
 // ---------------------------------------------------------------------------
 export function gravarConfig({ home, vaultMatriz, cerebroPessoal } = {}) {
-  const base = clean(home) || clean(process.env.CONNECT_HOME) || defaultConnectHome();
+  const { base, cfgPath } = caminhoConfig(home);
   ensureDir(base);
-  const cfgPath = path.join(base, 'connect.config.json');
 
-  let atual = {};
+  // Config ilegivel NAO e tratada como vazia (ver config-local.lerConfigBruta):
+  // sobrescrever apagaria matriz/pessoal/subVaults/repos em silencio.
+  let atual;
   try {
-    if (fs.existsSync(cfgPath)) atual = JSON.parse(fs.readFileSync(cfgPath, 'utf8').replace(/^﻿/, ''));
-  } catch { /* config corrompida e sobrescrita */ }
+    atual = lerConfigBruta(home);
+  } catch (e) {
+    if (e.code === 'CONFIG_ILEGIVEL') {
+      return { configPath: e.configPath, gravados: {}, invalidos: [], erro: 'config-ilegivel', motivo: `${e.message} — nada foi gravado. Corrija (ou apague) o arquivo antes de reconfigurar.` };
+    }
+    throw e;
+  }
 
   const gravados = {};
   const invalidos = [];
@@ -216,8 +224,8 @@ export function gravarConfig({ home, vaultMatriz, cerebroPessoal } = {}) {
   tentar('vaultMatriz', vaultMatriz);
   tentar('cerebroPessoal', cerebroPessoal);
 
-  // grava UTF-8 sem BOM
-  fs.writeFileSync(cfgPath, JSON.stringify(atual, null, 2) + '\n', 'utf8');
+  // grava UTF-8 sem BOM, atomico (tmp + rename)
+  gravarConfigBruta(home, atual);
   return { configPath: cfgPath, gravados, invalidos, config: atual };
 }
 
@@ -232,25 +240,16 @@ export function gravarConfig({ home, vaultMatriz, cerebroPessoal } = {}) {
 // ---------------------------------------------------------------------------
 export function registrarSubVaultLocal({ home, conceito, caminho } = {}) {
   if (!conceito) return { status: 'erro', motivo: 'conceito ausente' };
-
-  const p = caminho ? path.resolve(caminho) : null;
-  if (!p || !fs.existsSync(p) || !fs.statSync(p).isDirectory()) {
-    return { status: 'invalido', conceito, caminho, motivo: 'path nao existe ou nao e diretorio (se for OneDrive, sincronize "manter neste dispositivo")' };
-  }
-
-  const base = clean(home) || clean(process.env.CONNECT_HOME) || defaultConnectHome();
-  ensureDir(base);
-  const cfgPath = path.join(base, 'connect.config.json');
-
-  let atual = {};
-  try {
-    if (fs.existsSync(cfgPath)) atual = JSON.parse(fs.readFileSync(cfgPath, 'utf8').replace(/^﻿/, ''));
-  } catch { /* config corrompida e sobrescrita a partir daqui */ }
-
-  atual.subVaults = { ...(atual.subVaults || {}), [conceito]: p };
-
-  fs.writeFileSync(cfgPath, JSON.stringify(atual, null, 2) + '\n', 'utf8');
-  return { status: 'gravado', configPath: cfgPath, conceito, caminho: p };
+  // Chave SEMPRE normalizada: o `resolver` procura por `entry.conceito`, que e
+  // sempre lowercase. Gravar a chave crua (`Alpha-Tribo`) fazia o resolver devolver
+  // 'local-nao-configurado' para sempre — loop infinito de handshake, o operador
+  // informando o diretorio de novo a cada sessao (achado na revisao da 0.12.0).
+  const chave = String(conceito).toLowerCase().trim();
+  const r = gravarChaveLocal({ home, tabela: 'subVaults', chave, caminho });
+  // preserva o contrato de retorno anterior (conceito, nao chave/tabela)
+  return r.status === 'gravado'
+    ? { status: 'gravado', configPath: r.configPath, conceito, caminho: r.caminho }
+    : { ...r, conceito };
 }
 
 // ---------------------------------------------------------------------------

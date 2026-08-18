@@ -7,6 +7,9 @@
 //   - iniciar_sessao           : bootstrap da sessao (scaffold + matriz + identidade + L1)
 //   - resolver                 : casa um CONCEITO no registro derivado; nunca guarda path
 //   - registrar_subvault_local : grava o path LOCAL de um conceito (por-maquina, D35)
+//   - resolver_repo            : caminho local de um repo de codigo (P64; nunca monta junction)
+//   - registrar_repo_local     : grava o path LOCAL de um repo (substitui o repos.md do vault)
+//   - listar_repos             : tabela local de repos, para conferencia do operador
 //   - mount_junction           : primitivo de mount (base do resolver)
 //   - unmount_junction         : remove um atalho
 //   - list_mounts              : auditoria dos atalhos do workspace
@@ -17,11 +20,12 @@ import readline from 'node:readline';
 import { mount, unmount, listMounts } from '../lib/mount.mjs';
 import { iniciarSessao, gravarConfig, estadoSessao, registrarSubVaultLocal } from '../lib/session.mjs';
 import { resolver } from '../lib/resolver.mjs';
-import { renderContexto } from '../lib/render.mjs';
+import { renderContexto, renderResolucao } from '../lib/render.mjs';
+import { resolverRepo, registrarRepoLocal, listarRepos } from '../lib/repos.mjs';
 
 const log = (...a) => process.stderr.write(`[connect-mcp] ${a.join(' ')}\n`);
 
-const SERVER_INFO = { name: 'connect', version: '0.11.0' };
+const SERVER_INFO = { name: 'connect', version: '0.12.0' };
 let protocolVersion = '2025-06-18';
 
 const TOOLS = [
@@ -81,7 +85,9 @@ const TOOLS = [
       'nada nem advinha path — devolve `status` pra ' +
       'skill decidir: sem-acervo-externo, pendente-criacao (aciona fabrica), local-nao-configurado ' +
       '(pergunte o diretorio e grave com registrar_subvault_local), origem-ausente, ou resolvido ' +
-      '(monta e devolve `entrada` pra pousar na nota certa).',
+      '(monta, injeta a CARTA DE NAVEGACAO do sub-vault verbatim e devolve ' +
+      '`entradaResolvida.caminhoRelativo` — o ponto de pouso ja resolvido a caminho real, ' +
+      'nunca nome de nota a caçar).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -109,6 +115,45 @@ const TOOLS = [
       },
       required: ['conceito', 'caminho'],
     },
+  },
+  {
+    name: 'resolver_repo',
+    description:
+      'Resolve o CAMINHO LOCAL de um repositorio de codigo declarado (analogo do `resolver`, para ' +
+      'codigo — P64). Repo NAO e montado como junction: devolve o caminho real da maquina para o ' +
+      'agente pedir acesso ao Cowork / usar como cwd. Path mora so em connect.config.json (tabela ' +
+      '`repos`), nunca no vault (D35). Nunca advinha: status "local-nao-configurado" significa ' +
+      'PERGUNTE ao operador (ou ofereca clonar) e grave com registrar_repo_local — jamais procurar ' +
+      'o repo por varredura de disco.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        conceito: { type: 'string', description: 'Nome/conceito do repo (ex.: "connect-site", "connect").' },
+      },
+      required: ['conceito'],
+    },
+  },
+  {
+    name: 'registrar_repo_local',
+    description:
+      'Grava, em connect.config.json (tabela `repos`), o diretorio LOCAL onde um repositorio de ' +
+      'codigo mora nesta maquina. Use depois de `resolver_repo` devolver "local-nao-configurado" ' +
+      '(tendo perguntado ao operador) ou apos um clone conduzido na sessao. Substitui o antigo ' +
+      '`repos.md` no vault pessoal — path e por-maquina, nunca conteudo de vault (D35).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        conceito: { type: 'string', description: 'Nome/conceito do repo (chave estavel).' },
+        caminho: { type: 'string', description: 'Diretorio absoluto da raiz do repo nesta maquina.' },
+        home: { type: 'string', description: 'Pasta fixa do Connect. Opcional; default por SO.' },
+      },
+      required: ['conceito', 'caminho'],
+    },
+  },
+  {
+    name: 'listar_repos',
+    description: 'Lista a tabela local de repositorios (conceito, caminho, existe, tem .git) para o operador conferir ou curar.',
+    inputSchema: { type: 'object', properties: {} },
   },
   {
     name: 'mount_junction',
@@ -160,6 +205,24 @@ function toolText(obj) {
   return { content: [{ type: 'text', text }] };
 }
 
+// Evita pagar o mesmo texto duas vezes no payload: o que ja foi injetado verbatim
+// no `content.text` (protocolo do mecanismo, carta de navegacao) vira marcador no
+// `structuredContent`. Copia rasa — nunca mutila o objeto do chamador.
+function elidirInline(obj) {
+  const MARCA = '<injetado verbatim no texto desta resposta>';
+  const out = { ...obj };
+  if (out.protocoloMecanismo) out.protocoloMecanismo = MARCA;
+  for (const k of ['l1', 'l1Pessoal']) {
+    if (out[k] && typeof out[k] === 'object') {
+      out[k] = { ...out[k] };
+      if (out[k].carta?.inline) out[k].carta = { ...out[k].carta, inline: MARCA };
+      if (out[k].vaultConfigInline) out[k].vaultConfigInline = MARCA;
+      if (out[k].hotCacheInline) out[k].hotCacheInline = MARCA;
+    }
+  }
+  return out;
+}
+
 function handleToolCall(id, params) {
   const name = params?.name;
   const args = params?.arguments || {};
@@ -167,20 +230,37 @@ function handleToolCall(id, params) {
     switch (name) {
       case 'iniciar_sessao': {
         const report = iniciarSessao({ sessionId: args.session_id });
-        // Devolve o bloco de contexto legivel + o relatorio estruturado.
-        ok(id, { content: [{ type: 'text', text: renderContexto(report) }], structuredContent: report });
+        // Bloco legivel (com carta e protocolo verbatim) + relatorio estruturado
+        // SEM repetir os dois textos longos (ver elidirInline).
+        ok(id, { content: [{ type: 'text', text: renderContexto(report) }], structuredContent: elidirInline(report) });
         return;
       }
       case 'estado_sessao':
         return ok(id, toolText(estadoSessao({ sessionId: args.session_id })));
       case 'resolver': {
         const r = resolver({ conceito: args.conceito, workspaceDir: args.workspace_dir, alias: args.alias, replace: !!args.replace });
-        return ok(id, { content: [{ type: 'text', text: JSON.stringify(r, null, 2) }], structuredContent: r });
+        // Quando resolve, devolve TAMBEM o bloco de contexto do sub-vault (carta
+        // de navegacao verbatim + ponto de pouso). Sem isso o agente ganharia um
+        // mount e nenhuma orientacao — o defeito que o contrato-navegacao fecha.
+        // Sem duplicar: o TEXTO leva a carta verbatim; o JSON estruturado vai em
+        // structuredContent com o `inline` elidido (ele ja esta no texto). Mandar
+        // os dois inteiros paga a carta duas vezes em token — contradiz a ADR-6,
+        // que e a propria justificativa do desenho lazy.
+        const bloco = renderResolucao(r);
+        const structured = bloco ? elidirInline(r) : r;
+        const text = bloco || JSON.stringify(r, null, 2);
+        return ok(id, { content: [{ type: 'text', text }], structuredContent: structured });
       }
       case 'registrar_subvault_local':
         return ok(id, toolText(registrarSubVaultLocal({ conceito: args.conceito, caminho: args.caminho, home: args.home })));
       case 'configurar':
         return ok(id, toolText(gravarConfig({ vaultMatriz: args.vault_matriz, cerebroPessoal: args.cerebro_pessoal, home: args.home })));
+      case 'resolver_repo':
+        return ok(id, toolText(resolverRepo({ conceito: args.conceito })));
+      case 'registrar_repo_local':
+        return ok(id, toolText(registrarRepoLocal({ conceito: args.conceito, caminho: args.caminho, home: args.home })));
+      case 'listar_repos':
+        return ok(id, toolText(listarRepos()));
       case 'mount_junction':
         return ok(id, toolText(mount({ workspaceDir: args.workspace_dir, alias: args.alias, source: args.source_dir, replace: !!args.replace })));
       case 'unmount_junction':

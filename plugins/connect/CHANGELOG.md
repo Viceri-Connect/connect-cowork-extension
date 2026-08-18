@@ -1,5 +1,98 @@
 # Changelog — connect
 
+## 0.12.0 — 2026-08-18
+- **Contrato de NAVEGACAO (`config/contrato-navegacao.md`) — o par que faltava do contrato de
+  manifesto.** O manifesto resolvia a **fronteira** ("existe, quem governa, tem acervo externo?");
+  o instante seguinte ao mount era cego, e o vazio **forcava o contorno** (`grep`) que a espinha
+  proibe. Tres defeitos concretos, achados no dogfooding com o acervo real da tribo:
+  1. **`entrada` era nome de nota, nao caminho.** `resolver` devolvia `entrada: "Connect"` e pousar
+     nela exigia varrer o diretorio. O D120 fechou a *intencao* do D103, nao o mecanismo. Agora
+     `entrada` e caminho relativo ao acervo, resolvido por `resolverEntrada()` — e nome puro
+     (legado) resolve por convencao/busca **deixando marca** (aviso), porque a busca e sintoma de
+     manifesto incompleto.
+  2. **A camada 1 era prescrita pelo produto.** `montarL1()` emitia ponteiros fixos
+     (`modelo-roteamento`, `organizacao`, `projetos/`…) — o produto decidindo os eixos do vault,
+     contradicao direta com D98; em sub-vault que nao segue esses nomes, o resultado era
+     `ponteiros: []` (acervo montado sem nenhuma orientacao — foi exatamente o que aconteceu com
+     a Tribo Impulsa). Agora a camada 1 e **declarada pelo vault** em `_cerebro/camada-1.md`,
+     injetada **verbatim**; ausencia devolve **lacuna** + fabrica oferecida (D97), nunca ponteiro
+     inventado.
+  3. **Assimetria coletivo x pessoal.** O hot cache pessoal era injetado verbatim e o coletivo
+     entrava como lista de links (`vaultConfigInline` era calculado e **descartado** pelo render —
+     codigo morto). Corrigida **do lado coletivo**: todo vault de conhecimento montado agora fala
+     por si. O lado do **operador** (`montarL1Pessoal`) segue emitindo ponteiros prescritos pelo
+     produto — e isso e legitimo, porque o perfil do operador e artefato **gerido pelo produto**
+     (D113), nao vault da empresa. Se um dia virar vault declarante, entra no mesmo contrato.
+- **Ordem de resolucao canonica na espinha** (`config/protocolo-mecanismo.md`, secao nova):
+  conceito -> `resolver` -> carta -> ponto de pouso -> salto so por ponteiro declarado ->
+  fronteira volta ao `resolver`. **Varredura e ultimo recurso e DEIXA MARCA:** nota que so o grep
+  acha e, por definicao, **nota orfa** — o achado e defeito do vault (issue), nunca "encontrei".
+  E o que faz "sem notas soltas" deixar de ser boa intencao e virar verificavel.
+- **Compatibilidade de leitura com o hot cache legado.** Coletivo que ja navegava bem **antes** do
+  Connect (`_cerebro/CLAUDE.md` curado a mao) e lido como **carta legada**: injetado igual, marcado
+  como `origem: 'legado'`, com aviso de migracao pendente — **nenhum arquivo alterado**. Foi o
+  molde: rodado contra o coletivo maduro real, o mecanismo confirmou 3 das 5 secoes e acusou as
+  duas lacunas verdadeiras (ordem de entrada, fronteiras) — nem o melhor vault da casa declarava
+  ponto de pouso nem fronteira.
+- **`cnct-fabrica-navegacao` (L2, nova)** — materializa ou completa a carta por elicitacao, uma
+  pergunta por vez, banco de perguntas destilado do coletivo que funciona. Modo delta: nunca
+  sobrescreve carta existente, nunca toca o `CLAUDE.md` legado sem decisao do operador.
+- **Primitivo de repositorio de codigo (P64 fechada)** — `lib/repos.mjs` + tools
+  `resolver_repo` / `registrar_repo_local` / `listar_repos`. A espinha prometia "resolver o
+  repositorio e conecta-lo direto" e a promessa era cumprida com `grep` no `repos.md` do vault
+  pessoal — path de maquina dentro de conteudo coletivo, o que D35 proibe. Agora path de repo mora
+  so em `connect.config.json` (tabela `repos`), por-maquina. Repo **nao** e montado como junction
+  (junction de arvore de trabalho confunde git/IDE): o primitivo devolve o caminho real.
+- **`lib/config-local.mjs` (novo)** — escrita das tabelas locais do config num lugar so
+  (`subVaults`, `repos`). `registrarSubVaultLocal` passou a delegar; a terceira copia da mesma
+  funcao de gravacao deixou de nascer.
+- **P70 fechada** — o bloco de sessao renderizado ainda dizia que o registro deriva de
+  `tipo`+**`fonte`**, campo removido na 0.11.0: texto errado injetado em **toda** sessao desde
+  ontem. Corrigido, e o passo 4 do protocolo da sessao agora aponta a ordem canonica.
+- **Skills L1 realinhadas** (P66 passo 4): `cnct-nucleo-sessao` ganhou o Passo 3b (ler a carta /
+  tratar a lacuna) e o status `resolvido` agora manda pousar em `entradaResolvida`;
+  `cnct-nucleo-conhecimento` ganhou os principios 4 e 5 (camada 1 e do vault; ordem canonica).
+- **Rodada de revisao critica (Opus, mesma sessao) — 1 bloqueador + 7 itens corrigidos antes de
+  fechar a versao.** Vale registrar porque quase todos eram do mesmo genero: *frouxidao que
+  resolve silenciosamente pro alvo errado.*
+  - **BLOQUEADOR — `resolverRepo` resolvia o repo errado sem avisar.** O casamento era
+    bidirecional (`k.includes(chave) || chave.includes(k)`), sem deteccao de ambiguidade:
+    `resolverRepo('connect-web-api')`, **nao registrado**, devolvia `status:'resolvido'` com o
+    caminho de `connect-web`. Repo e superficie de **escrita** — o agente commitaria no lugar
+    errado. Agora: exato vence, fuzzy so numa direcao com piso de 3 caracteres, e **ambiguidade
+    devolve `ambigua`** (mesma disciplina do lado do conhecimento).
+  - **Path traversal em `resolverEntrada`.** `entrada: ../secret/senhas.md` resolvia como
+    'declarado', sem aviso, para fora do acervo — e o valor vem de frontmatter sincronizado.
+    Novo status `recusada` (`..` ou caminho absoluto). Mesmo cinto que `mount.mjs` ja tinha.
+  - **Busca de fallback ignorava o diretorio declarado.** `entrada: clientes/acme/estado.md` com
+    a pasta trocada pousava em `clientes/outro/estado.md` — nota do cliente errado. Agora o hit
+    tem de **terminar** com o caminho declarado; efeito colateral bom: caixa divergente resolve
+    igual em Linux e Windows.
+  - **`validarCarta` dava falso positivo.** `t.includes(s)` deixava "## Infraestrutura" satisfazer
+    'estrutura' e "## Gatilhos de escrita" satisfazer 'quando carregar' — carta com **zero** das 5
+    respostas passava calada, minando a face de verificacao inteira. Agora casa por igualdade ou
+    **prefixo**, com variantes apos separador ("Processo — Quando Carregar" continua valendo).
+  - **Chave de `subVaults` gravada sem normalizar.** Manifesto com `conceito: Alpha-Tribo` gravava
+    `"Alpha-Tribo"` e o `resolver` (sempre lowercase) devolvia `local-nao-configurado` **para
+    sempre** — loop de handshake, o operador informando o diretorio a cada sessao. Pre-existente,
+    ficou visivel porque as duas tabelas passaram a dividir `gravarChaveLocal`.
+  - **Ponteiros do operador com alias errado.** `montarL1Pessoal(perfilOperador, ALIAS_PESSOAL)`
+    emitia `./pessoal/TASKS.md` para conteudo montado em `./operador` — ponteiro morto ou, pior,
+    apontando para o arquivo homonimo do vault Obsidian do operador.
+  - **Gravacao do config nao era atomica e podia apagar tudo.** `writeFileSync` direto, e config
+    ilegivel era tratada como `{}` — a gravacao seguinte apagaria matriz/pessoal/subVaults/repos
+    em silencio. Agora: tmp + rename, e status novo `config-ilegivel` que **recusa** sobrescrever.
+  - **Payload duplicado.** `iniciar_sessao`/`resolver` mandavam a carta e o protocolo no texto
+    **e** no `structuredContent` — pagando o mesmo texto duas vezes em token, contra a ADR-6 que
+    justifica o desenho. Novo `elidirInline`.
+  - Cosmeticos: `bloccoCarta` -> `blocoCarta`; `clean`/`defaultConnectHome` deixaram de ter copia
+    em `session.mjs`; §5 do contrato agora declara **quais checks sao mecanismo e quais sao
+    pendentes** (3, 5 e 6 dependem do `vault-audit`, que vive no coletivo) em vez de prometer seis.
+- **Testes:** `spike-navegacao.mjs` (39 checagens) e `spike-repos.mjs` (20) novos, incluindo
+  regressao explicita para cada item da revisao acima;
+  `spike-mecanismo.mjs` realinhado ao contrato novo (carta em vez de ponteiros prescritos).
+  Suite: **7 arquivos, todos verdes** (30 -> 39 e 15 -> 20 apos as regressoes).
+
 ## 0.11.0 — 2026-08-17
 - **Corte de raiz sobre o P69 (2ª rodada de dogfooding, mesma sessão): manifesto nunca mais
   guarda path/url — nem relativo.** O fix da 0.10.2 (varrer o corpo inteiro por

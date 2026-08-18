@@ -6,17 +6,21 @@
 // contexto. Ela traz o minimo sempre-ligado — identidade + verdades globais da
 // matriz — e PONTEIROS relativos para o resto, que o agente le sob demanda.
 //
-// Camada 1 (sempre): identidade do operador + `_cerebro/vault-config.md` da
-//   matriz (verdades globais) inline, por serem curtos e definirem "quem/como".
-// Ponteiros (sob demanda): modelo-roteamento, metodologias, projetos, skills.
+// Camada 1 (sempre): identidade do operador + a CARTA DE NAVEGACAO do vault
+//   (`_cerebro/camada-1.md`), injetada verbatim.
 //
-// O que e a camada 1 hoje esta hardcodado num conjunto sensato; a definicao
-// canonica de camadas por TIPO de vault e trabalho do trilho de tipologia
-// (manifesto de vault + molde da matriz) e entra aqui depois via manifesto.
+// MUDANCA DE CONTRATO (0.12.0): a camada 1 e DECLARADA PELO VAULT, nunca
+// prescrita pelo produto. Antes, `montarL1` emitia um conjunto fixo de ponteiros
+// (`modelo-roteamento`, `organizacao`, `projetos/`...) — o produto decidindo os
+// eixos do vault, contradicao direta com D98, e `ponteiros: []` em qualquer
+// vault que nao seguisse esses nomes. Agora o mecanismo le a carta (contrato em
+// config/contrato-navegacao.md) e, na ausencia dela, reporta LACUNA — jamais
+// inventa ponteiro (D97: ausencia e gatilho de nascimento, nao erro).
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { lerCarta } from './navegacao.mjs';
 
 // Raiz deste modulo — usada para achar a config de mecanismo do proprio plugin,
 // de forma robusta ao local de instalacao (nunca path absoluto de maquina).
@@ -30,14 +34,6 @@ function readIfExists(p) {
     }
   } catch { /* ignore */ }
   return null;
-}
-
-function listDirs(p) {
-  try {
-    return fs.readdirSync(p, { withFileTypes: true })
-      .filter((e) => e.isDirectory() && !e.name.startsWith('.'))
-      .map((e) => e.name);
-  } catch { return []; }
 }
 
 // Extrai pares "key: value" de linhas markdown do tipo "- key: value" ou "key: value".
@@ -91,34 +87,27 @@ export function lerIdentidade(cerebroPessoalRoot) {
 }
 
 // ---------------------------------------------------------------------------
-// L1 — carga inicial de contexto da matriz.
-// Retorna conteudo inline curto (vault-config) + ponteiros relativos ao alias
-// da matriz no workspace, para o agente seguir sob demanda.
+// L1 — carga inicial de contexto de UM vault (a matriz ou qualquer sub-vault:
+// a forma e a mesma em todos os niveis, corolario do D97).
+//
+// Duas partes, ambas do proprio vault:
+//   - identidadeVault — `_cerebro/vault-config.md` (camada machine-readable:
+//     empresa, contexto, ponto focal). Curto, lido inline.
+//   - carta          — `_cerebro/camada-1.md`, a navegacao DECLARADA pelo vault
+//     (por onde entra, o que carrega por gatilho, onde termina). Injetada
+//     verbatim pelo render. Ausente => lacuna anunciada, nunca suprida.
 // ---------------------------------------------------------------------------
 export function montarL1(matrizRoot, aliasMatriz = 'matriz') {
   const cerebro = path.join(matrizRoot, '_cerebro');
   const vaultConfig = readIfExists(path.join(cerebro, 'vault-config.md'));
-
-  const ponteiros = [];
-  const addPtr = (rel, nota) => {
-    if (fs.existsSync(path.join(matrizRoot, rel))) {
-      ponteiros.push({ caminho: `./${aliasMatriz}/${rel}`, nota });
-    }
-  };
-  addPtr('_cerebro/modelo-roteamento.md', 'o que vai para onde; regra de forma/despromocao');
-  addPtr('_cerebro/CLAUDE.md', 'hot cache humano da matriz');
-  addPtr('_cerebro/metodologias', 'processo / metodologias (SDD, papeis)');
-  addPtr('_inteligencia/convencao-skills.md', 'protocolo de inicializacao das skills + requer-diretorios');
-  addPtr('organizacao', 'organizacao: identidade, politicas, tribos/squads');
-
-  const projetos = listDirs(path.join(matrizRoot, 'projetos'))
-    .map((nome) => ({ nome, caminho: `./${aliasMatriz}/projetos/${nome}` }));
+  const carta = lerCarta(matrizRoot, aliasMatriz);
 
   return {
     identidadeVault: parseKeyValues(vaultConfig), // empresa, cliente, contexto, ponto focal
     vaultConfigInline: vaultConfig,
-    ponteiros,
-    projetos,
+    alias: aliasMatriz,
+    carta,
+    avisos: carta.avisos,
   };
 }
 

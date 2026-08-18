@@ -59,9 +59,21 @@ Chamar a tool `iniciar_sessao` (com o `session_id`, se conhecido). Ela devolve o
 bloco "Connect — sessão iniciada" (identidade + `./matriz` + camada 1). Usar esse
 bloco como contexto ativo; referenciar tudo por caminho relativo (ex.: `./matriz/_cerebro/...`).
 
+**Passo 3b — Ler a carta de navegação (a camada 1 que o vault declara).**
+O bloco de sessão injeta, verbatim, `_cerebro/camada-1.md` do vault montado — quem diz o
+que carregar e quando é o **vault**, não o produto (D98; contrato em
+`config/contrato-navegacao.md`). Duas situações, nenhuma delas contornável:
+
+- **Carta presente** → ela é a fonte da navegação desta sessão: ponto de pouso, tabela
+  `gatilho → arquivo`, fronteiras. Não improvisar ponteiro que a carta não declara.
+- **Lacuna anunciada** (vault sem carta, ou carta incompleta) → dizer isso ao operador em
+  uma linha e **oferecer a `cnct-fabrica-navegacao`**. Enquanto não houver carta, qualquer
+  navegação ali é varredura: permitida como último recurso, sempre reportada (o achado é
+  defeito do vault, não sucesso da busca).
+
 **Passo 4 — Aprofundar sob demanda (resolve-on-touch, disciplina fixa).**
-Seguir os **ponteiros lazy** da camada 1 (modelo-roteamento, convenção de skills,
-projetos, organização) conforme a necessidade. Ao nomear ou tocar num **sub-vault
+Seguir a **tabela de gatilhos da carta** (Passo 3b) conforme a necessidade — nunca uma lista
+de ponteiros presumida pelo agente. Ao nomear ou tocar num **sub-vault
 tipado** (um conceito/entidade com casa própria — um projeto, uma tribo, "minha
 gestão"), ou ao abrir qualquer nota que declare `tipo`+`externo:true` no frontmatter:
 
@@ -74,8 +86,11 @@ gestão"), ou ao abrir qualquer nota que declare `tipo`+`externo:true` no frontm
    - `local-nao-configurado` → esta máquina nunca resolveu esse `conceito`. Perguntar o
      diretório ao operador, gravar com `registrar_subvault_local`, repetir.
    - `origem-ausente` → path conhecido mas não existe/não sincronizado. Avisar.
-   - `resolvido` → pedir acesso ao Cowork, montar, e se houver `entrada`, pousar direto
-     nela.
+   - `resolvido` → pedir acesso ao Cowork; ler a **carta de navegação do sub-vault** (vem
+     injetada no bloco de resolução) e pousar em `entradaResolvida.caminhoRelativo` — o
+     caminho real, já resolvido. Se a carta vier ausente, ou a `entrada` tiver sido
+     resolvida por **busca** (o aviso diz), isso é lacuna do vault: reportar ao operador,
+     nunca contornar em silêncio.
 3. Uma vez resolvido, o alias vale pro resto da sessão — não repetir `resolver` pro
    mesmo `conceito`; navegação dentro dele é path relativo normal.
 

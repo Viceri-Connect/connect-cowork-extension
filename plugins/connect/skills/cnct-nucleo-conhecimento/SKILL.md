@@ -31,6 +31,14 @@ demanda (MCP).
    correspondente.
 3. **Lazy antes de tudo.** No boot só a camada 1 vem inline; o resto é ponteiro.
    Leia sob demanda, seguindo os ponteiros que o bloco de contexto lista.
+4. **A camada 1 é do vault, não do produto.** O que carregar e quando vem da **carta de
+   navegação** (`_cerebro/camada-1.md`) daquele vault, injetada verbatim ao montar
+   (contrato: `config/contrato-navegacao.md`). O mecanismo não inventa ponteiro: vault sem
+   carta monta com **lacuna anunciada** e a `cnct-fabrica-navegacao` oferecida (D97/D98).
+5. **Ordem de resolução canônica** (espinha, seção própria): conceito → `resolver` → carta →
+   ponto de pouso (`entradaResolvida`) → salto só por ponteiro declarado → fronteira volta ao
+   `resolver`. Varredura é último recurso e **deixa marca**: nota que só o grep acha é nota
+   órfã, e o achado vira issue do vault — nunca "encontrei".
 
 ## Início de sessão
 
