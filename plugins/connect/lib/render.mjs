@@ -60,6 +60,25 @@ export function renderResolucao(res) {
 
 export function renderContexto(report) {
   const L = [];
+
+  // Estado zero (D97/D105): matriz nunca configurada nesta maquina, ou o path
+  // gravado nao existe mais. Isto vai PRIMEIRO, antes de qualquer outra secao
+  // (identidade, protocolo, atalhos) — nao pode ser so mais um item na lista
+  // de avisos do fim do bloco, senao o agente segue o resto da sessao sem
+  // perguntar o caminho (defeito real, achado no 1o uso da Helena: o hook
+  // rodou, mas o aviso solto no fim nao bastou pra disparar a pergunta).
+  if (!report.matrizConfigurada) {
+    L.push('## Connect — configuracao necessaria (1o uso nesta maquina)');
+    L.push('');
+    L.push('🔧 **Acao obrigatoria antes de qualquer outra coisa nesta sessao:**');
+    L.push('Ainda nao ha uma MATRIZ configurada (o vault coletivo — a pasta que contem');
+    L.push('`_cerebro/vault-config.md`). Pergunte ao operador, em linguagem simples, onde');
+    L.push('fica essa pasta nesta maquina (e o cerebro pessoal, se ele tiver um) e chame a');
+    L.push('tool `configurar` com os caminhos. Depois, chame `iniciar_sessao` de novo para');
+    L.push('restaurar o contexto completo. Nao prossiga com outra tarefa antes disso.');
+    L.push('');
+  }
+
   L.push('## Connect — sessao iniciada');
   L.push('');
   L.push(`Workspace da sessao: \`${report.workspace}\` (fora do OneDrive).`);
@@ -131,11 +150,13 @@ export function renderContexto(report) {
   L.push('3. Ao nomear um conceito (projeto, cliente, area, tribo), acione `resolver` — ele deriva o registro varrendo os manifestos (frontmatter `tipo` + `externo`; nenhum path no vault, D35 — contrato em `contrato-manifesto.md`), casa por conceito/gatilho e monta manifesto + acervo so no toque.');
   L.push('4. Dentro de qualquer vault, navegue pela **ordem de resolucao canonica** (secao no protocolo acima): carta de navegacao -> ponto de pouso -> ponteiro declarado. Varredura e ultimo recurso e deixa marca.');
 
-  // Avisos
-  if (report.avisos && report.avisos.length) {
+  // Avisos — omite o aviso de matriz-nao-definida quando ja coberto pelo
+  // bloco dedicado do topo (evita repetir a mesma instrucao duas vezes).
+  const avisos = (report.avisos || []).filter((a) => report.matrizConfigurada || !/CONNECT_VAULT_MATRIZ nao definido/.test(a));
+  if (avisos.length) {
     L.push('');
     L.push('### Avisos');
-    for (const a of report.avisos) L.push(`- ${a}`);
+    for (const a of avisos) L.push(`- ${a}`);
   }
 
   return L.join('\n') + '\n';

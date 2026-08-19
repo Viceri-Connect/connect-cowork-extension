@@ -1,5 +1,32 @@
 # Changelog — connect
 
+## 0.12.1 — 2026-08-19
+- **Bug real corrigido: 1º uso não perguntava o caminho da matriz.** Achado no
+  dogfooding com a Helena (primeira interação dela com o Cowork + Connect): o
+  hook `SessionStart` rodava, mas quando `CONNECT_VAULT_MATRIZ` não estava
+  configurado o aviso ficava **solto no fim** do bloco de contexto (seção
+  "Avisos", depois de identidade/protocolo/atalhos, todos vazios) — não bastava
+  pra fazer o agente parar e perguntar o caminho antes de seguir. Pior ainda
+  quando o operador clicava em "Personalizar" no plugin recém-instalado, sem
+  mencionar projeto/tarefa: a skill `cnct-nucleo-sessao` (fallback do hook) só
+  disparava por menção a trabalho, e essa interação não casava com nenhum
+  gatilho descrito.
+  - **`lib/session.mjs`**: `iniciarSessao()` agora devolve `matrizConfigurada`
+    (bool) — fonte única de verdade sobre o estado zero, calculada uma vez.
+  - **`lib/render.mjs`**: quando `matrizConfigurada = false`, o bloco abre com
+    uma seção dedicada — "Connect — configuração necessária (1º uso nesta
+    máquina)" — **antes** de qualquer outra coisa, instruindo explicitamente a
+    perguntar o caminho da matriz (e do cérebro pessoal) e chamar `configurar`.
+    O aviso antigo deixou de se repetir no fim do bloco quando esta seção já
+    cobre o mesmo caso.
+  - **`skills/cnct-nucleo-sessao/SKILL.md`** (v0.7.0): gatilhos ampliados para
+    cobrir explicitamente o clique em "Personalizar"/"Customizar" logo após a
+    instalação e pedidos de setup ("configurar o Connect", "conectar minha
+    matriz", "sou novo aqui") — mesmo sem menção a projeto/tarefa. Reforça que
+    checar `estado_sessao` cedo demais não tem custo nem efeito colateral.
+  - Sem mudança de comportamento quando já configurado (`matrizConfigurada =
+    true`): bloco de sessão idêntico ao 0.12.0.
+
 ## 0.12.0 — 2026-08-18
 - **Contrato de NAVEGACAO (`config/contrato-navegacao.md`) — o par que faltava do contrato de
   manifesto.** O manifesto resolvia a **fronteira** ("existe, quem governa, tem acervo externo?");

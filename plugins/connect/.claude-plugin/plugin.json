@@ -1,6 +1,6 @@
 {
   "name": "connect",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "description": "Connect (Impulsa/Viceri): no inicio da sessao restaura a identidade do operador, monta a matriz como atalho flat no workspace e injeta a CARTA DE NAVEGACAO declarada pelo proprio vault (camada 1 — por onde se entra, o que carrega por gatilho, onde termina). Expoe um MCP para iniciar a sessao, resolver conceitos em sub-vaults sob demanda (registro derivado da varredura de manifestos, sem path/url no coletivo) e resolver repositorios de codigo. Ordem de navegacao garantida pelo mecanismo: varredura e ultimo recurso e deixa marca. Governanca que desce da matriz para os sub-vaults.",
   "author": {
     "name": "Impulsa / Viceri"

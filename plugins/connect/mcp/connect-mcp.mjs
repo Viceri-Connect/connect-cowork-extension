@@ -25,7 +25,7 @@ import { resolverRepo, registrarRepoLocal, listarRepos } from '../lib/repos.mjs'
 
 const log = (...a) => process.stderr.write(`[connect-mcp] ${a.join(' ')}\n`);
 
-const SERVER_INFO = { name: 'connect', version: '0.12.0' };
+const SERVER_INFO = { name: 'connect', version: '0.12.1' };
 let protocolVersion = '2025-06-18';
 
 const TOOLS = [

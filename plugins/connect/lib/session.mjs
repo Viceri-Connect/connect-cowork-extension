@@ -90,6 +90,14 @@ export function iniciarSessao({ sessionId, ...override } = {}) {
   const sid = sanitizeSessionId(sessionId);
   const avisos = [];
 
+  // Estado zero: matriz nunca configurada nesta maquina, ou o path gravado
+  // nao existe mais (ex.: pasta renomeada/OneDrive nao sincronizado). Esta
+  // flag e a fonte de verdade que o render usa para decidir se a sessao abre
+  // com o bloco de configuracao guiada ANTES de qualquer outra coisa — nao
+  // basta um aviso solto no fim do bloco (achado no dogfooding: 1o uso real
+  // nao perguntou o caminho da matriz).
+  const matrizConfigurada = !!(cfg.vaultMatriz && fs.existsSync(cfg.vaultMatriz));
+
   if (cfg.homeOrigem === 'default') {
     avisos.push(`CONNECT_HOME nao configurado — usando pasta padrao sugerida: ${cfg.home}. Conecte esta pasta ao Cowork (ou grave CONNECT_HOME) se quiser outro local.`);
   }
@@ -187,6 +195,7 @@ export function iniciarSessao({ sessionId, ...override } = {}) {
     protocoloMecanismo,
     l1,
     l1Pessoal,
+    matrizConfigurada,
     avisos,
   };
 }

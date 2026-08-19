@@ -6,12 +6,18 @@ description: >
   ou pedir para "trabalhar em", "continuar", "retomar" algo — chamando a tool
   iniciar_sessao (identidade do operador + matriz montada em ./matriz + contexto
   lazy da camada 1). Use também quando o contexto precisar de aprofundamento
-  ("consultar o vault", "onde está", "mais detalhe", "qual a norma/decisão"). Na
-  primeira vez, conduz a configuração guiada dos caminhos (matriz, cérebro pessoal)
-  via a tool configurar. É o FALLBACK do hook de SessionStart quando ele não dispara
-  no Cowork — o mecanismo é o mesmo, só muda o gatilho.
+  ("consultar o vault", "onde está", "mais detalhe", "qual a norma/decisão").
+  DISPARA TAMBÉM no primeiro contato do operador com o plugin recém-instalado —
+  inclusive ao clicar em "Personalizar"/"Customizar" no Cowork logo após a
+  instalação, ou em pedidos como "configurar o Connect", "conectar minha
+  matriz", "onde fica meu vault", "sou novo aqui", "primeiro uso", "setup
+  inicial" — mesmo sem menção a projeto/tarefa. Na primeira vez, conduz a
+  configuração guiada dos caminhos (matriz, cérebro pessoal) via a tool
+  configurar. É o FALLBACK do hook de SessionStart quando ele não dispara
+  no Cowork (inclusive quando o clique em "Personalizar" abre uma janela sem
+  disparar o hook) — o mecanismo é o mesmo, só muda o gatilho.
 metadata:
-  version: "0.6.0"
+  version: "0.7.0"
   program: "Impulsa / Viceri"
 ---
 
@@ -26,6 +32,11 @@ esteja montado antes de qualquer trabalho, sem depender do hook de SessionStart.
   demanda, cliente, reunião, ticket, ou pedido de "trabalhar em / retomar / continuar".
 - Quando o contexto precisar **aprofundar** (consultar o vault, achar uma norma,
   decisão, arquivo, "onde está…").
+- **Logo após a instalação do plugin**, incluindo o clique em "Personalizar"/
+  "Customizar" no Cowork — mesmo que a mensagem do operador não mencione
+  projeto/tarefa nenhum. Trate qualquer primeiro contato como candidato a
+  1º uso: chamar `estado_sessao` custa zero, então não há risco em checar cedo
+  demais.
 - Executar **no máximo uma vez por sessão** para a restauração — depois de montado,
   não repetir (checar com `estado_sessao`).
 
