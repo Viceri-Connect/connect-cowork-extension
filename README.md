@@ -12,6 +12,9 @@ governança que mora na matriz desce para todos os sub-vaults.
 
 ## Instalação no Cowork
 
+> **Nota (v0.12.2+):** A extensão não exige mais que o usuário tenha o Node.js instalado. O próprio plugin fará o download de um executável portátil do Node.js (apenas para Windows) na primeira vez que a sessão for iniciada.
+
+
 **Caminho primário — adicionar o marketplace pela URL do repo (recomendado):**
 
 1. No Cowork, adicionar um marketplace de plugins apontando para a URL deste repo
@@ -73,3 +76,4 @@ node tests/handshake-mcp.mjs       # handshake do MCP + iniciar_sessao
 ```
 
 Ver `docs/POC-NOTES.md` para o spike das premissas 1–3 no host Windows/Cowork.
+

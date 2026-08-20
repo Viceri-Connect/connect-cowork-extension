@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "connect": {
-      "command": "node",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp/connect-mcp.mjs"],
+      "command": "cmd.exe",
+      "args": ["/c", "${CLAUDE_PLUGIN_ROOT}/mcp/launcher.bat"],
       "env": {
         "CONNECT_HOME": "${CONNECT_HOME}",
         "CONNECT_VAULT_MATRIZ": "${CONNECT_VAULT_MATRIZ}",
