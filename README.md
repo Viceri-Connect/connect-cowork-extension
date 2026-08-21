@@ -41,19 +41,28 @@ Entregar o `connect.plugin`; no Cowork, abrir o arquivo e aceitar a instalação
 
 ```
 .claude-plugin/marketplace.json     # marketplace "impulsa" — aponta ./plugins/connect
-plugins/connect/                     # o plugin instalável
+plugins/connect/                     # o plugin instalável para Claude Cowork
   ├── .claude-plugin/plugin.json     # ← fonte da VERSÃO
   ├── .mcp.json                      # registra o MCP stdio local "connect"
-  ├── mcp/connect-mcp.mjs            # servidor MCP (iniciar_sessao + primitivos de mount)
+  ├── bridge/                        # bridge HTTP local para Copilot/harnesses
+  │   ├── index.mjs                  #   endpoint /iniciar_sessao e /resolver
+  │   └── testClient.mjs             #   smoke test do bridge local
+  ├── mcp/connect-mcp.mjs            # servidor MCP (iniciar_sessao + primitivos de mount + matriz.persist)
   ├── lib/                           # núcleo testável, zero-dep
   │   ├── mount.mjs                  #   junction (Windows) / symlink (POSIX)
   │   ├── matriz.mjs                 #   identidade + montagem da camada 1
+  │   ├── matriz-store.mjs           #   persistência segura da matriz em CONNECT_HOME
   │   ├── session.mjs                #   iniciarSessao() — o bootstrap
   │   └── render.mjs                 #   bloco de contexto da sessão
   ├── hooks/                         # SessionStart (type: command) → iniciarSessao
-  ├── skills/connect-knowledge-mount/
+  ├── skills/                        # skills do plugin Claude (canonicas)
+  ├── providers/                     # adaptadores de provider e helpers
   ├── scripts/spike-junction.ps1     # spike da premissa 2 (junction NTFS) no host
   └── config/connect.config.example.json
+code/copilot/                       # integração local opcional para Copilot
+  ├── README.md                     # observações do scaffold local
+  ├── providers/copilot-adapter.mjs # bridge wrapper para /iniciar_sessao
+  └── skills/*/copilot.instruction.md
 scripts/build-plugin.sh              # empacota o .plugin (caminho secundário)
 docs/                                # SPEC, notas do POC
 tests/                               # spikes que matam premissas (repetíveis)
@@ -73,6 +82,7 @@ Via env ou por `{CONNECT_HOME}/connect.config.json`
 ```
 node tests/spike-mecanismo.mjs     # núcleo ponta a ponta (symlink no Linux, junction no Windows)
 node tests/handshake-mcp.mjs       # handshake do MCP + iniciar_sessao
+node tests/spike-matriz-persist.mjs # persistência e lifecycle da matriz via MCP
 ```
 
 Ver `docs/POC-NOTES.md` para o spike das premissas 1–3 no host Windows/Cowork.

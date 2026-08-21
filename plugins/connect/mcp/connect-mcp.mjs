@@ -22,6 +22,7 @@ import { iniciarSessao, gravarConfig, estadoSessao, registrarSubVaultLocal } fro
 import { resolver } from '../lib/resolver.mjs';
 import { renderContexto, renderResolucao } from '../lib/render.mjs';
 import { resolverRepo, registrarRepoLocal, listarRepos } from '../lib/repos.mjs';
+import { persistMatrix, loadMatrix, listMatrices, removeMatrix } from '../lib/matriz-store.mjs';
 
 const log = (...a) => process.stderr.write(`[connect-mcp] ${a.join(' ')}\n`);
 
@@ -195,6 +196,56 @@ const TOOLS = [
       required: ['workspace_dir'],
     },
   },
+  {
+    name: 'matriz.persist',
+    description: 'Persiste a referencia e, quando consentido, um snapshot da matriz em CONNECT_HOME para reutilizacao por Copilot/harnesses.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'Identificador da matriz.' },
+        sourcePath: { type: 'string', description: 'Diretorio de origem da matriz.' },
+        metadata: { type: 'object', description: 'Metadados extras da matriz.' },
+        consent: { type: 'boolean', description: 'Se true, copia um snapshot para CONNECT_HOME.' },
+        home: { type: 'string', description: 'Pasta fixa do Connect. Opcional; default por SO.' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'matriz.load',
+    description: 'Carrega uma matriz persistida em CONNECT_HOME e devolve instrucoes de montagem segura.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'Identificador da matriz persistida.' },
+        home: { type: 'string', description: 'Pasta fixa do Connect. Opcional; default por SO.' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'matriz.list',
+    description: 'Lista as matrizes persistidas em CONNECT_HOME.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        home: { type: 'string', description: 'Pasta fixa do Connect. Opcional; default por SO.' },
+      },
+      required: [],
+    },
+  },
+  {
+    name: 'matriz.remove',
+    description: 'Remove uma matriz persistida e seu snapshot associado quando houver.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'Identificador da matriz persistida.' },
+        home: { type: 'string', description: 'Pasta fixa do Connect. Opcional; default por SO.' },
+      },
+      required: ['id'],
+    },
+  },
 ];
 
 function send(msg) { process.stdout.write(JSON.stringify(msg) + '\n'); }
@@ -267,6 +318,28 @@ function handleToolCall(id, params) {
         return ok(id, toolText(unmount({ workspaceDir: args.workspace_dir, alias: args.alias })));
       case 'list_mounts':
         return ok(id, toolText(listMounts(args.workspace_dir)));
+      case 'matriz.persist': {
+        const result = persistMatrix({
+          id: args.id,
+          sourcePath: args.sourcePath,
+          metadata: args.metadata,
+          consent: !!args.consent,
+          home: args.home,
+        });
+        return ok(id, { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], structuredContent: result });
+      }
+      case 'matriz.load': {
+        const result = loadMatrix({ id: args.id, home: args.home });
+        return ok(id, { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], structuredContent: result });
+      }
+      case 'matriz.list': {
+        const result = listMatrices({ home: args.home });
+        return ok(id, { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], structuredContent: result });
+      }
+      case 'matriz.remove': {
+        const result = removeMatrix({ id: args.id, home: args.home });
+        return ok(id, { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], structuredContent: result });
+      }
       default:
         return fail(id, -32602, `tool desconhecida: ${name}`);
     }

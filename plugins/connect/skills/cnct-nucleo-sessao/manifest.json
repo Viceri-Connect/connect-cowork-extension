@@ -1,0 +1,11 @@
+{
+  "id": "cnct-nucleo-sessao",
+  "version": "0.7.0",
+  "title": "cnct-nucleo-sessao",
+  "providers": ["claude", "copilot"],
+  "sources": ["SKILL.md"],
+  "instructions": {
+    "copilot": "../../../code/copilot/skills/cnct-nucleo-sessao/copilot.instruction.md"
+  },
+  "deltaPolicy": "merge"
+}

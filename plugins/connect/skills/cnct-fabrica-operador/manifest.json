@@ -1,0 +1,14 @@
+{
+  "id": "cnct-fabrica-operador",
+  "version": "0.1.0",
+  "title": "cnct-fabrica-operador",
+  "providers": ["claude", "copilot"],
+  "sources": ["SKILL.md"],
+  "templates": {
+    "default": "templates/meu-config.template.md"
+  },
+  "instructions": {
+    "copilot": "../../../code/copilot/skills/cnct-fabrica-operador/copilot.instruction.md"
+  },
+  "deltaPolicy": "merge"
+}

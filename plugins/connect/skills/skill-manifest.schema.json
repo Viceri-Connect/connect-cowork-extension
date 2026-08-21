@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Connect Skill Manifest",
+  "type": "object",
+  "required": ["id", "version", "providers"],
+  "properties": {
+    "id": { "type": "string", "description": "Skill identifier" },
+    "version": { "type": "string", "description": "Semantic version for the skill" },
+    "title": { "type": "string" },
+    "description": { "type": "string" },
+    "providers": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Provider ids that this skill supports (e.g., claude, copilot)"
+    },
+    "sources": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Primary source files for the skill"
+    },
+    "templates": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "Provider-specific template files or paths"
+    },
+    "instructions": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "Optional provider-specific instruction files, such as Copilot instruction paths"
+    },
+    "triggers": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "deltaPolicy": {
+      "type": "string",
+      "enum": ["merge", "replace", "overlay"],
+      "default": "merge"
+    },
+    "guardrails": {
+      "type": "object",
+      "description": "Optional guardrail settings for the skill"
+    }
+  },
+  "additionalProperties": false
+}

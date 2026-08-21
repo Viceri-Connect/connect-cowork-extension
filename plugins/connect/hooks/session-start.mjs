@@ -10,6 +10,7 @@
 
 import { iniciarSessao } from '../lib/session.mjs';
 import { renderContexto } from '../lib/render.mjs';
+import { extractSessionId } from '../providers/provider-adapter.mjs';
 
 function lerStdin() {
   return new Promise((resolve) => {
@@ -26,12 +27,15 @@ function lerStdin() {
 }
 
 async function main() {
-  let sessionId = process.env.CLAUDE_SESSION_ID || process.env.CONNECT_SESSION_ID || null;
+  let sessionId = null;
   try {
     const raw = await lerStdin();
     if (raw && raw.trim()) {
       const payload = JSON.parse(raw);
-      sessionId = payload.session_id || payload.sessionId || sessionId;
+      sessionId = extractSessionId(payload) || sessionId;
+    } else {
+      // No stdin payload, allow adapter to resolve from envs
+      sessionId = extractSessionId(null) || sessionId;
     }
   } catch { /* sem payload utilizavel; segue com env/gerado */ }
 

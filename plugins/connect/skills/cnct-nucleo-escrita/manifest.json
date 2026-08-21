@@ -1,0 +1,15 @@
+{
+  "id": "cnct-nucleo-escrita",
+  "version": "0.3.0",
+  "title": "cnct-nucleo-escrita",
+  "providers": ["claude", "copilot"],
+  "sources": ["SKILL.md"],
+  "templates": {
+    "default": "templates/cnct-nucleo-escrita.template.md"
+  },
+  "instructions": {
+    "copilot": "../../../code/copilot/skills/cnct-nucleo-escrita/copilot.instruction.md"
+  },
+  "triggers": ["on-write"],
+  "deltaPolicy": "merge"
+}

@@ -1,0 +1,11 @@
+{
+  "id": "cnct-nucleo-encerramento",
+  "version": "0.2.0",
+  "title": "cnct-nucleo-encerramento",
+  "providers": ["claude", "copilot"],
+  "sources": ["SKILL.md"],
+  "instructions": {
+    "copilot": "../../../code/copilot/skills/cnct-nucleo-encerramento/copilot.instruction.md"
+  },
+  "deltaPolicy": "merge"
+}
