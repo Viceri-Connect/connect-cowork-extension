@@ -1,5 +1,77 @@
 # Changelog — connect
 
+## 0.13.0 — 2026-08-23
+Quatro correções, todas de **medição em sessão real** (dogfooding do dia), não de
+hipótese. As três primeiras são a mesma família de defeito, vista de ângulos
+diferentes: **o mecanismo monta, e o harness não alcança** — junction não é
+permissão, e injetar não é entregar.
+
+- **`CONNECT_HOME` sai da pasta de aplicativo** (`%LOCALAPPDATA%\Connect` →
+  `%USERPROFILE%\Connect`; POSIX: `~/.connect`). **Causa isolada por spike:** o
+  Cowork resolve o **destino real** de uma junction e aplica política de acesso
+  sobre ele, não sobre o link. Junction cujo destino está no perfil do usuário ou
+  no OneDrive é lida normalmente — **inclusive sem conceder a origem
+  separadamente**; junction cujo destino está em `AppData` é recusada mesmo com a
+  pasta concedida. Consequências que isso fecha: `./operador` era inalcançável
+  pelas file tools (P93), travando o Passo 4 do `cnct-nucleo-encerramento`; e cada
+  origem montada exigia concessão manual própria (P62/P90), porque o workspace da
+  sessão também morava em `AppData` e não servia de porta única.
+  - **`lib/config-local.mjs`**: `defaultConnectHome()` reescrita; nasce
+    `homeLegado()` e `migrarHomeLegado()` — migra `connect.config.json` +
+    `operador/`, **não** migra `sessions/` (scaffolds descartáveis, cheios de
+    junctions que virariam links mortos), preserva o home antigo intacto e deixa
+    um `MIGRADO.md`. Idempotente.
+  - **`lib/session.mjs`**: a migração roda como passo **0**, antes de
+    `resolveConfig()`. Se rodasse depois, quem já estava configurado leria um home
+    novo e vazio e seria tratado como 1º uso.
+- **Entrega de contexto: elidir passa a ser por sessão, não por chamada** — fecha
+  o lado B da P74. O desenho anterior (`elidirInline`) elidia o bloco verbatim do
+  `structuredContent` **sempre**, apostando que o `content.text` da mesma resposta
+  entregaria o texto. Medido duas vezes em 23/08, em sessão recém-iniciada (processo
+  novo, sem release no meio): **esse bloco de texto não alcança o cliente Cowork**.
+  O agente recebia só o marcador `<injetado verbatim no texto desta resposta>` — e
+  a carta de navegação tinha de ser aberta à mão em toda sessão, devolvendo ao
+  agente exatamente o trabalho que o D98 tirou dele e deu ao vault.
+  - Novo **`lib/entrega.mjs`**: `criarEntrega()` mantém um registro por sessão com
+    hash SHA-1 do conteúdo. Primeira entrega de cada bloco vai **inteira**;
+    repetição vira marcador. A economia da ADR-6 é preservada — o que ela nunca
+    pediu foi economizar a **primeira** entrega.
+  - A regra saiu do `mcp/connect-mcp.mjs` para o `lib/` de propósito: regra em
+    servidor não é testável isoladamente.
+- **Camada 0 do operador finalmente é injetada** (P75 + P76, os dois de uma vez).
+  - **P76 — divergência de contrato:** `montarL1Pessoal` lia `_cerebro/CLAUDE.md`
+    e a `cnct-fabrica-operador` grava `CLAUDE.md` na **raiz**. Quem rodasse a
+    fábrica ao pé da letra nascia com uma Camada 0 que o mecanismo nunca injetava —
+    e um `./operador` que *parece* vazio sem estar. A raiz vira a casa canônica;
+    `_cerebro/CLAUDE.md` continua sendo lido como **legado**, com aviso (é o mesmo
+    nome da carta legada do contrato de navegação, e a colisão originou a divergência).
+  - **P75 — fallback inalcançável:** o gate era `fs.existsSync(perfilOperador)`,
+    mas o passo 3c faz `ensureDir()` nessa mesma pasta — sempre verdadeiro a partir
+    da 1ª sessão, `else if` morto, operador com vault legado perdia a Camada 0 em
+    silêncio. O gate passa a ser a presença de **conteúdo** de Camada 0.
+  - Removido o ponteiro `30-Áreas` hardcoded em `matriz.mjs` — nome de pasta do
+    vault pessoal de **um** operador vazando para dentro do mecanismo, contra D98.
+- **Concessão de acesso e estado zero do operador viram estrutura, não prosa.**
+  - `iniciarSessao()` devolve `concessao {necessaria, caminho, motivo, alcanca[]}` e
+    `operadorProvisionado` (bool). O `render` abre o bloco com a seção **"Connect —
+    acesso de pasta (faça isto primeiro)"**, antes até do estado zero da matriz —
+    é precondição de qualquer leitura — e proíbe explicitamente o contorno por
+    varredura/`grep`/automação de SO. Motivo: a exigência vivia só no texto da
+    skill e **três agentes independentes a contornaram** (P62/D108, D148 ×2).
+  - O estado zero do **operador** ganha seção dedicada, simétrica à que a 0.12.1 deu
+    à matriz — pela mesma razão, e corrigindo a assimetria que ficou.
+- **Node do hook.** Nasce `scripts/run-node.bat` como fonte única da resolução do
+  runtime; `mcp/launcher.bat` delega a ele e `hooks/hooks.json` passa a usá-lo em vez
+  de `node` do PATH. Até aqui o node embarcado valia só para o MCP: em máquina sem
+  Node instalado o `SessionStart` falhava **em silêncio** e o produto degradava para
+  o fallback por skill, enquanto o README já anunciava "não exige Node instalado".
+  Meia-garantia é o defeito que o D104 nomeou.
+- **`tests/spike-entrega-contexto.mjs`** — 35 checks cobrindo as quatro correções.
+  Suíte completa: 8 spikes, todos verdes.
+- **Drift de versão corrigido:** `plugin.json`, `SERVER_INFO` e este CHANGELOG
+  estavam em três valores diferentes (0.12.2 / 0.12.1 / 0.12.1) — a 0.12.2 (node
+  embarcado) nunca ganhou entrada. Os três agora em **0.13.0**.
+
 ## 0.12.1 — 2026-08-19
 - **Bug real corrigido: 1º uso não perguntava o caminho da matriz.** Achado no
   dogfooding com a Helena (primeira interação dela com o Cowork + Connect): o

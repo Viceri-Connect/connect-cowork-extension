@@ -25,7 +25,7 @@ import { resolverRepo, registrarRepoLocal, listarRepos } from '../lib/repos.mjs'
 
 const log = (...a) => process.stderr.write(`[connect-mcp] ${a.join(' ')}\n`);
 
-const SERVER_INFO = { name: 'connect', version: '0.12.1' };
+const SERVER_INFO = { name: 'connect', version: '0.13.0' };
 let protocolVersion = '2025-06-18';
 
 const TOOLS = [
@@ -205,23 +205,10 @@ function toolText(obj) {
   return { content: [{ type: 'text', text }] };
 }
 
-// Evita pagar o mesmo texto duas vezes no payload: o que ja foi injetado verbatim
-// no `content.text` (protocolo do mecanismo, carta de navegacao) vira marcador no
-// `structuredContent`. Copia rasa — nunca mutila o objeto do chamador.
-function elidirInline(obj) {
-  const MARCA = '<injetado verbatim no texto desta resposta>';
-  const out = { ...obj };
-  if (out.protocoloMecanismo) out.protocoloMecanismo = MARCA;
-  for (const k of ['l1', 'l1Pessoal']) {
-    if (out[k] && typeof out[k] === 'object') {
-      out[k] = { ...out[k] };
-      if (out[k].carta?.inline) out[k].carta = { ...out[k].carta, inline: MARCA };
-      if (out[k].vaultConfigInline) out[k].vaultConfigInline = MARCA;
-      if (out[k].hotCacheInline) out[k].hotCacheInline = MARCA;
-    }
-  }
-  return out;
-}
+// Contrato de entrega de contexto (0.13.0 — fecha o lado B da P74). A regra e o
+// rationale vivem em lib/entrega.mjs; aqui o servidor so usa o registro do processo.
+import { entregaDaSessao } from '../lib/entrega.mjs';
+const dedupInline = (obj) => entregaDaSessao.dedup(obj);
 
 function handleToolCall(id, params) {
   const name = params?.name;
@@ -230,9 +217,10 @@ function handleToolCall(id, params) {
     switch (name) {
       case 'iniciar_sessao': {
         const report = iniciarSessao({ sessionId: args.session_id });
-        // Bloco legivel (com carta e protocolo verbatim) + relatorio estruturado
-        // SEM repetir os dois textos longos (ver elidirInline).
-        ok(id, { content: [{ type: 'text', text: renderContexto(report) }], structuredContent: elidirInline(report) });
+        // Bloco legivel + relatorio estruturado com os textos longos INTEIROS na
+        // primeira entrega da sessao (ver dedupInline — o canal de texto nao chega
+        // ao cliente Cowork, medido em 23/08).
+        ok(id, { content: [{ type: 'text', text: renderContexto(report) }], structuredContent: dedupInline(report) });
         return;
       }
       case 'estado_sessao':
@@ -247,7 +235,7 @@ function handleToolCall(id, params) {
         // os dois inteiros paga a carta duas vezes em token — contradiz a ADR-6,
         // que e a propria justificativa do desenho lazy.
         const bloco = renderResolucao(r);
-        const structured = bloco ? elidirInline(r) : r;
+        const structured = bloco ? dedupInline(r) : r;
         const text = bloco || JSON.stringify(r, null, 2);
         return ok(id, { content: [{ type: 'text', text }], structuredContent: structured });
       }

@@ -23,7 +23,7 @@ import { mount, ensureDir, listMounts } from './mount.mjs';
 import { lerIdentidade, montarL1, montarL1Pessoal, lerProtocoloMecanismo } from './matriz.mjs';
 // Fonte unica de CONNECT_HOME e da escrita do config (nao reimplementar aqui:
 // duas resolucoes independentes do mesmo cfgPath divergem com o tempo).
-import { gravarChaveLocal, defaultConnectHome, caminhoConfig, lerConfigBruta, gravarConfigBruta } from './config-local.mjs';
+import { gravarChaveLocal, defaultConnectHome, caminhoConfig, lerConfigBruta, gravarConfigBruta, migrarHomeLegado } from './config-local.mjs';
 
 const ALIAS_MATRIZ = 'matriz';
 const ALIAS_PESSOAL = 'pessoal';
@@ -86,9 +86,20 @@ export function sanitizeSessionId(sessionId) {
 // coleta avisos e devolve um relatorio; a sessao do Cowork nunca cai por mount.
 // ---------------------------------------------------------------------------
 export function iniciarSessao({ sessionId, ...override } = {}) {
+  // 0. Migracao do home legado (pasta de aplicativo -> perfil do usuario), ANTES de
+  // resolver a config: se rodasse depois, a sessao leria um home novo e vazio e
+  // pediria a configuracao inteira de novo a quem ja estava configurado.
+  const migracao = migrarHomeLegado(override.home);
+
   const cfg = resolveConfig(override);
   const sid = sanitizeSessionId(sessionId);
   const avisos = [];
+
+  if (migracao.status === 'migrado') {
+    avisos.push(`CONNECT_HOME migrado de ${migracao.legado} para ${cfg.home} (${migracao.migrados.join(', ')}) — pasta de aplicativo e inalcancavel pelas file tools do harness. O home antigo foi preservado e marcado, nada foi apagado.`);
+  } else if (migracao.status === 'falhou') {
+    avisos.push(`migracao do CONNECT_HOME legado falhou: ${migracao.motivo} — a sessao segue no home novo (${cfg.home}), possivelmente sem a config anterior.`);
+  }
 
   // Estado zero: matriz nunca configurada nesta maquina, ou o path gravado
   // nao existe mais (ex.: pasta renomeada/OneDrive nao sincronizado). Esta
@@ -99,7 +110,7 @@ export function iniciarSessao({ sessionId, ...override } = {}) {
   const matrizConfigurada = !!(cfg.vaultMatriz && fs.existsSync(cfg.vaultMatriz));
 
   if (cfg.homeOrigem === 'default') {
-    avisos.push(`CONNECT_HOME nao configurado — usando pasta padrao sugerida: ${cfg.home}. Conecte esta pasta ao Cowork (ou grave CONNECT_HOME) se quiser outro local.`);
+    avisos.push(`CONNECT_HOME nao configurado — usando a pasta padrao: ${cfg.home}. Grave CONNECT_HOME se quiser outro local (nunca dentro de pasta de aplicativo/sistema).`);
   }
 
   // 1. scaffold da sessao, fora do OneDrive
@@ -166,16 +177,23 @@ export function iniciarSessao({ sessionId, ...override } = {}) {
   // 4b. Camada 0 do operador (D104) — hot cache/delta. Prefere o perfil gerido no
   // CONNECT_HOME; se ausente, cai no vault pessoal montado (quando houver). A espinha
   // NAO vem daqui (vem de lerProtocoloMecanismo) — aqui e so o delta do operador.
-  let l1Pessoal = null;
-  if (fs.existsSync(perfilOperador)) {
-    // ALIAS_OPERADOR (nao ALIAS_PESSOAL): o perfil gerido pelo Connect e montado
-    // como ./operador. Usar ./pessoal aqui gerava ponteiro morto — ou pior,
-    // apontava para o arquivo homonimo do vault Obsidian do operador, quando ele
-    // existisse (achado na revisao da 0.12.0).
-    l1Pessoal = montarL1Pessoal(perfilOperador, ALIAS_OPERADOR);
-  } else if (cfg.cerebroPessoal && fs.existsSync(cfg.cerebroPessoal)) {
-    l1Pessoal = montarL1Pessoal(cfg.cerebroPessoal, ALIAS_PESSOAL);
+  // O gate NAO pode ser `fs.existsSync(perfilOperador)`: o passo 3c faz ensureDir()
+  // nessa mesma pasta, entao ela existe SEMPRE a partir da 1a sessao e o fallback
+  // ficava inalcancavel — operador com vault legado perdia a Camada 0 em silencio
+  // (P75). O gate certo e a presenca de CONTEUDO de Camada 0, nao da pasta.
+  let l1Pessoal = montarL1Pessoal(perfilOperador, ALIAS_OPERADOR);
+  if ((!l1Pessoal || l1Pessoal.hotCacheOrigem === 'ausente') && cfg.cerebroPessoal && fs.existsSync(cfg.cerebroPessoal)) {
+    const alt = montarL1Pessoal(cfg.cerebroPessoal, ALIAS_PESSOAL);
+    if (alt && alt.hotCacheOrigem !== 'ausente') l1Pessoal = alt;
   }
+  if (l1Pessoal?.avisos?.length) avisos.push(...l1Pessoal.avisos);
+
+  // Estado zero do OPERADOR — mesma natureza de `matrizConfigurada` (0.12.1): a flag
+  // e a fonte de verdade que o render usa para abrir a sessao com o bloco de
+  // provisionamento ANTES de qualquer outra coisa. Aviso solto no fim do bloco ja se
+  // provou insuficiente para o agente parar e agir — foi exatamente o defeito que a
+  // 0.12.1 corrigiu para a matriz e deixou de corrigir para o operador.
+  const operadorProvisionado = !!identidade && l1Pessoal?.hotCacheOrigem !== 'ausente';
 
   // 4c. Espinha do mecanismo (D104/D96) — protocolo entregue pelo produto,
   // injetado no bloco de sessao. Independe de arquivo do operador.
@@ -196,6 +214,18 @@ export function iniciarSessao({ sessionId, ...override } = {}) {
     l1,
     l1Pessoal,
     matrizConfigurada,
+    operadorProvisionado,
+    // Concessao de acesso — contrato ESTRUTURAL, nao instrucao em prosa (P90).
+    // Ate a 0.12.2 a exigencia vivia so no texto da skill ("resolvido -> pedir acesso
+    // ao Cowork") e dois agentes independentes a contornaram (D148, 3 recorrencias).
+    // O mecanismo passa a devolver o pedido pronto, com o caminho exato: uma pasta so,
+    // porque o workspace e a porta unica para todas as origens montadas nele.
+    concessao: {
+      necessaria: true,
+      caminho: cfg.home,
+      motivo: 'o harness precisa de acesso concedido a esta pasta; ela alcanca o workspace da sessao e, por tabela, toda origem montada nele',
+      alcanca: mounts.filter((m) => m.status === 'mounted').map((m) => `./${m.alias}`),
+    },
     avisos,
   };
 }

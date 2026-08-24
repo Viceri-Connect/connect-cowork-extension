@@ -119,9 +119,23 @@ export function montarL1(matrizRoot, aliasMatriz = 'matriz') {
 // produto). Aqui fica so o DELTA pessoal (o que sobra no `_cerebro/CLAUDE.md`
 // depois do corte: interpretacao pessoal, projetos-exemplo, indice de memoria).
 // ---------------------------------------------------------------------------
+// Casa canonica da Camada 0 do operador: `CLAUDE.md` na RAIZ do perfil — que e onde
+// a `cnct-fabrica-operador` materializa (tabela do Passo 3 da skill). Ate a 0.12.2 esta
+// funcao lia so `_cerebro/CLAUDE.md` e emitia a raiz como mero ponteiro: quem rodasse a
+// fabrica ao pe da letra nascia com uma Camada 0 que o mecanismo nunca injetava (P76).
+// O caminho `_cerebro/CLAUDE.md` continua sendo lido como LEGADO — e o mesmo nome da
+// carta legada do contrato de navegacao, e a colisao originou a divergencia.
 export function montarL1Pessoal(cerebroPessoalRoot, aliasPessoal = 'pessoal') {
   if (!cerebroPessoalRoot) return null;
-  const hotCache = readIfExists(path.join(cerebroPessoalRoot, '_cerebro', 'CLAUDE.md'));
+  const canonico = path.join(cerebroPessoalRoot, 'CLAUDE.md');
+  const legado = path.join(cerebroPessoalRoot, '_cerebro', 'CLAUDE.md');
+  const hotCache = readIfExists(canonico) ?? readIfExists(legado);
+  const hotCacheOrigem = readIfExists(canonico) ? 'canonica' : (readIfExists(legado) ? 'legada' : 'ausente');
+
+  const avisos = [];
+  if (hotCacheOrigem === 'legada') {
+    avisos.push(`Camada 0 do operador lida de ./${aliasPessoal}/_cerebro/CLAUDE.md (casa legada) — a casa canonica e ./${aliasPessoal}/CLAUDE.md.`);
+  }
 
   const ponteiros = [];
   const addPtr = (rel, nota) => {
@@ -129,14 +143,17 @@ export function montarL1Pessoal(cerebroPessoalRoot, aliasPessoal = 'pessoal') {
       ponteiros.push({ caminho: `./${aliasPessoal}/${rel}`, nota });
     }
   };
-  addPtr('CLAUDE.md', 'camada 0 minima da raiz do cerebro pessoal');
+  // Ponteiros PRESCRITOS pelo produto ficam restritos ao que o proprio produto
+  // materializa (fabrica de operador). Nome de pasta de vault de operador especifico
+  // nao entra aqui — era vazamento de instancia no mecanismo, contra D98.
   addPtr('_cerebro/memory', 'memoria profunda (indice)');
-  addPtr('30-Áreas', 'interpretacao pessoal de papeis/metodologias (delta do coletivo)');
   addPtr('TASKS.md', 'kanban pessoal');
 
   return {
-    hotCacheInline: hotCache, // _cerebro/CLAUDE.md pessoal (delta), inline por ser curto
+    hotCacheInline: hotCache, // delta de comportamento do operador, inline por ser curto
+    hotCacheOrigem,
     ponteiros,
+    avisos,
   };
 }
 

@@ -61,6 +61,27 @@ export function renderResolucao(res) {
 export function renderContexto(report) {
   const L = [];
 
+  // Concessao de acesso (P90) — vai ANTES de tudo, inclusive do estado zero da
+  // matriz, porque e a precondicao de qualquer leitura: sem ela o agente monta e
+  // nao alcanca. Ate a 0.12.2 a exigencia vivia so em prosa dentro da skill, e dois
+  // agentes independentes a contornaram (D148, 3 recorrencias medidas). O mecanismo
+  // passa a emitir o pedido pronto, com caminho exato e o alcance que ele concede.
+  if (report.concessao?.necessaria) {
+    L.push('## Connect — acesso de pasta (faca isto primeiro)');
+    L.push('');
+    L.push(`🔑 Solicite ao operador acesso a **uma** pasta: \`${report.concessao.caminho}\``);
+    L.push(`Ela ${report.concessao.motivo}.`);
+    if (report.concessao.alcanca?.length) {
+      L.push(`Com ela concedida, ficam alcancaveis: ${report.concessao.alcanca.map((a) => `\`${a}\``).join(', ')}.`);
+    }
+    L.push('');
+    L.push('**Se um caminho declarado nao abrir, reporte a lacuna — nao contorne.** Varredura de');
+    L.push('sistema de arquivos, `grep` exploratorio e ferramenta de automacao de SO para ler vault');
+    L.push('sao contorno: mascaram o defeito em vez de corrigi-lo (D108/D148) e produzem resposta');
+    L.push('errada a partir de nota que so o grep acha — que e, por definicao, nota orfa.');
+    L.push('');
+  }
+
   // Estado zero (D97/D105): matriz nunca configurada nesta maquina, ou o path
   // gravado nao existe mais. Isto vai PRIMEIRO, antes de qualquer outra secao
   // (identidade, protocolo, atalhos) — nao pode ser so mais um item na lista
@@ -76,6 +97,21 @@ export function renderContexto(report) {
     L.push('fica essa pasta nesta maquina (e o cerebro pessoal, se ele tiver um) e chame a');
     L.push('tool `configurar` com os caminhos. Depois, chame `iniciar_sessao` de novo para');
     L.push('restaurar o contexto completo. Nao prossiga com outra tarefa antes disso.');
+    L.push('');
+  }
+
+  // Estado zero do OPERADOR (D105) — simetrico ao da matriz, e pela mesma razao.
+  // A 0.12.1 deu secao dedicada ao estado zero da matriz porque aviso solto no fim
+  // do bloco nao fazia o agente parar e agir; o operador ficou de fora e reproduziu
+  // o defeito: `ensureDir` cria a pasta na 1a sessao, entao ./operador existe e
+  // parece provisionado mesmo vazio, e a `cnct-fabrica-operador` nunca dispara.
+  if (report.operadorProvisionado === false) {
+    L.push('## Connect — perfil do operador nao provisionado');
+    L.push('');
+    L.push('👤 **Acao esperada nesta sessao:** o cerebro do operador (identidade cross-cliente +');
+    L.push('delta de comportamento) ainda nao foi materializado. Sem ele, a Camada 0 entra vazia:');
+    L.push('a sessao sobe, mas o agente nao sabe quem e o operador nem como ele trabalha.');
+    L.push('Ofereca rodar a `cnct-fabrica-operador` — estado zero e gatilho de nascimento, nao erro.');
     L.push('');
   }
 
