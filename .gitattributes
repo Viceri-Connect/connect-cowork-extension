@@ -1,0 +1,14 @@
+# EOL normalizado — fecha a classe de ruido que fez um commit de 2 correcoes
+# aparecer com 598 linhas alteradas num arquivo de 299 (LF->CRLF, zero mudanca de
+# codigo). Gotcha ja conhecido do projeto: ver [[ambiente-cowork-gotchas]] na matriz.
+* text=auto eol=lf
+
+# .bat e consumido pelo cmd.exe do Windows: CRLF nao e preferencia, e requisito.
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Binarios: nunca normalizar.
+*.exe binary
+*.png binary
+*.ico binary
+*.woff2 binary

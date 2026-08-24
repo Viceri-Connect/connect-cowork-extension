@@ -1,5 +1,56 @@
 # Changelog — connect
 
+## 0.15.0 — 2026-08-24
+
+**O runtime sai do pacote.** Uma correção só, e ela é de bloqueio de release: até a
+0.14.0 o plugin **não podia ser atualizado enquanto rodava** — que é exatamente quando
+alguém atualiza.
+
+- **A atualização do plugin destruía a instalação.** Medido em 24/08, por cronologia de
+  arquivo: às 00:02 o pacote estava sadio (`bin/node.exe`, 70.027.928 bytes, íntegro);
+  às 09:31 o instalador reescreveu o diretório, **não conseguiu tocar em `bin/`** (o
+  único arquivo em uso pelo servidor MCP em execução) e abortou — deixando um
+  `plugin.json` de 23 bytes (`{"name":"connect"}`), sem `lib/`, sem `skills/`, sem
+  `mcpServers`. Windows não substitui `.exe` com processo ativo. Sintoma para o
+  operador: *"a extensão está com falha, não consigo atualizar"* — e não há o que
+  atualizar, porque não sobrou pacote válido.
+  - **Consequência direta do commit `e7ff9c1`** ("embutir o node na instalação"): antes
+    dele nenhum binário morava no pacote, então nada travava. O produto ganhou *"não
+    exige Node instalado"* (D153) e pagou com *"não pode ser atualizado em uso"* — o
+    custo nunca foi declarado.
+  - **É a P74 por outro ângulo, e pior.** Ela já dizia que atualizar não recarrega o
+    servidor MCP em memória; agora sabemos que **corrompe a instalação**.
+  - **`scripts/run-node.bat`**: o runtime passa a viver em `%CONNECT_HOME%\bin`, fora do
+    pacote. Não é contorno — é a casa certa: `CONCEITOS.md` §5 declara o `CONNECT_HOME`
+    como a pasta de estado/runtime da máquina, e `node.exe` é runtime. Estava na pasta
+    errada pela própria taxonomia do produto.
+  - Efeitos colaterais bons: o download de ~70 MB **deixa de se repetir a cada versão**
+    (o runtime sobrevive à atualização) e quem já tem o plugin instalado **migra do
+    legado por cópia local**, sem rebaixar nada.
+  - Endurecimentos que entraram junto, todos de defeito real no script anterior:
+    `curl -f` (sem ele, um HTTP 404 era gravado como `node.exe` com exit 0, e o
+    `if exist` das execuções seguintes nunca mais tentava baixar — binário corrompido
+    permanente, mesma classe do `.git/index.lock` órfão da P77); download **atômico**
+    (`.tmp` + `move`); verificação de que o binário **executa** (`node -v`), não só de
+    que existe; e degradação para o `node` do PATH **avisada em stderr**, nunca
+    silenciosa — que é o modo de falha que o D153 fechou.
+  - `tests/spike-runtime-fora-do-pacote.mjs` (11 casos). **Declarado no próprio spike:**
+    ele cobre o *contrato textual* do `.bat`, não a execução em Windows. A validação real
+    é atualizar o plugin com sessão aberta e a instalação sobreviver — teste que nenhum
+    spike faz (norma D163).
+
+- **`SERVER_INFO.version` deixa de ser hardcoded** (`connect-mcp.mjs`). Estava fixo em
+  `'0.13.0'` e ficou para trás no bump da 0.14.0 — literalmente o defeito que a **P74**
+  descreve: o servidor não sabe a versão do disco e o operador não tem como saber que a
+  sessão serve outra versão. Passa a derivar do `plugin.json`; se a leitura falhar,
+  `'desconhecida'` — resposta honesta, ao contrário de um número errado. Fecha a metade
+  estrutural da P74.
+
+- **`.gitattributes` nasce.** Um commit de duas correções apareceu com 598 linhas
+  alteradas num arquivo de 299 — LF→CRLF, zero mudança de código. EOL normalizado para
+  LF, com `.bat`/`.ps1` em CRLF (requisito do `cmd.exe`, não preferência) e binários
+  nunca normalizados. Gotcha já conhecido do projeto; agora travado no repositório.
+
 ## 0.14.0 — 2026-08-24
 
 **Presença em vez de entrega única.** Duas correções, ambas de medição na própria

@@ -17,6 +17,7 @@
 // IMPORTANTE: stdout e reservado para o protocolo. Todo log vai para stderr.
 
 import readline from 'node:readline';
+import { readFileSync } from 'node:fs';
 import { mount, unmount, listMounts } from '../lib/mount.mjs';
 import { iniciarSessao, gravarConfig, estadoSessao, registrarSubVaultLocal } from '../lib/session.mjs';
 import { resolver } from '../lib/resolver.mjs';
@@ -25,7 +26,21 @@ import { resolverRepo, registrarRepoLocal, listarRepos } from '../lib/repos.mjs'
 
 const log = (...a) => process.stderr.write(`[connect-mcp] ${a.join(' ')}\n`);
 
-const SERVER_INFO = { name: 'connect', version: '0.13.0' };
+// Versao do servidor: DERIVADA do plugin.json, nunca hardcoded (fecha metade da P74).
+// Estava fixa em '0.13.0' e ficou para tras no bump da 0.14.0 — exatamente o defeito que
+// a P74 descreve: o servidor nao sabe a versao do disco, e o operador nao tem como saber
+// que a sessao esta servindo codigo de outra versao. Se a leitura falhar, 'desconhecida'
+// e resposta honesta; numero errado nao e.
+function versaoDoPacote() {
+  try {
+    const p = new URL('../.claude-plugin/plugin.json', import.meta.url);
+    return JSON.parse(readFileSync(p, 'utf8')).version || 'desconhecida';
+  } catch {
+    return 'desconhecida';
+  }
+}
+
+const SERVER_INFO = { name: 'connect', version: versaoDoPacote() };
 let protocolVersion = '2025-06-18';
 
 const TOOLS = [
