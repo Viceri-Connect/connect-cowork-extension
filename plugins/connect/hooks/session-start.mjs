@@ -9,7 +9,8 @@
 // Nunca derruba a sessao: qualquer falha vira aviso, exit 0.
 
 import { iniciarSessao } from '../lib/session.mjs';
-import { renderContexto } from '../lib/render.mjs';
+import { renderContexto, renderContextoCurto } from '../lib/render.mjs';
+import { materializarContexto } from '../lib/contexto-arquivo.mjs';
 
 function lerStdin() {
   return new Promise((resolve) => {
@@ -43,7 +44,26 @@ async function main() {
     process.exit(0);
   }
 
-  process.stdout.write(renderContexto(report));
+  // M1 — presenca em vez de entrega unica.
+  //
+  // O bloco completo e materializado no workspace (arquivo que o harness rele) e o
+  // stdout carrega so o minimo acionavel + o ponteiro. Motivo medido em 24/08: o
+  // bloco unico chegou a ~16 KB, o cliente Cowork truncou, salvou num log de hook e
+  // entregou 2 KB de preview — camada 0/1 ausente, sem sinal. Ver
+  // `lib/contexto-arquivo.mjs` para a historia completa.
+  //
+  // Degradacao: se a escrita falhar, emite o bloco INTEIRO no stdout (comportamento
+  // <= 0.13.0). Pior, mas nunca contexto ausente — e o bloco curto avisaria o agente
+  // de uma leitura que ele nao tem como fazer.
+  const completo = renderContexto(report);
+  const arquivo = materializarContexto({ workspace: report.workspace, bloco: completo });
+
+  if (arquivo.status === 'materializado') {
+    process.stdout.write(renderContextoCurto(report, arquivo));
+  } else {
+    process.stderr.write(`[connect] contexto nao materializado (${arquivo.status}: ${arquivo.motivo || '—'}) — emitindo bloco inteiro no stdout\n`);
+    process.stdout.write(completo);
+  }
   process.exit(0);
 }
 

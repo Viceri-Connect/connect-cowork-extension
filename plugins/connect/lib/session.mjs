@@ -220,11 +220,27 @@ export function iniciarSessao({ sessionId, ...override } = {}) {
     // ao Cowork") e dois agentes independentes a contornaram (D148, 3 recorrencias).
     // O mecanismo passa a devolver o pedido pronto, com o caminho exato: uma pasta so,
     // porque o workspace e a porta unica para todas as origens montadas nele.
+    //
+    // M2 (24/08) — a promessa de "uma concessao so" foi RETIRADA, por medicao.
+    // O D149 concluiu que junction com destino no perfil do usuario ou no OneDrive
+    // e lida "inclusive SEM conceder a origem separadamente". Medido em 24/08, em
+    // sessao real: conceder o CONNECT_HOME nao alcancou `./matriz` nem o sub-vault
+    // resolvido — as tres origens (duas no OneDrive) tiveram de ser concedidas uma a
+    // uma. A causa nao e o momento do mount (pre-montar nao resolveria): o harness
+    // aplica politica sobre o DESTINO REAL da junction, e destino sincronizado por
+    // OneDrive exige concessao propria.
+    //
+    // Consequencia de produto: o mecanismo para de prometer o que nao entrega e passa
+    // a DECLARAR o que falta. Custo conhecido e melhor que surpresa — e o operador
+    // concede uma vez por origem, nao uma vez por sessao.
     concessao: {
       necessaria: true,
       caminho: cfg.home,
-      motivo: 'o harness precisa de acesso concedido a esta pasta; ela alcanca o workspace da sessao e, por tabela, toda origem montada nele',
+      motivo: 'o harness precisa de acesso concedido a esta pasta — ela alcanca o workspace da sessao e o estado do operador',
       alcanca: mounts.filter((m) => m.status === 'mounted').map((m) => `./${m.alias}`),
+      origens: mounts
+        .filter((m) => m.status === 'mounted' || m.status === 'exists')
+        .map((m) => ({ alias: `./${m.alias}`, caminho: m.source })),
     },
     avisos,
   };

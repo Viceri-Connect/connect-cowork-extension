@@ -296,6 +296,16 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, ...ov
     mount: mountReport,
     l1,
     nota: entry.nota,
+    // M2 (24/08) — montar nao e alcancar. O harness aplica politica de acesso sobre o
+    // DESTINO REAL da junction; conceder o CONNECT_HOME nao alcancou este acervo em
+    // nenhuma das 4 ocorrencias medidas (P97). O mecanismo declara a origem a conceder
+    // em vez de deixar o agente descobrir por tentativa — e a alternativa a tentativa
+    // e o contorno (D148), que e o que estamos tentando extinguir.
+    concessao: {
+      necessaria: true,
+      caminho: caminhoLocal,
+      motivo: `sem acesso concedido a esta origem, \`./${aliasFinal}\` monta e nao abre — pedir ao operador, nunca contornar`,
+    },
     avisos,
   };
 }

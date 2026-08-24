@@ -1,5 +1,62 @@
 # Changelog — connect
 
+## 0.14.0 — 2026-08-24
+
+**Presença em vez de entrega única.** Duas correções, ambas de medição na própria
+sessão de dogfooding, e ambas revisando conclusões da 0.13.0 — não porque a 0.13.0
+errou o método, mas porque o escopo do que ela mediu era menor do que ela concluiu.
+
+- **O bloco de contexto não era injetado — era truncado.** Medido em 24/08: o hook
+  emitiu **15,7 KB** e o cliente Cowork não injetou. Truncou, salvou num log de hook
+  e entregou ao agente um preview de 2 KB. O agente teve de abrir o arquivo à mão
+  para ter camada 0 e camada 1 — ou seja, **reversão prática do D104** (*"a garantia
+  é estrutural: não depende de o agente escolher ler um arquivo"*).
+  **A correção do D150 produziu o defeito seguinte:** ela fez a primeira entrega ir
+  inteira, o bloco cresceu, e o crescimento estourou o canal.
+  - Nasce **`lib/contexto-arquivo.mjs`**: `materializarContexto()` grava o bloco
+    completo como `contexto-sessao.md` **no workspace da sessão**, atomicamente
+    (tmp + rename — bloco pela metade é pior que bloco ausente, porque o agente não
+    tem como saber que falta pedaço). Só é possível desde o D149, que tirou o
+    `CONNECT_HOME` da pasta de aplicativo: antes, o workspace era inalcançável (P93).
+  - **`lib/render.mjs`**: nasce `renderContextoCurto()` — o canal injetado carrega só
+    o **mínimo acionável** (concessão, estado zero, identidade, atalhos, regras duras,
+    ponteiro). O peso (protocolo do mecanismo, carta verbatim, camada 0 do operador)
+    vive no arquivo. `blocoAcionavel()` extraído para os dois renders compartilharem
+    as seções de precondição sem duplicar texto.
+  - **Invariante nova, com teste:** o bloco injetado é **O(1) no tamanho do acervo**.
+    Era exatamente isso que o bloco único não era. `tests/spike-presenca-contexto.mjs`
+    trava um teto de 4 KB e falha se o bloco variar quando a carta cresce 5×.
+    Medição depois da mudança: **15,7 KB → 3,4 KB** no canal injetado (−78%), com o
+    peso preservado e agora **relível** — que é a propriedade que o stdout nunca teve.
+  - **Emenda ao D104, não violação.** A garantia deixa de ser *"injetar tudo"* e passa
+    a ser *"injetar o mínimo acionável e materializar o resto onde o harness relê"*. O
+    D104 já dependia de leitura de arquivo na prática — só que de um arquivo de log
+    que o produto não controla, sem instrução e sem ponteiro.
+  - Degradação declarada: se a escrita falhar, o hook emite o bloco inteiro no stdout
+    (comportamento ≤ 0.13.0) e avisa em stderr; e o bloco curto anuncia a ausência em
+    vez de apontar uma leitura impossível.
+
+- **A promessa de "uma concessão só" foi retirada — o D149 concluiu além do que mediu.**
+  A 0.13.0 afirmou que junction com destino no perfil do usuário ou no OneDrive é lida
+  *"inclusive sem conceder a origem separadamente"*. Medido em 24/08, em sessão real:
+  conceder o `CONNECT_HOME` **não** alcançou `./matriz` nem o sub-vault resolvido — as
+  três origens (duas no OneDrive) tiveram de ser concedidas uma a uma. A causa não é o
+  momento do mount (pré-montar não resolveria): o harness aplica política sobre o
+  **destino real**, e destino sincronizado por OneDrive exige concessão própria.
+  **4ª ocorrência da família P62/P97.**
+  - **`lib/session.mjs`**: `concessao` ganha `origens[]` — cada alias com o caminho
+    real da sua origem.
+  - **`lib/resolver.mjs`**: todo `resolvido` devolve `concessao` com a origem daquele
+    acervo. Motivo: a alternativa a declarar é o agente descobrir por tentativa, e a
+    alternativa à tentativa é o contorno (D148) — que é o que estamos extinguindo.
+  - **`lib/render.mjs`**: o bloco de acesso lista as origens e diz, sem eufemismo, que
+    uma concessão pode não bastar. Custo conhecido é melhor que surpresa.
+
+> Nota de método: as duas correções acima revisam a 0.13.0, que revisou a 0.12.x. O
+> padrão já é estável o bastante para ser previsto — **conclusão tirada de spike vale
+> só no caminho que o spike percorreu.** O D149 mediu as origens montadas no início da
+> sessão e concluiu sobre todas; o D150 mediu a elisão e concluiu sobre a entrega.
+
 ## 0.13.0 — 2026-08-23
 Quatro correções, todas de **medição em sessão real** (dogfooding do dia), não de
 hipótese. As três primeiras são a mesma família de defeito, vista de ângulos
