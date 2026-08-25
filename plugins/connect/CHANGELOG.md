@@ -1,5 +1,48 @@
 # Changelog — connect
 
+## 0.16.0 — 2026-08-24 (não commitada — validação do operador pendente, D167)
+
+**O catálogo ganha dono declarado, e dois executores param de degradar em silêncio.** Nenhuma
+mudança de runtime: é catálogo, contrato e protocolo de skill. Origem: auditoria das 6 skills do
+plugin, que achou 10 defeitos.
+
+- **`cnct-nucleo-encerramento` 0.2.0 → 0.3.0 — nasce o Passo 4b.** O executor persistia
+  `TASKS.md` e `meu-config.md` do operador e **nunca** `vinculos/{coletivo}/estado.md`, que é a
+  casa declarada pela emenda CA6–CA9 da `CONNECT-E2-01` desde 18/08. Consequência medida: o
+  `estado.md` do vínculo `mapfre` **nasceu vazio e ficou vazio** enquanto o cérebro pessoal legado
+  tinha a tabela cheia e fresca — ninguém escrevia ali. O Passo 4b torna a atualização obrigatória
+  por vínculo tocado e traz a forma junto (uma frase por célula, substitui, fonte de verdade é a
+  nota do projeto, `a reconciliar` em vez de suposição). **P117.**
+- **`cnct-fabrica-operador` 0.1.0 → 0.2.0 — sai do schema aposentado.** Materializava
+  `_cerebro/clientes/.gitkeep` e `clientes/{slug}/config.md`; passa a materializar
+  `_cerebro/vinculos/{coletivo}/{config,estado}.md` no schema `vinculos-v1`, sem `repos.md` (o
+  registro de repo virou `resolver_repo`, P64/D127) e sem path no vault (D35). **Todo operador novo
+  nascia errado**, e ela é a implementação de referência do padrão.
+  - **Novo Passo 6 — migrar com inventário e diff.** A fábrica declarava *"nasce, não migra à
+    força"*, e o caso do operador existente ficava fora de escopo. Foi assim que **4 convenções com
+    gatilho** se perderam na migração da Camada 0 — uma delas declarada *"genuinamente pessoal, sem
+    equivalente no coletivo"*, ou seja, irrecuperável se a fonte fosse podada antes de alguém notar.
+    **P119.**
+  - `fabrica-papel` → **`cnct-fabrica-papel`**: o nome citado não existia **e** violava a convenção
+    do próprio framework, dentro do arquivo de referência.
+- **`metadata.eixo` em todas as 6 skills, e `metadata` em `cnct-fabrica-navegacao`** — ela não
+  declarava metadata nenhum, portanto **não tinha versão**: o comparador de frescor da ADR-9 não
+  tinha o que comparar. Conformidade passa a ser exigência do `contrato-skill.md` (a escrever,
+  **P115**).
+- **`FRAMEWORK.md` 0.1.0 → 0.2.0** — nasce a **§3.2 (namespace de origem)**: `cnct-` é reservado ao
+  produto, fábrica cujo contrato é do coletivo não leva o prefixo, e **nenhuma fábrica emite nome no
+  namespace do produto**. Era a lacuna que a L3 (explodir processo em skill) tornava bloqueante.
+  §3/§5/§5.4/§6 atualizadas; `elicitacao-captura` deixa de ser "candidata a split" e passa ao eixo
+  `dogfooding`. Decisão em **ADR-15** (`proposta`, acervo da tribo Impulsa).
+- **`cnct-nucleo-conhecimento` marcada `status: a reclassificar`** — texto declarativo sem protocolo
+  executável, e com gatilhos que colidem palavra por palavra com `cnct-nucleo-sessao`. Mesma classe
+  da P113, dentro do plugin. Candidata a virar `config/`, não skill. **P118.**
+
+> ⚠️ **Não entrou, e é o que fecha o ciclo:** o **entregador de skill** (comparar versão instalada ×
+> canônica, empacotar, entregar). A ADR-9 decidiu isso em 04/08 e a implementação virou prosa
+> replicada no Passo 1 de 11 das 14 skills instaladas. É por isso que o D143 declarou uma skill
+> desabilitada e **nada mudou na máquina do operador**. **P114**, com **P115** como pré-requisito.
+
 ## 0.15.0 — 2026-08-24
 
 **O runtime sai do pacote.** Uma correção só, e ela é de bloqueio de release: até a

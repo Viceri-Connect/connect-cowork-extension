@@ -1,5 +1,10 @@
 ---
 name: cnct-fabrica-navegacao
+metadata:
+  version: "0.1.0"
+  eixo: nucleo
+  program: "Impulsa / Viceri"
+  camada: "L2 — fábrica por tipo"
 description: Materializa ou completa a CARTA DE NAVEGAÇÃO (`_cerebro/camada-1.md`) de um vault desta instância Connect — a camada 1 declarada pelo próprio vault: por onde se entra, o que carrega por gatilho, onde termina. Dispara quando o mecanismo reporta "lacuna de navegação" ou "carta incompleta" ao montar a matriz ou um sub-vault, quando o operador diz "criar a camada 1", "carta de navegação", "hot cache do coletivo", "o vault monta e o agente não sabe navegar", ou quando um vault legado ainda usa `_cerebro/CLAUDE.md` e precisa migrar para a casa canônica. Convenção `cnct-fabrica-<tipo>`: esta é a fábrica do tipo "navegação" (artefato de interior, contrato em config/contrato-navegacao.md). Nunca sobrescreve carta existente — completa por delta.
 ---
 

@@ -10,7 +10,9 @@ description: >
   connect MCP server.
 metadata:
   version: "0.4.0"
+  eixo: nucleo
   program: "Impulsa / Viceri"
+  status: "a reclassificar — P118: knowledge disfarçado de executor, gatilhos colidem com cnct-nucleo-sessao"
 ---
 
 # Connect — protocolo de contexto por caminho dinâmico

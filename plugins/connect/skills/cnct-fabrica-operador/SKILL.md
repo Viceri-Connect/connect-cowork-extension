@@ -11,7 +11,8 @@ description: >
   Roda no estado zero — não exige coletivo montado. Estado zero é gatilho de
   nascimento, não erro (D97/D105).
 metadata:
-  version: "0.1.0"
+  version: "0.2.0"
+  eixo: nucleo
   program: "Impulsa / Viceri"
   camada: "L2 — fábrica por tipo"
 ---
@@ -82,14 +83,30 @@ reportar e pular.**
 |---|---|---|
 | `_cerebro/meu-config.md` | `templates/meu-config.template.md` | identidade cross-cliente; `{{DATA_INSTALACAO}}`=hoje, `{{NOME}}`, `{{EMAILS}}`, `{{PAPEIS}}` |
 | `CLAUDE.md` | `templates/CLAUDE.template.md` | Camada 0 mínima = **só o delta** (a espinha vem do protocolo-mecanismo) |
-| `_cerebro/clientes/.gitkeep` | — | pasta vazia; um registro por cliente entra depois |
+| `_cerebro/vinculos/.gitkeep` | — | pasta vazia; **um registro por coletivo** (cliente, tribo, área) entra depois. Schema vigente: `vinculos-v1` (CA6–CA9 da `CONNECT-E2-01`, emenda 18/08). ⚠️ **Nunca** materializar `_cerebro/clientes/` — schema aposentado |
 | `_cerebro/memory/MEMORY.md` | inline | `# Memória profunda — {{NOME}}\n\n> Índice. Notas de memória entram aqui, cada uma linkada.` |
 | `_cerebro/atualizacoes-aplicadas.md` | inline | cabeçalho do log do check de atualizações + lista vazia |
 | `TASKS.md` | inline | `# TASKS — {{NOME}}` + colunas kanban vazias (A fazer / Fazendo / Feito) |
 
-Se o Passo 2.4 trouxe um coletivo: semear `_cerebro/clientes/{slug}/config.md` com o
-`path-vault-coletivo` informado (forma mínima — paths locais + slug), e deixar
-`estado.md`/`repos.md` como stubs vazios.
+Se o Passo 2.4 trouxe um coletivo: semear `_cerebro/vinculos/{coletivo}/` com **dois** arquivos, no
+schema `vinculos-v1`:
+
+- `config.md` — o vínculo em si: papel efetivo do operador naquele coletivo, e-mail de contexto se
+  houver. **Sem path** (D35: o path local vive só em `connect.config.json`, gravado por
+  `registrar_subvault_local` — nunca no vault, nem no perfil).
+- `estado.md` — hot cache do operador naquele coletivo, **com cabeçalho de forma e tabela vazia**:
+  uma linha por projeto, uma frase por célula, **substitui e nunca acumula**, fonte de verdade é a nota
+  do projeto no coletivo. Quem passa a mantê-lo é o `cnct-nucleo-encerramento` (Passo 4b) — a fábrica
+  só o **nasce com a forma certa**.
+
+> **`repos.md` não é criado** — o registro de repositório foi substituído pelo primitivo `resolver_repo`
+> (P64/D127). Materializá-lo aqui recria o schema que já foi aposentado.
+
+> ⚠️ **`estado.md` vazio é o estado normal de um vínculo recém-nascido — e é diferente de vínculo com
+> dado perdido.** O arquivo declara qual dos dois é, na própria nota de cabeçalho: *"nasceu vazio nesta
+> instalação"* × *"a reconciliar"*. A distinção existe porque a confusão entre as duas já custou: em
+> 24/08 um `estado.md` nasceu vazio ao lado de uma tabela cheia no acervo legado, e por nove dias
+> ninguém soube dizer se faltava dado ou faltava fonte (P117/P119).
 
 **Passo 4 — Registrar o handshake com o mecanismo.**
 Sendo o destino `{CONNECT_HOME}/operador`, o mecanismo **já descobre o perfil sozinho** — o
@@ -100,9 +117,27 @@ como enriquecimento (`./pessoal`) — isso é opcional e independente do perfil.
 
 **Passo 5 — Moldagem de papel (delegar).**
 Para cada papel estável coletado, a **moldagem de papel** materializa a estrutura mínima
-daquele papel no vault. Isso é da skill-irmã `fabrica-papel` (framework de papéis).
+daquele papel no vault. Isso é da skill-irmã **`cnct-fabrica-papel`** (framework de papéis) — nome
+corrigido em 24/08: era citado como `fabrica-papel`, que **não existe e viola a convenção de nome**
+(`cnct-` é do produto, e "papel" é conceito do produto — ADR-15/D174).
 Enquanto ela não existe, registrar os papéis em `meu-config.md` (já feito no Passo 3) e
 **deixar a pendência nomeada** ao operador — não embutir a moldagem aqui.
+
+**Passo 6 — Operador que já existe: migrar com inventário, nunca sobrescrever (P119).**
+Esta fábrica **nasce** um operador; quando o destino já tem perfil, ela não recria — mas também **não
+pode simplesmente parar**, porque foi assim que 4 convenções com gatilho se perderam em 24/08 (regra de
+empacotamento de skill, projetos exemplo, limpeza em reestruturação de vault, destino de artefato — uma
+delas declarada *"genuinamente pessoal, sem equivalente no coletivo"*, ou seja, irrecuperável se a fonte
+fosse podada). Protocolo:
+
+1. **Inventariar a origem** — se o operador tinha cérebro pessoal anterior (`CLAUDE.md` raiz e
+   `_cerebro/CLAUDE.md`), listar toda seção com **gatilho declarado** ("ao empacotar…", "quando eu
+   disser…", "antes de salvar…").
+2. **Diff explícito** contra o perfil atual, apresentado ao operador — o que existe nos dois, o que só
+   existe na origem, o que só existe no perfil.
+3. **Nada é descartado em silêncio.** O que só existe na origem é ou migrado, ou declarado como
+   deliberadamente aposentado, com a razão. Ausência de decisão não vira remoção.
+4. **Nunca podar a origem** antes de o diff estar zerado e confirmado pelo operador.
 
 ## Regras
 
@@ -121,4 +156,4 @@ Enquanto ela não existe, registrar os papéis em `meu-config.md` (já feito no 
   fábrica genérica** (D105): a versão do coletivo era a instância Viceri; a forma sobe para
   o produto.
 
-<!-- SKILL-END cnct-fabrica-operador v0.1.0 · L2 · ref. FRAMEWORK.md §4 -->
+<!-- SKILL-END cnct-fabrica-operador v0.2.0 · L2 · ref. FRAMEWORK.md §4 -->

@@ -18,6 +18,7 @@ description: >
   disparar o hook) — o mecanismo é o mesmo, só muda o gatilho.
 metadata:
   version: "0.7.0"
+  eixo: nucleo
   program: "Impulsa / Viceri"
 ---
 

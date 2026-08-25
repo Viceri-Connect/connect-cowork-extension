@@ -7,6 +7,7 @@ description: >
   em qualquer alias de sub-vault montado na sessão.
 metadata:
   version: "0.3.0"
+  eixo: nucleo
   program: "Impulsa / Viceri"
 ---
 

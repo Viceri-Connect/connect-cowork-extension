@@ -8,7 +8,8 @@ description: >
   memória', 'persiste contexto', ou ao final de qualquer sessão de trabalho
   Connect.
 metadata:
-  version: "0.2.0"
+  version: "0.3.0"
+  eixo: nucleo
   program: "Impulsa / Viceri"
 ---
 
@@ -43,6 +44,33 @@ Tasks pessoais (novas, concluídas, mudança de status) e delta de identidade v�
 `./operador` não estiver acessível ainda (Cowork não concedeu acesso à origem), solicitar
 o acesso antes de escrever — nunca pular o passo silenciosamente.
 
+**Passo 4b — Persistir o estado de CADA vínculo tocado (obrigatório, não opcional).**
+Para **cada coletivo** que a sessão tocou (um por alias do Passo 1, exceto `./operador` e
+`./pessoal`), atualizar `./operador/_cerebro/vinculos/{coletivo}/estado.md` — **o hot cache do
+operador naquele coletivo**. Este passo existe porque a sua ausência foi medida: nenhum executor
+escrevia nesse arquivo, e o `estado.md` do vínculo `mapfre` **nasceu vazio e permaneceu vazio**
+enquanto o cérebro pessoal legado tinha a tabela cheia e fresca (P117).
+
+Forma do arquivo — é **hot cache**, e a forma é o que o mantém útil:
+
+- Uma linha por projeto/frente; **uma frase por célula**.
+- **Substitui, nunca acrescenta.** Zero histórico, zero `✅ DD/MM`, zero narrativa. Não é log nem
+  changelog: o que deixou de ser corrente **sai da linha**.
+- A **fonte de verdade** é a nota do projeto no coletivo; aqui mora a **leitura do operador** sobre
+  ela (ADR-14: fato → acervo; leitura/urgência/próximo passo → vínculo).
+- Só entra alerta **cross-projeto** que muda o que o operador faz. Item de um projeto só vive na
+  linha dele.
+- `atualizado:` no frontmatter recebe a data da sessão.
+
+**Não preencher por suposição.** Projeto que a sessão não tocou **não muda de linha** — repetir status
+antigo como se fosse novo é pior que deixá-lo velho, porque apaga o sinal de que está velho. Se o dado
+corrente não está na conversa, buscá-lo na nota do projeto no coletivo antes de escrever; não havendo
+fonte, a célula fica declarada como *a reconciliar* — nunca inventada.
+
+> **Vínculo tocado sem registro ainda** (`vinculos/{coletivo}/` inexistente): criar `estado.md` e
+> `config.md` no schema vigente (`vinculos-v1`, CA6–CA9 da `CONNECT-E2-01`) e reportar ao operador.
+> **Nunca** usar o schema antigo `_cerebro/clientes/{slug}/`.
+
 **Passo 5 — Despromoção obrigatória, por vault, antes de acrescentar.**
 Regra do contrato `cnct-nucleo-escrita` (matriz): identificar o que deixou de ser
 corrente, confirmar que já existe na fonte, só então substituir. Nunca podar sem
@@ -58,6 +86,7 @@ confirmar duplicação.
 
 ### Operador (./operador)
 TASKS.md: [N] concluídas · [N] novas · [N] atualizadas
+Vínculos atualizados: {coletivo} ([N] linhas substituídas · [N] a reconciliar) · …
 
 ### ⚠️ Para revisão manual (se houver)
 - [itens sem vault claro, ou vault sem taxonomia — reportados na íntegra, nunca descartados]
