@@ -1,6 +1,51 @@
 # Changelog — connect
 
-## 0.16.0 — 2026-08-24 (não commitada — validação do operador pendente, D167)
+## 0.17.0 — 2026-08-25
+
+**Nasce `config/contrato-tipos.md` — o terceiro contrato do produto, e o que fecha o handshake da
+fábrica.** Nenhuma mudança de runtime: é contrato. A `convencao-skills` da matriz já declarava
+`tipos` como conceito do produto *"com contrato próprio em `config/`"*, ao lado de `operador` e
+`navegacao`, que **têm** o seu. O terceiro nunca existiu — e sem ele a **D204** entregava a metade
+do coletivo (estrutura mínima e herança, no `modelo-roteamento`) e deixava a metade do produto sem
+casa. **P134.**
+
+- **O schema de tipo — 6 campos.** nome · **família** · estrutura mínima · semântica de descida ·
+  forma canônica (ponteiro, nunca molde) · handshake. Ausência de qualquer um = tipo **não
+  construível**: a fábrica recusa e nomeia o campo, jamais supre.
+- **O modo se deduz da família, nunca se pergunta** (D199). Perguntar ao operador *"isto é artefato
+  ou contexto?"* transfere a ele uma classificação do mecanismo — é a pergunta que ninguém de fora
+  do produto sabe responder.
+- **§5 — o handshake de materialização, o primitivo que faltava.** *A fábrica não termina quando
+  escreve o último arquivo; termina quando o mecanismo resolve o que ela criou.* Para **contexto**:
+  manifesto + `registrar_subvault_local` + carta, com `resolver → resolvido` e zero avisos como
+  **gate de fechamento**. Para **artefato**: estrutura mínima + **linha de gatilho na carta do
+  vault** — este segundo passo é o que nada declarava, e sem ele a fábrica **produz nota órfã por
+  construção**, que é o defeito que o contrato de navegação §5 check 6 reporta depois.
+- **Estado zero vira regra com teste** (D200): tipo cujo nascimento precede qualquer coletivo é
+  declarado em `config/tipos/`, e o teste é objetivo — *precisa ler declaração do coletivo?* Hoje
+  qualifica **um**: `operador`.
+- **A lista de tipos nunca mora no plugin.** O produto declara a exigência; o coletivo declara os
+  tipos, no `modelo-roteamento` da sua matriz. Catálogo próprio permitiria à fábrica ignorar o que a
+  matriz já declara — que é exatamente o viés medido do construtor (D186/D204).
+
+> ⚠️ **Dívida declarada, não silenciada:** o `FRAMEWORK.md` §3 ainda descreve o desenho plural
+> (L2 "uma fábrica por tipo", L3 `cnct-fabrica-tipos`) que a **D186** fechou. Este contrato o
+> substitui — "criar um tipo novo" deixa de ser skill meta e vira preencher as células do schema no
+> roteamento do coletivo. A §3 está em dívida de atualização.
+>
+> ⚠️ **Face de verificação com 6 checks e nenhum mecanismo** — estado honesto, não omissão. Este
+> contrato é a *especificação*; o executor é a **P124**, que ele desbloqueia. A distância entre
+> contrato e garantia é a família D104/D152/D157/D168/D181/D190 (*a norma existe, o executor não*);
+> declará-la é o que impede a sétima ocorrência em silêncio.
+
+## 0.16.0 — 2026-08-25
+
+> ⚠️ **Defeito de release, registrado porque tem consequência.** O conteúdo desta versão foi
+> commitado em 25/08 (`772a818 "upgrade"`), mas o `plugin.json` **não foi incrementado no commit**:
+> saiu ainda como `0.15.0`. Instalada e canônica ficaram indistinguíveis pelo número, e por isso a
+> atualização não aterrissou na máquina do operador. Bump aplicado depois, em 25/08.
+> **É a mesma classe do que a P114 descreve** — o comparador de frescor da ADR-9 depende do número
+> ser verdade, e aqui o número mentiu na origem, não no transporte.
 
 **O catálogo ganha dono declarado, e dois executores param de degradar em silêncio.** Nenhuma
 mudança de runtime: é catálogo, contrato e protocolo de skill. Origem: auditoria das 6 skills do
