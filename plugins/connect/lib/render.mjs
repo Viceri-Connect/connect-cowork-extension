@@ -3,6 +3,8 @@
 // injetado na sessao (via stdout do hook) ou devolvido pela tool MCP.
 // E aqui que os atalhos e a identidade "passam a existir" para o agente.
 
+import { REGRAS_DURAS } from './regras.mjs';
+
 // ---------------------------------------------------------------------------
 // blocoCarta — a carta de navegacao de UM vault, pronta para injecao.
 // Injetada VERBATIM quando presente (o vault fala por si); quando ausente, o
@@ -137,19 +139,10 @@ function blocoAcionavel(report) {
   return L;
 }
 
-// ---------------------------------------------------------------------------
-// REGRAS_DURAS — as invariantes que o agente nao pode violar nem por engano.
-// Ficam SEMPRE no canal injetado (nunca so no arquivo), porque sao o unico
-// conteudo cuja ausencia produz dano em vez de ignorancia: um agente sem a carta
-// navega mal e sabe disso; um agente sem estas regras contorna e nao sabe.
-// ---------------------------------------------------------------------------
-const REGRAS_DURAS = [
-  '1. Referencie conhecimento por caminho relativo ao workspace — nunca por caminho absoluto de maquina.',
-  '2. Mount da junction da o caminho estavel; ele NAO concede leitura. Se um caminho declarado nao abrir, PECA a concessao ao operador — varredura, `grep` exploratorio e automacao de SO sao contorno, nao alternativa (D108/D148).',
-  '3. Ao nomear um conceito (projeto, cliente, area, tribo), chame `resolver` ANTES de procurar qualquer coisa. Nunca comece por glob/grep.',
-  '4. Dentro de um vault, navegue na ordem: carta de navegacao -> ponto de pouso declarado -> ponteiro declarado. Varredura e ultimo recurso e DEIXA MARCA (reporte).',
-  '5. Antes de criar ou editar arquivo em qualquer vault, carregue o protocolo de escrita (`cnct-nucleo-escrita`). Nao pule, mesmo com destino obvio.',
-];
+// REGRAS_DURAS vem de `lib/regras.mjs` desde a ADR-18: o mesmo texto passa a viver
+// tambem no `{vault}/CLAUDE.md` (arquivo de governanca), e duas copias divergiriam
+// na primeira edicao — com o agente recebendo regras nao-negociaveis discordantes
+// por dois canais. Ver o cabecalho daquele modulo.
 
 // ---------------------------------------------------------------------------
 // renderContextoCurto — o bloco que vai pelo canal INJETADO (stdout do hook).
