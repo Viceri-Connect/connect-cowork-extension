@@ -1,5 +1,46 @@
 # Changelog — connect
 
+## 0.18.0 — 2026-08-26
+
+**Nasce `cnct-nucleo-audit` — a auditoria de saúde materializada como skill do produto.**
+Antes vivia só como conhecimento solto em cada vault (`vault-audit`, provisionado
+manualmente por cliente). Agora o executor é mecanismo do plugin, no mesmo padrão das
+demais `cnct-nucleo-*`: roda em TODO vault tocado na sessão (matriz + sub-vaults
+resolvidos, `list_mounts` — mesmo princípio do `cnct-nucleo-encerramento`), nunca assume
+vault único.
+
+- **Dois níveis de conhecimento, nunca misturados.** Checks de **mecanismo** (novo, sempre
+  ativos, qualquer vault): schema de manifesto, ausência de registro autorado, path/URL fora
+  do manifesto, lar do cliente, consistência bidirecional do grafo, acervo pendente há muito
+  tempo (`config/contrato-manifesto.md` §5) — mais nota órfã achada por varredura forçada e
+  carta de navegação incompleta (`config/protocolo-mecanismo.md`). Checks de **cliente**
+  continuam vivendo em `{vault}/_inteligencia/skills/vault-audit/vault-audit.md` — nome do
+  artefato por-vault mantido (convive com o executor novo, mesmo padrão do `vault-write`
+  convivendo com `cnct-nucleo-escrita`). Vault sem conhecimento próprio ainda: a skill
+  materializa um stub a partir de `templates/vault-audit.template.md` — nunca sobrescreve.
+- **Capa separada de histórico e log.** `issues.md` vira só as issues pendentes; issues
+  resolvidas migram para `issues-historico.md` (novo); `log.md` e o histórico só são lidos
+  sob demanda, não no fluxo padrão — custo de contexto plano por run.
+- **Issue nomeada de verdade.** Cada issue carrega Gerado por (operador), Data (primeira
+  detecção) e Responsável pelo repair (preenchido por delegação, nunca em AUDIT).
+- **REPAIR com filtro por operador.** Padrão: só issues do próprio operador. Alternativa
+  sempre oferecida: ver todas as pendentes do escopo, inclusive de outros operadores —
+  reparo proativo. Ação `"delega: {nome}"` atribui sem executar. Toda ação — inclusive
+  delegação — é logada, sem exceção.
+- **Modo SCHEDULE — tarefa agendada real, por operador.** Substitui o modelo manual de
+  copiar/colar (`audit-schedule-template.md`): a skill cria a tarefa de verdade, com
+  escopo/critérios daquele operador embutidos num prompt autocontido (cada disparo agendado
+  é uma sessão nova, sem memória da atual). Mais de um operador pode ter sua própria tarefa,
+  com seus próprios critérios. **REPAIR nunca é agendado.**
+- **`criterios-override` por operador — só em escopo pessoal.** Decisão explícita (26/08):
+  verificação de escopo coletivo sempre usa o critério único do `vault-config` do vault —
+  nunca sobrescrita por operador, para não gerar abre/fecha divergente no backlog
+  compartilhado quando operadores divergem de threshold.
+
+Instância de referência já rodando com o formato novo: coletivo Viceri interno (matriz
+Impulsa/Connect) — `vault-audit.md` v1.1, capa/histórico separados, provisionado antes desta
+mudança e compatível com o executor novo sem migração.
+
 ## 0.17.0 — 2026-08-25
 
 **Nasce `config/contrato-tipos.md` — o terceiro contrato do produto, e o que fecha o handshake da
