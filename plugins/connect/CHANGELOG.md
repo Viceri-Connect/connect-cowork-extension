@@ -1,5 +1,75 @@
 # Changelog — connect
 
+## 0.20.0 — 2026-08-27
+
+**Três cortes no custo de contexto, todos nascidos de medição em sessão real (26/08, 8ª
+sessão) e não de hipótese.** O operador pediu uma informação que obrigasse o agente a
+navegar de verdade — *"o que é o Connect"* — **e** a medição de cada camada na mesma ordem.
+Instrumentar pergunta sintética mede o instrumento; instrumentar pergunta real mede o produto.
+
+O resultado que enquadra tudo: a abertura custou ~74,8k tokens, dos quais **84% são piso do
+harness** e só 15% são Connect — e a carta de navegação **economizou ~18.100 tokens numa
+pergunta só** (`Connect.md` tem 66,5 KB; foram lidos 3 KB). O produto se paga no primeiro
+salto para dentro de uma nota grande; o que sobrava para cortar era repetição, não conteúdo.
+
+- **Bloco acionável não é mais pago duas vezes** (−1.230 B por sessão). `blocoAcionavel`
+  chegava pelo canal injetado **e** de novo dentro do `contexto-sessao.md`. `renderContexto`
+  ganha `{ acionavel }`: o arquivo recebe um **recap nomeado** no lugar do texto inteiro.
+  Não é remoção — o arquivo existe para ser **relido** quando o contexto fica distante, e é
+  exatamente aí que um aviso de governança apagado faria falta. **A degradação segue
+  intacta:** quando a escrita do arquivo falha e o stdout volta a ser canal único, o bloco
+  vai inteiro (default `true` — quem esquecer a flag paga token, não perde aviso).
+- **`vaultConfigInline` deixa de atravessar o payload** (−1.259 B). Nenhum renderizador o
+  consumia: a seção de identidade sempre saiu de `identidadeVault`, o mesmo frontmatter já
+  parseado. Passa a ser **ponteiro sempre**, não marcador de dedup — o corte é na borda
+  (`entrega.mjs`), não na origem, para não tirar o dado de quem precise dele em runtime.
+- **A carta do sub-vault viaja por um canal só** (−6.742 B no canal de texto). Medido no
+  Cowork: o `content[].text` do `resolver` **não chegou ao agente** — chegou o
+  `structuredContent` e mais nada. É a reincidência do que a 0.13.0 registrou para o
+  `iniciar_sessao` (*"esse bloco de texto NAO alcanca o cliente Cowork"*), nunca estendida às
+  demais tools. `renderResolucao` ganha `{ cartaInline }`; o texto passa a levar ponteiro.
+  ⚠️ **Medição de um cliente só** — por isso o texto diz *onde a carta deveria estar*: se
+  algum cliente descartar o `structuredContent`, a falha aparece nomeada em vez de silenciosa.
+  Aberto como **P146**.
+- **Correção de comentário que mentia, e ela é a lição.** O comentário em `connect-mcp.mjs`
+  afirmava que o texto levava a carta e que o `inline` ia elidido do JSON — **as duas metades
+  falsas**, porque `dedupInline` elide a partir da *segunda* entrega, nunca na primeira, que
+  é a de toda sessão nova. Foi esse comentário que fez a duplicação sobreviver três sessões de
+  dogfooding sem ser vista: quem lê o código confia nele e não mede. *Comentário que descreve
+  intenção em vez de comportamento é pior que ausência de comentário.*
+- **`tests/spike-custo-contexto.mjs`** (novo, 24 asserts) — a resposta direta ao item acima:
+  o comportamento passa a ser afirmado por teste, não por prosa. Verificado por mutação:
+  contra o código anterior falha em 11 asserts (os três cortes) e passa nos 13 restantes,
+  que são as **invariantes** — governança preservada na degradação, carta íntegra no canal
+  que chega, lacuna de carta e carta incompleta ainda denunciadas com o inline desligado.
+  Economia que apaga aviso não é economia, é regressão silenciosa.
+
+> **Contrapartida declarada, porque a conta líquida é menor do que os cortes sugerem:** a
+> carta da matriz **cresceu** +1.311 B nesta rodada (núcleo de normas de agente, no vault, não
+> no plugin). Líquido por sessão: **−337 tokens** sem resolver sub-vault, **−124** resolvendo.
+> O corte do canal de texto não entra nessa conta no Cowork — lá ele já era descartado.
+
+## 0.19.0 — 2026-08-26
+
+> ⚠️ **Entrada reconstituída em 27/08 a partir do diff do commit `c1f16bd`.** A versão foi
+> bumpada em `plugin.json` e commitada **sem entrada no changelog**; o texto abaixo descreve o
+> que o diff mostra, não o que o autor pretendia. É a terceira ocorrência desta classe de
+> deslize no projeto (a v0.16.0 foi commitada sob o número da 0.15.0) — registrada aqui como
+> lacuna preenchida, não como histórico de primeira mão.
+
+**ADR-18, fases 4–6: publicação de governança, setup do canal e audit.**
+
+- **`publicar_governanca`** — nova tool MCP: materializa `{vault}/CLAUDE.md`, o arquivo que o
+  harness carrega sozinho da raiz de pasta conectada e rotula como *override*. Write-once, com
+  marcador `CNCT-GOV-*`; **recusa sobrescrever** `CLAUDE.md` sem marcador do Connect — pode ser
+  Camada 0 de operador, sonda ou conteúdo de terceiro.
+- **`blocoCanalInjetado`** (`render.mjs`) — a metade da ADR-18 que o mecanismo não consegue
+  verificar sozinho: se o vault está conectado como pasta do projeto. O hook não tem como
+  saber (escreve antes de o agente existir), então quem verifica é o **agente**, procurando o
+  marcador no próprio contexto.
+- Skills `cnct-fabrica-navegacao`, `cnct-nucleo-audit` e `cnct-nucleo-sessao` atualizadas para
+  o fluxo novo; `tests/spike-governanca.mjs` estendido.
+
 ## 0.18.0 — 2026-08-26
 
 **Nasce `cnct-nucleo-audit` — a auditoria de saúde materializada como skill do produto.**

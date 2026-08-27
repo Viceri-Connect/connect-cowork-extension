@@ -46,7 +46,13 @@ export function criarEntrega() {
       if (out[k] && typeof out[k] === 'object') {
         out[k] = { ...out[k] };
         if (out[k].carta?.inline) out[k].carta = { ...out[k].carta, inline: trate(out[k].carta.inline) };
-        if (out[k].vaultConfigInline) out[k].vaultConfigInline = trate(out[k].vaultConfigInline);
+        // `vaultConfigInline` NUNCA vai inteiro (corte de 26/08). Diferente da carta
+        // e do hot cache, nenhum renderizador o consome: o `render.mjs` monta a secao
+        // de identidade a partir de `identidadeVault`, que e o mesmo frontmatter ja
+        // parseado. O inline era ~400 tokens de arquivo integral atravessando para o
+        // agente sem leitor — e a propria carta ja manda ler `[[vault-config]]` como
+        // passo 2 da ordem de entrada, se o resto fizer falta.
+        if (out[k].vaultConfigInline) out[k].vaultConfigInline = '<vault-config nao inline — identidade ja em `identidadeVault`; para o resto, ler `_cerebro/vault-config.md` do vault>';
         if (out[k].hotCacheInline) out[k].hotCacheInline = trate(out[k].hotCacheInline);
       }
     }

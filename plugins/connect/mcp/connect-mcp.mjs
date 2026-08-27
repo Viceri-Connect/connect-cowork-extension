@@ -266,14 +266,22 @@ function handleToolCall(id, params) {
         return ok(id, toolText(estadoSessao({ sessionId: args.session_id })));
       case 'resolver': {
         const r = resolver({ conceito: args.conceito, workspaceDir: args.workspace_dir, alias: args.alias, replace: !!args.replace });
-        // Quando resolve, devolve TAMBEM o bloco de contexto do sub-vault (carta
-        // de navegacao verbatim + ponto de pouso). Sem isso o agente ganharia um
-        // mount e nenhuma orientacao — o defeito que o contrato-navegacao fecha.
-        // Sem duplicar: o TEXTO leva a carta verbatim; o JSON estruturado vai em
-        // structuredContent com o `inline` elidido (ele ja esta no texto). Mandar
-        // os dois inteiros paga a carta duas vezes em token — contradiz a ADR-6,
-        // que e a propria justificativa do desenho lazy.
-        const bloco = renderResolucao(r);
+        // Quando resolve, devolve TAMBEM o bloco de contexto do sub-vault (ponto
+        // de pouso + orientacao). Sem isso o agente ganharia um mount e nenhuma
+        // orientacao — o defeito que o contrato-navegacao fecha.
+        //
+        // Qual canal leva a CARTA (corrigido em 26/08): o `structuredContent`, e so
+        // ele. O comentario anterior aqui afirmava que o texto levava a carta e que
+        // o `inline` ia elidido do JSON — as duas metades eram falsas. `dedupInline`
+        // elide a partir da SEGUNDA entrega do mesmo bloco, nunca na primeira (que e
+        // a de toda sessao nova), entao a carta ia inteira nos dois canais. E medido
+        // no Cowork na mesma data: o `content[].text` desta tool nao chegou ao agente
+        // — chegou o JSON estruturado e mais nada.
+        //
+        // Entao: texto = bloco curto (alias, pouso, concessao, ponteiro para a carta);
+        // structuredContent = a carta inteira na primeira entrega. Uma copia so, pelo
+        // canal que provadamente alcanca.
+        const bloco = renderResolucao(r, { cartaInline: false });
         const structured = bloco ? dedupInline(r) : r;
         const text = bloco || JSON.stringify(r, null, 2);
         return ok(id, { content: [{ type: 'text', text }], structuredContent: structured });

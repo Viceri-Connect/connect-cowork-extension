@@ -55,8 +55,17 @@ async function main() {
   // Degradacao: se a escrita falhar, emite o bloco INTEIRO no stdout (comportamento
   // <= 0.13.0). Pior, mas nunca contexto ausente — e o bloco curto avisaria o agente
   // de uma leitura que ele nao tem como fazer.
+  // Duas variantes do MESMO relatorio, porque os dois destinos tem necessidades
+  // opostas (medido em 26/08 — ver `recapAcionavel` em lib/render.mjs):
+  //   `completo`   — com o bloco acionavel inteiro. So para a DEGRADACAO: se o
+  //                  arquivo nao for gravado, o stdout e o unico canal e nao pode
+  //                  sair sem aviso de governanca/concessao.
+  //   `paraArquivo`— sem o bloco acionavel, com recap no lugar. O caminho normal:
+  //                  o `renderContextoCurto` abaixo ja injeta o acionavel inteiro,
+  //                  e repeti-lo no arquivo custava ~750 tokens por sessao.
   const completo = renderContexto(report);
-  const arquivo = materializarContexto({ workspace: report.workspace, bloco: completo });
+  const paraArquivo = renderContexto(report, { acionavel: false });
+  const arquivo = materializarContexto({ workspace: report.workspace, bloco: paraArquivo });
 
   if (arquivo.status === 'materializado') {
     process.stdout.write(renderContextoCurto(report, arquivo));
