@@ -73,6 +73,44 @@ export function blocoGovernanca(governanca, rotulo = 'vault') {
 }
 
 // ---------------------------------------------------------------------------
+// blocoCanalInjetado — a metade da ADR-18 que o mecanismo NAO consegue verificar
+// sozinho: o vault esta conectado como pasta do projeto Cowork?
+//
+// O hook nao tem como saber — "pasta conectada" e estado do harness, e ele escreve
+// antes de o agente existir (mesmo limite que bloqueou a P139 por tres sessoes).
+// Quem sabe e o AGENTE: se o vault tem governanca publicada, o marcador
+// `CNCT-GOV-{slug}` ou chegou no contexto dele, ou nao chegou. A verificacao e
+// dele, sobre o proprio contexto — nao uma pergunta que o mecanismo responde.
+//
+// So emite quando ha o que fazer. Vault governado + marcador presente = silencio.
+// ---------------------------------------------------------------------------
+export function blocoCanalInjetado(governanca, rotulo = 'matriz') {
+  const L = [];
+  if (!governanca) return L;
+
+  if (governanca.estado === 'governado' && governanca.marcador?.vault) {
+    L.push(`## Connect — confira o canal injetado (${rotulo})`);
+    L.push('');
+    L.push(`Este vault publica governanca com o marcador \`CNCT-GOV-${governanca.marcador.vault}\`.`);
+    L.push('**Procure esse marcador no seu proprio contexto.** Se ele NAO estiver la, esta pasta nao');
+    L.push('esta conectada ao projeto Cowork — e a camada 1 depende de um arquivo que pode nao abrir,');
+    L.push('que e a falha medida em 26/08. Ofereca ao operador conectar a pasta; e uma pasta so.');
+    L.push('');
+    return L;
+  }
+
+  if (governanca.estado === 'ausente') {
+    L.push(`## Connect — canal injetado nao preparado (${rotulo})`);
+    L.push('');
+    L.push('Este vault nao publica governanca na raiz, entao o canal de maior precedencia esta vazio');
+    L.push('e a camada 1 chega por um caminho so. Nao e erro (vault sem escrita nao recebe o arquivo),');
+    L.push('mas se este vault recebe escrita, ofereca a `cnct-fabrica-navegacao` para publica-la.');
+    L.push('');
+  }
+  return L;
+}
+
+// ---------------------------------------------------------------------------
 // renderResolucao — bloco de contexto de UM sub-vault recem-resolvido, para a
 // tool `resolver` devolver junto do JSON. Sem isso, a camada 1 do sub-vault
 // (a curadoria de navegacao daquele acervo) nunca entra no contexto: o agente
@@ -118,6 +156,11 @@ function blocoAcionavel(report) {
   // *override* ja no contexto, ela ja esta agindo sobre TODA decisao seguinte,
   // inclusive sobre como o agente interpreta os blocos abaixo.
   L.push(...blocoGovernanca(report.l1?.governanca, 'matriz'));
+
+  // Depois da deteccao (que e sobre risco) vem a preparacao do canal (que e sobre
+  // alcance). So aparece quando ha acao: matriz governada pede a auto-checagem do
+  // marcador; matriz sem governanca pede a fabrica.
+  if (report.matrizConfigurada) L.push(...blocoCanalInjetado(report.l1?.governanca, 'matriz'));
 
   // Concessao de acesso (P97, era P90) — vai ANTES de tudo, inclusive do estado
   // zero da matriz, porque e a precondicao de qualquer leitura: sem ela o agente

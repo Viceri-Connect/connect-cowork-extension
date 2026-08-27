@@ -4,7 +4,21 @@
 > Gabriel, 26/08). A fonte da camada 1 continua sendo `_cerebro/camada-1.md`; nada de conteúdo é
 > duplicado. Ver "Por que mudou" abaixo antes de implementar.
 >
-> Estado: proposto · 2026-08-26 · aguarda emenda da ADR-17
+> Estado: **implementado** · 2026-08-26 · plugin 0.19.0 · ADR-18 ratificada
+>
+> | Fase | Estado | Onde |
+> |---|---|---|
+> | 0 — ADR | ✅ | ADR-18 (vault) · `contrato-navegacao.md` 0.3.0 |
+> | 1 — `lib/governanca.mjs` | ✅ | + `tests/spike-governanca.mjs` (42 checks) |
+> | 2 — fonte única das regras | ✅ | `lib/regras.mjs`, importado por `render.mjs` |
+> | 3 — detecção | ✅ | `montarL1` → `verificarRaiz`; `blocoGovernanca` no topo do bloco acionável |
+> | 4 — materialização | ✅ | tool MCP `publicar_governanca` + `cnct-fabrica-navegacao` Passo 3b |
+> | 5 — setup da pasta conectada | ✅ | `cnct-nucleo-sessao` Passo 2b + `blocoCanalInjetado` |
+> | 6 — audit, versão | ✅ | `cnct-nucleo-audit` (2 checks) · plugin 0.19.0 |
+>
+> **Ainda em aberto:** a P144 segue sem detector (ver "O que a gente perde"); e os avisos da
+> carta **da matriz** (`carta legada`, `> 250 linhas`) continuam sem chegar ao agente — defeito
+> pré-existente, achado na Fase 3, não corrigido aqui por ser fora de escopo.
 
 ---
 

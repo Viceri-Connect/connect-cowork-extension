@@ -33,7 +33,7 @@ import {
 } from '../plugins/connect/lib/governanca.mjs';
 import { REGRAS_DURAS } from '../plugins/connect/lib/regras.mjs';
 import { montarL1 } from '../plugins/connect/lib/matriz.mjs';
-import { blocoGovernanca, renderContextoCurto } from '../plugins/connect/lib/render.mjs';
+import { blocoGovernanca, blocoCanalInjetado, renderContextoCurto } from '../plugins/connect/lib/render.mjs';
 
 let passou = 0, falhou = 0;
 const ok = (cond, nome) => {
@@ -151,6 +151,27 @@ const curto = renderContextoCurto(
 ok(/nao governado/i.test(curto), 'o bloco CURTO (canal injetado) carrega a deteccao');
 ok(curto.indexOf('nao governado') < curto.indexOf('Regras duras'),
   'a deteccao vem ANTES das regras duras — interrompe, nao informa');
+
+// --- 9. Fase 5: preparacao do canal (a auto-checagem do marcador) -----------
+console.log('\n9) canal injetado: o AGENTE confere o marcador no proprio contexto');
+const canalOk = blocoCanalInjetado(l1Limpo.governanca, 'matriz').join('\n');
+ok(/CNCT-GOV-vault-b/.test(canalOk), 'diz QUAL marcador procurar');
+ok(/no seu proprio contexto/i.test(canalOk), 'a verificacao e do agente, nao do mecanismo');
+ok(/conectada ao projeto Cowork/i.test(canalOk), 'nomeia a acao: conectar a pasta');
+
+const canalAusente = blocoCanalInjetado(verificarRaiz(vazio), 'matriz').join('\n');
+ok(/nao publica governanca/i.test(canalAusente), 'raiz ausente oferece a fabrica');
+ok(/[Nn]ao e erro/.test(canalAusente), 'ausencia e declarada como NAO-erro (D97)');
+
+ok(blocoCanalInjetado(l1Ocupado.governanca, 'x').length === 0,
+  'raiz nao-governada nao pede canal — o risco vem primeiro');
+ok(blocoCanalInjetado(null).length === 0, 'sem governanca, sem bloco');
+
+const curtoOk = renderContextoCurto(
+  { workspace: '/ws', mounts: [], avisos: [], matrizConfigurada: true, l1: l1Limpo },
+  { status: 'materializado', caminhoRelativo: './contexto-sessao.md', bytes: 2048 },
+);
+ok(/CNCT-GOV-vault-b/.test(curtoOk), 'a auto-checagem vai pelo canal injetado (bloco curto)');
 
 // --- resultado -------------------------------------------------------------
 console.log(`\n${passou} ok, ${falhou} falha(s)\n`);

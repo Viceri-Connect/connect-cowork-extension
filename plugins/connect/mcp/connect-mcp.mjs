@@ -23,6 +23,7 @@ import { iniciarSessao, gravarConfig, estadoSessao, registrarSubVaultLocal } fro
 import { resolver } from '../lib/resolver.mjs';
 import { renderContexto, renderResolucao } from '../lib/render.mjs';
 import { resolverRepo, registrarRepoLocal, listarRepos } from '../lib/repos.mjs';
+import { publicarGovernanca } from '../lib/governanca.mjs';
 
 const log = (...a) => process.stderr.write(`[connect-mcp] ${a.join(' ')}\n`);
 
@@ -129,6 +130,29 @@ const TOOLS = [
         home: { type: 'string', description: 'Pasta fixa do Connect. Opcional; default por SO.' },
       },
       required: ['conceito', 'caminho'],
+    },
+  },
+  {
+    name: 'publicar_governanca',
+    description:
+      'Materializa `{vault}/CLAUDE.md` — o arquivo de GOVERNANCA na raiz de um vault de ' +
+      'conhecimento (ADR-18): declara que o acervo e governado, carrega as regras duras e APONTA ' +
+      'para `_cerebro/camada-1.md`. Nao copia o conteudo da carta. O harness carrega esse arquivo ' +
+      'sozinho da raiz de pasta conectada e o rotula como *override* — e o slot de maior ' +
+      'precedencia do contexto, e sem isto ele fica sob autoria nao governada (D222/P145). ' +
+      'WRITE-ONCE: republicar sem mudanca devolve "inalterado" e NAO toca o arquivo (e o que ' +
+      'impede a copia de conflito em vault sincronizado — P144). RECUSA sobrescrever CLAUDE.md ' +
+      'sem marcador do Connect, sempre: pode ser Camada 0 de operador, sonda ou conteudo de ' +
+      'terceiro. Use na cnct-fabrica-navegacao, depois de materializar a carta. NUNCA escrever ' +
+      'esse arquivo a mao — o marcador CNCT-GOV e gerado aqui.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        vault_dir: { type: 'string', description: 'Diretorio absoluto da raiz do vault de conhecimento. Nunca o perfil do operador (la CLAUDE.md e a Camada 0).' },
+        vault: { type: 'string', description: 'Nome/conceito do vault, usado no marcador (ex.: "Tribo Impulsa").' },
+        nome_exibicao: { type: 'string', description: 'Titulo legivel do vault no arquivo (opcional; default = vault).' },
+      },
+      required: ['vault_dir', 'vault'],
     },
   },
   {
@@ -258,6 +282,8 @@ function handleToolCall(id, params) {
         return ok(id, toolText(registrarSubVaultLocal({ conceito: args.conceito, caminho: args.caminho, home: args.home })));
       case 'configurar':
         return ok(id, toolText(gravarConfig({ vaultMatriz: args.vault_matriz, cerebroPessoal: args.cerebro_pessoal, home: args.home })));
+      case 'publicar_governanca':
+        return ok(id, toolText(publicarGovernanca(args.vault_dir, { vault: args.vault, nomeExibicao: args.nome_exibicao })));
       case 'resolver_repo':
         return ok(id, toolText(resolverRepo({ conceito: args.conceito })));
       case 'registrar_repo_local':

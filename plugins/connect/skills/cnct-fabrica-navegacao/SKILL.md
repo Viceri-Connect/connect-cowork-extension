@@ -98,6 +98,26 @@ apresente a resposta encontrada para ratificação.
    menos uma nota existente (nunca nota solta).
 4. Nunca sobrescrever: se `camada-1.md` existir, aplicar só o delta.
 
+### Passo 3b — Publicar a governança na raiz (ADR-18)
+
+Depois da carta, chamar a tool **`publicar_governanca`** com a raiz do vault. Ela materializa
+`{vault}/CLAUDE.md` — o arquivo que o harness carrega sozinho da raiz de pasta conectada e
+rotula como *override*. Sem ele, o slot de maior precedência do contexto fica sob autoria não
+governada (D222/P145).
+
+- **Nunca escrever esse arquivo à mão.** O marcador `CNCT-GOV-{vault}` é gerado pela tool; um
+  arquivo digitado a mão não é reconhecido como governado e vira issue no início da sessão.
+- **Ele não copia a carta** — declara que o vault é governado, carrega as regras duras e aponta
+  para `_cerebro/camada-1.md`. Se você sentir vontade de colar o conteúdo da carta ali, é a
+  ADR-17 tentando voltar: ela caiu porque espelho de conteúdo exige escrita recorrente, e
+  escrita recorrente em vault sincronizado produz cópia de conflito (P144).
+- **Só em vault de conhecimento.** Perfil de operador nunca — lá `CLAUDE.md` é a Camada 0.
+- **Status `recusado`** significa que já existe um `CLAUDE.md` sem marcador do Connect ali.
+  **Não force e não apague**: mostre o arquivo ao operador e pergunte. Pode ser Camada 0
+  legítima, sonda de medição ou conteúdo de terceiro.
+- **Status `inalterado`** é sucesso, não falha: o corpo já era o esperado e a tool
+  deliberadamente não tocou o arquivo (é o que evita o conflito de sync).
+
 ## Passo 4 — Verificar de verdade (não declarar sucesso)
 
 1. Reler o arquivo escrito e rodar a validação: 5 seções presentes, ≤ 250 linhas.
@@ -106,7 +126,11 @@ apresente a resposta encontrada para ratificação.
 3. Reiniciar o contexto do vault (`resolver` de novo, ou `iniciar_sessao` se for a matriz) e
    confirmar que a carta aparece **injetada verbatim** no bloco — a carta que não chega ao
    contexto não existe.
-4. Reportar ao operador: seções materializadas, lacunas remanescentes, ponteiros conferidos.
+4. **Conferir que a raiz saiu de "não governada":** o bloco de sessão não deve mais abrir com a
+   seção de conteúdo não governado para este vault. Se ainda abrir, o `publicar_governanca` foi
+   recusado ou o arquivo foi escrito à mão — nos dois casos, reportar, não remediar sozinho.
+5. Reportar ao operador: seções materializadas, lacunas remanescentes, ponteiros conferidos,
+   e o status da publicação da governança.
 
 ## Passo 5 — Fechar o ciclo com a fronteira
 
@@ -119,4 +143,6 @@ apresente a resposta encontrada para ratificação.
 
 > Fontes de decisão: D96 (mecanismo × conteúdo), D97 (ausência = nascimento), D98 (produto
 > hospeda, não prescreve), D103 (acervo lazy, ponteiro tipado), D104 (espinha injetada),
-> D120 (`entrada`), ADR-6 (token-efficiency lazy). Contrato: `config/contrato-navegacao.md`.
+> D120 (`entrada`), ADR-6 (token-efficiency lazy), ADR-18 (canal injetado recebe governança e
+> ponteiro — Passo 3b; substitui a ADR-17, cujo espelho de conteúdo caiu pela P144).
+> Contrato: `config/contrato-navegacao.md`.

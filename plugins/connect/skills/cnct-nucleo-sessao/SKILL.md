@@ -66,6 +66,20 @@ Chamar a tool `configurar` com `vault_matriz` e/ou `cerebro_pessoal`.
   zero, e ao final chama `configurar` por conta própria. Não tentar montar um vault que ainda
   não existe.
 
+**Passo 2b — Conectar a matriz como pasta do projeto Cowork (ADR-18).**
+Depois de `configurar`, **peça ao operador para conectar a pasta da matriz ao projeto Cowork** —
+é uma pasta só, e é o que faz a camada 1 deixar de depender de um arquivo que pode não abrir.
+
+- **Por que isso não é detalhe de conforto:** medido em 26/08, duas vezes, o `contexto-sessao.md`
+  não abriu por concessão ausente — e a carta, o protocolo e a camada 0 não chegaram. Com a matriz
+  conectada, `_cerebro/camada-1.md` abre por construção, e o `contexto-sessao.md` sai do caminho
+  crítico. Além disso o harness passa a carregar sozinho o `CLAUDE.md` de governança da raiz.
+- **Passo de setup se pula, e este some em silêncio.** Se o operador não conectar, tudo degrada
+  para o comportamento antigo sem emitir sinal — por isso o pedido é explícito aqui, e não uma
+  sugestão no fim da conversa.
+- **Não confunda com concessão de acesso.** Conectar a pasta ao projeto é o que traz o canal
+  injetado; a concessão que o bloco de sessão pede (🔑) é outra coisa e continua valendo.
+
 **Passo 3 — Restaurar o contexto coletivo.**
 Chamar a tool `iniciar_sessao` (com o `session_id`, se conhecido). Ela devolve o
 bloco "Connect — sessão iniciada" (identidade + `./matriz` + camada 1). Usar esse

@@ -83,6 +83,8 @@ Do protocolo do mecanismo (`config/protocolo-mecanismo.md`):
 | Nota órfã achada por varredura | A ordem de resolução canônica (resolver → carta → ponteiro) não alcançou uma nota, e ela só foi achada por varredura forçada — o achado em si é o defeito |
 | Carta de navegação incompleta/ausente | `_cerebro/camada-1.md` do vault falta, ou a validação (`presentes`/`faltando`, contrato `config/contrato-navegacao.md`) reporta lacuna |
 | `entrada` sem caminho válido | Manifesto declara `entrada` mas a nota-hub correspondente não existe no acervo |
+| **Conteúdo não governado na raiz** (ADR-18) | Há `{vault}/CLAUDE.md` **sem** marcador `CNCT-GOV-…`. O harness carrega esse arquivo sozinho e o rotula como *override* — é o slot de maior precedência do contexto, ocupado por autoria não verificada (D222/P145). ⚠️ **Severidade alta e tratamento especial: o REPAIR nunca apaga nem sobrescreve.** Pode ser Camada 0 legítima de operador, sonda de medição ou conteúdo de terceiro — a correção é *mostrar ao operador e perguntar*, nunca remediar sozinho |
+| **Canal injetado não preparado** | Vault que **recebe escrita** não tem `{vault}/CLAUDE.md` publicado. Severidade baixa: a camada 1 continua chegando pelo mecanismo, só perde o caminho redundante. Correção: `publicar_governanca` via `cnct-fabrica-navegacao`. **Vault somente-leitura não gera issue** — ausência ali é o caso normal, nunca lacuna |
 
 Estes checks rodam em **todo** vault tocado, independente de cliente — não fazem parte do
 `vault-audit.md` de ninguém, porque não são conhecimento de cliente, são garantia de produto.
@@ -198,3 +200,7 @@ critérios — tarefas de operadores diferentes não se sobrepõem.
 - Não cria manifesto, sub-vault ou carta de navegação por conta própria — issues desses
   tipos **oferecem** a fábrica correspondente (`cnct-fabrica-navegacao`, `cnct-fabrica-<tipo>`),
   nunca materializam sozinhas.
+- **Nunca apaga nem sobrescreve `CLAUDE.md` de raiz**, em modo nenhum, com ou sem confirmação
+  em lote. É a única classe de arquivo em que o REPAIR não tem autoridade de escrita: ele pode
+  ser Camada 0 de operador, sonda de medição em curso ou conteúdo de terceiro, e apagar qualquer
+  um dos três destrói conhecimento ou uma medição. O reparo é **mostrar e perguntar**.
