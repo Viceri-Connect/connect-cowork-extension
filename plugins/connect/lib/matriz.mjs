@@ -21,6 +21,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { lerCarta } from './navegacao.mjs';
+import { verificarRaiz } from './governanca.mjs';
 
 // Raiz deste modulo — usada para achar a config de mecanismo do proprio plugin,
 // de forma robusta ao local de instalacao (nunca path absoluto de maquina).
@@ -97,16 +98,35 @@ export function lerIdentidade(cerebroPessoalRoot) {
 //     (por onde entra, o que carrega por gatilho, onde termina). Injetada
 //     verbatim pelo render. Ausente => lacuna anunciada, nunca suprida.
 // ---------------------------------------------------------------------------
+// GOVERNANCA DA RAIZ (ADR-18, Fase 3): quem ocupa `{vault}/CLAUDE.md` — o slot que
+// o harness carrega sozinho e rotula como *override* (D226). O check mora AQUI, e
+// nao em session.mjs, porque `montarL1` e o unico ponto por onde passam os dois
+// casos que importam: a matriz (eager, no startup) e todo sub-vault (lazy, via
+// `resolver`). Um lugar so cobre o grafo inteiro.
+//
+// E o recorte da ADR-18 §6 cai de graca: `montarL1` e para vault de CONHECIMENTO;
+// o perfil do operador entra por `montarL1Pessoal`, onde `CLAUDE.md` e a Camada 0
+// legitima e nao pode ser tratada como ocupacao indevida.
 export function montarL1(matrizRoot, aliasMatriz = 'matriz') {
   const cerebro = path.join(matrizRoot, '_cerebro');
   const vaultConfig = readIfExists(path.join(cerebro, 'vault-config.md'));
   const carta = lerCarta(matrizRoot, aliasMatriz);
+  // Sem `vault:` de proposito — a comparacao de slug exigiria uma identidade
+  // ESTAVEL do vault, e o alias e nome de sessao (o mesmo acervo pode montar sob
+  // outro alias). Comparar com o alias produziria falso positivo, e falso positivo
+  // em check de procedencia queima a confianca no check. Fica para quando a
+  // identidade de vault tiver casa declarada (P101/P103).
+  const governanca = verificarRaiz(matrizRoot);
 
   return {
     identidadeVault: parseKeyValues(vaultConfig), // empresa, cliente, contexto, ponto focal
     vaultConfigInline: vaultConfig,
     alias: aliasMatriz,
     carta,
+    governanca,
+    // `governanca.avisos` NAO entra aqui de proposito: ele e renderizado como
+    // SECAO propria (`blocoGovernanca`), no topo do bloco acionavel. Somar aos
+    // avisos faria o mesmo texto sair duas vezes — secao no topo e bullet no fim.
     avisos: carta.avisos,
   };
 }

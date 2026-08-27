@@ -7,7 +7,7 @@
 > declara a **exigência** (quais seções toda carta tem); a empresa responde o **como** (o que
 > escreve em cada uma). O produto não prescreve os eixos de conteúdo (D98).
 >
-> Versão 0.2.0 · 2026-08-26 · Impulsa / Viceri
+> Versão 0.3.0 · 2026-08-26 · Impulsa / Viceri
 
 ---
 
@@ -50,7 +50,7 @@ contexto.
 | Onde mora | frontmatter da nota da entidade, **na matriz** | `_cerebro/camada-1.md`, **na raiz do próprio vault** |
 | Responde | existe? quem governa? é externo? | por onde entro? o que é camada 1? o que carrego só por gatilho? |
 | Quem escreve | quem declara a entidade | quem governa **aquele** vault |
-| Como chega ao contexto | `resolver` devolve status | por **dois canais**: o mecanismo, que a injeta verbatim no bloco de sessão ao montar (sempre), e o espelho `{vault}/CLAUDE.md` em pasta conectada, onde o harness tiver a convenção (§2.1) |
+| Como chega ao contexto | `resolver` devolve status | **injetada verbatim** no bloco de sessão, ao montar. Em pasta conectada, o `{vault}/CLAUDE.md` (§2.1) chega antes disso e **aponta** para ela — governança e ponteiro, nunca cópia do conteúdo |
 | Ausência | `pendente-criacao` → fábrica | **lacuna reportada** → `cnct-fabrica-navegacao` |
 
 Vale para **todo** vault desta instância — a matriz e cada sub-vault. Mesma forma em todos os
@@ -70,36 +70,45 @@ recusa — decidia não usar o nome e não decidia o que fazer com ele **existin
 sem passo de leitura, antes de qualquer ferramenta ser chamada; e que não o entrega neutro — embrulha
 como *override* (D226), nível de precedência que a saída de hook não alcança. Enquanto o produto só
 recusava o nome, **o slot de maior precedência do contexto ficava sob autoria não governada** (D222).
-A ADR-17 decidiu ocupá-lo: `{vault}/CLAUDE.md` passa a ser **espelho derivado** da fonte, publicado
-pelo mecanismo. Acoplamento fraco — usar onde há, nunca depender; onde não há, nada muda.
+A **ADR-18** decidiu ocupá-lo com **instrução, nunca conteúdo**: `{vault}/CLAUDE.md` declara que o
+vault é governado, carrega as **regras duras** e **aponta** para `_cerebro/camada-1.md`. Acoplamento
+fraco — usar onde há, nunca depender; onde não há, nada muda.
+
+> **Por que instrução e não cópia da carta.** A ADR-17 chegou a decidir espelhar o *conteúdo* da
+> carta aqui, com hash de frescor. Caiu no mesmo dia: espelho de conteúdo exige **escrita
+> recorrente**, e a P144 já havia medido o OneDrive resolvendo dois conflitos a favor da versão
+> velha — um deles a própria carta da matriz, em silêncio, por sessões. Arquivo cujo texto **não
+> depende do que a carta diz** nunca precisa ser reescrito, e é a única forma de o canal não virar
+> fonte de conflito no vault sincronizado. O slot é bom para instrução e ruim para conteúdo.
 
 Depois dessa decisão, **três arquivos diferentes se chamam `CLAUDE.md`**, e o tratamento de cada um é
 distinto. Confundi-los é o modo de falha desta seção — a fábrica migra o arquivo errado, ou a
-auditoria reporta o espelho como defeito:
+auditoria reporta como defeito o arquivo que o próprio mecanismo materializou:
 
 | Arquivo | O que é | Tratamento |
 |---|---|---|
 | `_cerebro/CLAUDE.md` | **carta legada** — coletivo anterior ao Connect cumprindo o papel da camada 1 | lida como carta: origem marcada, injetada igual, migração anunciada. Nunca reescrita por conta própria. **Não está na raiz, logo não disputa o slot** |
-| `{vault}/CLAUDE.md` **com** marcador válido | **espelho** derivado da fonte | publicado e regenerado pelo mecanismo; nunca autorado à mão |
+| `{vault}/CLAUDE.md` **com** marcador válido | **arquivo de governança** — regras duras + ponteiro para a carta | materializado pelo mecanismo; nunca autorado à mão |
 | `{vault}/CLAUDE.md` **sem** marcador válido | arquivo **não governado** no slot de maior precedência | issue reportada no início da sessão (D222/§5 check 7). Não é lacuna de carta — é ocupação indevida |
 
-**Regras do espelho** (ADR-17, D228/D229):
+**Regras do arquivo de governança** (ADR-18):
 
-- **Fonte única.** O espelho é derivado de `_cerebro/camada-1.md` e herda todas as invariantes dela
-  (§4) — inclusive a proibição de path de máquina. **Editar o espelho à mão é o ponto de
-  não-retorno** declarado na ADR: a partir daí existem duas cartas divergentes a reconciliar.
-- **Marca verificável.** Todo espelho carrega `CNCT-L1-{vault}-{hash-da-fonte}` e `gerado-em`. É a
-  marca que torna procedência, supressão e detecção **deriváveis** em vez de instruídas. Hash que
-  não bate com a fonte é procedência quebrada: reportar e regenerar.
-- **Vault que não recebe escrita não recebe espelho.** Espelho ausente **não é lacuna** — é o caso
-  normal de vault somente-leitura, legado ou não conectado.
-- **Supressão é endereçamento, não obediência.** O bloco de sessão lista cada carga com seu marcador
-  e hash; o agente que já tem `CNCT-L1-{vault}-{hash}` no contexto não abre aquele arquivo. É decisão
-  de leitura sobre conteúdo endereçável — não instrução em prosa, que é a classe de garantia que
-  D104/D152/D157 já mostraram falhar.
-- **Supressão é otimização; entrega é garantia.** Supressão falhar custa **token**; a camada 1 não
-  chegar custa **navegação por adivinhação**. São classes diferentes, e tratá-las como iguais é o que
-  travou a formulação anterior desta decisão por três sessões (D228).
+- **Não carrega conteúdo da carta.** Declara que o vault é governado, traz as regras duras e aponta
+  para `_cerebro/camada-1.md`. A camada 1 continua sendo declarada num lugar só.
+- **Write-once.** Como o texto não depende do que a carta diz, ele nunca desatualiza e nunca é
+  regenerado. Republicar sem mudança de corpo **não escreve** — é o que impede o evento de escrita
+  que vault sincronizado transforma em cópia de conflito (P144).
+- **Marcador de identidade, não de versão:** `CNCT-GOV-{vault}` + `gerado-em`. Responde *"este
+  arquivo é nosso?"* e nada mais. Sem hash da fonte, porque não há fonte espelhada.
+- **Só em vault de conhecimento** (`tipo-vault: matriz|sub-vault`). Perfil de operador nunca — lá
+  `CLAUDE.md` já é a Camada 0. **Vault que não recebe escrita não recebe o arquivo**, e a ausência
+  dele **nunca é lacuna**.
+- **Nunca sobrescrever arquivo sem marcador nosso**, sem exceção e sem flag de força: pode ser
+  Camada 0 legítima, sonda de medição ou conteúdo de terceiro. O mecanismo detecta e reporta —
+  apagar não é atribuição dele.
+- **A leitura do ponteiro é garantida por configuração, não por persuasão.** A matriz entra como
+  pasta conectada do projeto Cowork; aí `_cerebro/camada-1.md` abre por construção. Sem isso, o
+  arquivo vira ponteiro para caminho que pode não abrir — o defeito medido em 26/08.
 
 ---
 
@@ -138,10 +147,11 @@ auditoria reporta o espelho como defeito:
   vault; o *onde no disco* mora em `connect.config.json`.
 - **Ausência é gatilho de nascimento, não erro** (D97). Vault sem carta monta normalmente,
   com a lacuna anunciada e a fábrica oferecida — nunca com ponteiro inventado pelo produto.
-- **O espelho é derivado, nunca autorado** (ADR-17/D229). A fonte é `_cerebro/camada-1.md`;
-  `{vault}/CLAUDE.md` é publicação dela, com marcador e hash, e herda as invariantes acima. Espelho
-  **ausente não é lacuna** (vault sem escrita não recebe espelho). Espelho **sem marcador não é
-  espelho**: é arquivo não governado ocupando o slot de maior precedência, e é issue.
+- **O canal injetado recebe instrução, nunca conteúdo** (ADR-18). `{vault}/CLAUDE.md` é governança
+  e ponteiro, write-once, com marcador de identidade `CNCT-GOV-{vault}`. Ausência **não é lacuna**
+  (vault sem escrita não recebe o arquivo). Presença **sem marcador** não é o nosso arquivo: é
+  conteúdo não governado ocupando o slot de maior precedência, e é issue — detectada e reportada,
+  nunca sobrescrita.
 - **`entrada` do manifesto é caminho relativo ao acervo** (ex.: `projetos/Connect/Connect.md`),
   não nome de nota. Nome puro é aceito como legado e resolvido por busca limitada, que **deixa
   marca** (aviso + issue): a busca é o sintoma de um manifesto incompleto.
@@ -161,14 +171,11 @@ mecanismo (o plugin garante) × pendente (hoje depende de disciplina, e por isso
 | 4 | A carta tem ≤ 250 linhas (acima disso, "peso no índice") | **mecanismo** — aviso, não bloqueio |
 | 5 | Todo `## Fronteiras` nomeia **conceito**, nunca caminho de máquina nem URL | **pendente** |
 | 6 | **Nota órfã:** nota que nenhum hub alcança por ponteiro declarado — só encontrável por varredura — é issue | **pendente** — a espinha já obriga a *reportar* a varredura; o check sistemático é do `vault-audit` |
-| 7 | Todo `CLAUDE.md` na **raiz** de vault do grafo tem marcador `CNCT-L1-…` válido — sem marcador é arquivo não governado no slot de maior precedência, e é issue | **pendente** — decidido na ADR-17; vira mecanismo quando o `iniciar_sessao` implementar a detecção |
-| 8 | O hash do marcador do espelho bate com a fonte `_cerebro/camada-1.md` (divergência → reportar e regenerar) | **pendente** — decidido na ADR-17; vira mecanismo quando a `cnct-fabrica-navegacao` publicar o espelho |
+| 7 | Todo `CLAUDE.md` na **raiz** de vault de conhecimento tem marcador `CNCT-GOV-…` válido — sem marcador é conteúdo não governado no slot de maior precedência, e é issue | **mecanismo** — `verificarRaiz` (`lib/governanca.mjs`), chamado por `montarL1`: cobre a matriz no startup e todo sub-vault via `resolver`. Emitido como **seção** no topo do bloco acionável, não como aviso no fim |
+| 8 | O mecanismo nunca sobrescreve `CLAUDE.md` de raiz sem marcador nosso | **mecanismo** — `publicarGovernanca` devolve `recusado`; não há flag de força |
 
-> Os cinco checks pendentes são pendentes por **duas razões diferentes**, e a distinção importa.
-> Os checks 3, 5 e 6 dependem do `vault-audit`, que vive no coletivo (não no plugin). Os checks 7 e
-> 8 dependem de código do plugin **ainda não escrito**: o contrato declara o espelho antes de o
-> mecanismo publicá-lo, e essa divergência é deliberada — declarar primeiro é o que dá ao código um
-> alvo, e esta coluna é o lugar de dizer que ele ainda não chegou lá.
+> Os checks pendentes (3, 5 e 6) dependem do `vault-audit`, que vive no coletivo e não no plugin —
+> por isso não são garantia estrutural ainda.
 >
 > O check 6 é o que faz "sem notas soltas" deixar de ser boa intenção: uma nota que só o `grep` acha
 > é, por definição, uma nota que a curadoria perdeu. Enquanto ele não existir, a garantia disponível
@@ -223,6 +230,8 @@ está sentado fica no vault do operador.
 > arquivo não governado no slot de maior precedência), D225 (o canal `CLAUDE.md` de pasta conectada
 > existe e foi medido), D226 (o canal carrega rótulo de *override*), D228 (supressão é otimização;
 > entrega é garantia), D229 (espelho derivado, nunca segunda casa), D230 (o slot é vetor de injeção
-> em vault compartilhado — P145, dono em SI/Infra), ADR-6 (token-efficiency lazy), ADR-17 (canal
-> duplo de camada 1 por espelho governado). Pendências que este contrato consome: P66 (passos
-> 1/3/4/5), P70 (texto do render), P137 e P139 (ambas fechadas pela ADR-17).
+> em vault compartilhado — P145, dono em SI/Infra), ADR-6 (token-efficiency lazy), **ADR-18 (canal
+> injetado recebe governança e ponteiro; substitui a ADR-17, cujo espelho de conteúdo caiu pela
+> P144 — escrita recorrente em vault sincronizado compartilhado)**. Pendências que este contrato
+> consome: P66 (passos 1/3/4/5), P70 (texto do render), P137 e P139 (fechadas). **P144 segue
+> aberta e sem detector** — o hash do espelho seria a saída (b), e caiu junto com a ADR-17.

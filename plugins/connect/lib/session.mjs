@@ -172,6 +172,9 @@ export function iniciarSessao({ sessionId, ...override } = {}) {
   let l1 = null;
   if (cfg.vaultMatriz && fs.existsSync(cfg.vaultMatriz)) {
     l1 = montarL1(cfg.vaultMatriz, ALIAS_MATRIZ);
+    // A governanca da raiz (`l1.governanca`) NAO vira aviso aqui: o render a emite
+    // como secao propria no topo do bloco acionavel, porque aviso no fim ja se
+    // provou insuficiente para o agente parar e agir (licao da 0.12.1).
   }
 
   // 4b. Camada 0 do operador (D104) — hot cache/delta. Prefere o perfil gerido no
