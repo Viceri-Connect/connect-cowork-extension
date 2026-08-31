@@ -8,7 +8,7 @@ description: >
   memória', 'persiste contexto', ou ao final de qualquer sessão de trabalho
   Connect.
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
   eixo: nucleo
   program: "Impulsa / Viceri"
 ---
@@ -92,9 +92,39 @@ Vínculos atualizados: {coletivo} ([N] linhas substituídas · [N] a reconciliar
 - [itens sem vault claro, ou vault sem taxonomia — reportados na íntegra, nunca descartados]
 ```
 
+**Passo 7 — Hooks de saída, por vault. Genérico: a lista é knowledge, nunca daqui.**
+
+Este executor **não conhece hook nenhum**. Para cada vault do Passo 1, ler a seção
+`## Hooks Registrados` do knowledge daquele vault
+(`{alias}/_inteligencia/skills/cnct-nucleo-encerramento/cnct-nucleo-encerramento.md`) e
+executar os hooks declarados lá, **na ordem em que aparecem**. Adicionar, alterar ou remover
+hook é editar aquele knowledge — **sem reinstalar** este executor. Hook hardcoded aqui seria
+conhecimento de coletivo dentro do produto (corte `_`/conteúdo, D96).
+
+- **Vault sem a seção, ou sem knowledge:** zero hooks naquele vault. Não é lacuna — é o caso
+  normal de um coletivo que não registrou nenhum. Seguir em silêncio.
+- **Hook cuja skill de origem não está no coletivo:** registrar `não aplicável neste coletivo`
+  e seguir. Nunca abortar o encerramento por hook ausente.
+- **Hook falhou:** o item vai para `⚠️ Para revisão manual` do relatório, na íntegra. Falha de
+  hook nunca engole o encerramento nem some do relatório.
+- Cada hook declara no knowledge: condição de disparo · a qual MODO de qual skill delega · o
+  que registrar no relatório. Este executor só orquestra e reporta.
+
+> **Por que este passo existe.** Ele foi medido como **ausente** em 31/08: a arquitetura de
+> hooks vivia no knowledge do `session-close` legado (Hook 1 `lei-do-bem`, Hook 2
+> `elicitacao-captura`) e não sobreviveu à absorção pelo núcleo. Consequência: as duas skills
+> seguiam instaladas esperando um hook que nenhum executor chamava — captura passiva de PD&I e
+> de caso-zero **desligada em silêncio** desde então.
+
 ## Fora de escopo (não faz)
 
 - Não gera nem altera artefatos de entrega (specs, discoveries) — isso acontece durante o
   trabalho, não no encerramento.
 - Não cria conteúdo — se não está na conversa, não preenche.
 - Idempotente — rodar duas vezes não duplica.
+- **Nunca reescreve arquivo inteiro** — edita o mínimo necessário no destino.
+- **Não commita, e não menciona commit.** Preparar e parar; a validação é do operador (D167).
+- **Não atualiza `agents.md` de repositório nenhum.** Decisão técnica vai para a nota do
+  projeto; `agents.md` só em sessão deliberada de refinamento técnico.
+- **`TASKS.md` do operador não é `tasks.md` de Delivery Hub** — nomes parecidos, destinos
+  distintos. Não confundir ao persistir o Passo 4.
