@@ -1,5 +1,34 @@
 # Changelog — connect
 
+## 0.24.0 — 2026-09-01
+
+**A mente construtora existe, e ganha o par que a faz melhorar sozinha.**
+
+- **`skills/cnct-fabrica/` — o executor genérico que faltava.** Uma fábrica, não uma por tipo: o
+  construtor é genérico, o tipo vem do coletivo alvo e o modo se deduz da família, nunca se
+  pergunta ao operador. Implementa o `contrato-tipos.md` de ponta a ponta — pré-condições
+  verificadas na abertura (não descobertas no fim), busca da casa que já governa antes de criar,
+  leitura da forma declarada, elicitação a partir do banco do coletivo, materialização sem
+  sobrescrever, **handshake obrigatório** e verificação real (`resolver → resolvido` com zero
+  avisos; artefato com linha de gatilho na carta). Inclui **modo migração** — contexto que já
+  existe fora do produto entra por inventário e diff, nunca por recriação.
+- **`skills/cnct-elicitacao/` — captura passiva promovida a mecanismo.** Era `elicitacao-captura`,
+  fora do plugin, com `eixo: dogfooding` e disparo só em sessão de estruturação. Agora é núcleo,
+  observa **qualquer sessão de trabalho do coletivo**, e o que ela destila tem destino declarado:
+  o banco de elicitação por tipo que a `cnct-fabrica` lê. Captura o **viés de arquitetura** da
+  casa — que aparece nas correções de enquadramento do operador, não nas afirmações dele — para
+  que o produto passe a oferecer opções concretas em vez de perguntas abertas. Regra de promoção
+  assimétrica declarada: pergunta sobe com 2 ocorrências, armadilha sobe com 1, estrutura mínima
+  **nunca sobe sozinha** (é governança, vai como proposta ao operador). Nunca cruza coletivo.
+- **A skill antiga não é desinstalada por esta versão.** Gatilhos sobrepostos produzem seleção
+  não-determinística; enquanto o entregador de skill não existir, a remoção é ato manual do
+  operador — decisão registrada em vault não alcança inventário instalado.
+
+> **O que esta versão deliberadamente NÃO entrega:** a garantia mecânica dos seis checks do
+> `contrato-tipos.md` §7. Um `SKILL.md` é prompt, não código — `mcp/` e `lib/` não mudaram. Os
+> seis seguem dependendo de disciplina, e a distinção *mecanismo × pendente* é do próprio contrato:
+> quem ler "a fábrica existe" e esperar gate vai receber boa vontade.
+
 ## 0.23.0 — 2026-09-01
 
 **Fecha a limpeza de identificador cru que a 0.22.0 começou, e ocupa o slot de maior precedência do

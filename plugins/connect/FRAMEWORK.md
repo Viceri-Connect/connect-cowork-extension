@@ -55,12 +55,20 @@ O plugin entrega três camadas; só a terceira é opinativa.
 | Camada | O que é | Exemplos | Natureza |
 |---|---|---|---|
 | **L1 · Primitivos** | mount + manifesto + acervo; restauração de contexto; escrita governada; encerramento; auditoria do vault. Agnóstico de tipo | `iniciar_sessao`, `resolver`, `mount_junction`, `cnct-nucleo-sessao`, `cnct-nucleo-escrita`, `cnct-nucleo-encerramento`, `cnct-nucleo-audit` | mecanismo, universal |
-| **L2 · Fábricas por tipo** (`cnct-fabrica-<tipo>`) | Uma por **tipo declarado pelo produto**: `operador`, `navegacao`, `papel`. Cada uma sabe **entrevistar** e **materializar** o seu tipo | `cnct-fabrica-operador` (referência), `cnct-fabrica-navegacao` | mecanismo, plural e extensível |
-| **L3 · Meta** | Criação/edição de **templates** para tipos que ainda não existem — a empresa cria o seu modelo sem esperar release. É também a camada que **explode processo em skill** sob demanda com o operador | `cnct-fabrica-tipos` *(a especificar — declarada desde 15/08)* | mecanismo |
-| **Fora das camadas · fábricas do coletivo** | Fábricas cujo **contrato é da empresa** — tribo, cliente, projeto, processo. Canônicas na matriz, entregues pelo plugin, **sem prefixo `cnct-`** (§3.2) | fábrica de tribo/cliente *(a especificar; o vault da Tribo MAPFRE, criado à mão em 24/08, é o caso-zero dela)* | conteúdo da empresa |
+| **L2 · Construção** | **Uma** fábrica genérica (`cnct-fabrica`) que constrói qualquer tipo que o coletivo declare, mais o par que aprende com a construção (`cnct-elicitacao`). O tipo vem do coletivo; o modo se deduz da família | `cnct-fabrica`, `cnct-elicitacao` | mecanismo, genérico |
+| **L3 · Meta** | Declarar um **tipo novo** — deixou de ser skill e virou *preencher as células do schema* (`contrato-tipos.md` §3) na § *Estrutura mínima e herança* do roteamento do coletivo. A empresa cria o seu modelo sem esperar release, e sem skill meta | *(não é skill — é a §3 do contrato de tipos)* | mecanismo |
 
-> A fábrica não constrói o vault — constrói as **fábricas de cada tipo de vault** (num
-> nível acima). O produto hospeda a declaração; não prescreve o "como".
+> ⚠️ **A L2 era plural e deixou de ser (0.24.0).** O desenho original previa uma skill por tipo
+> (`cnct-fabrica-<tipo>`) e uma camada meta que criasse as fábricas. A decisão de fábrica única o
+> substituiu: há **uma** mente construtora que lê o tipo do coletivo alvo em runtime. O motivo é o
+> viés medido do construtor — catálogo próprio permitiria à fábrica ignorar o que a matriz já
+> declara, e ignorar o que já existe é o modo de falha mais observado.
+>
+> `cnct-fabrica-operador` e `cnct-fabrica-navegacao` **continuam existindo** e não são erro: são as
+> duas implementações de referência que vieram antes, com o banco de perguntas **embutido** — e é
+> por isso que não crescem sem reinstalar. Absorvê-las como *tipos* da fábrica genérica é trabalho
+> declarado e não feito; até lá, `operador` é a exceção legítima (estado zero, `contrato-tipos.md`
+> §2) e `navegacao` é delegação legítima do handshake.
 
 ### 3.1 Convenção de nomes — `cnct-<família>-<objeto>`
 
@@ -71,8 +79,8 @@ skill atua. Nome semântico e em PT — diz a camada e o objeto sem abrir o arqu
 | Camada | Família | Exemplos |
 |---|---|---|
 | L1 · primitivos | `nucleo` | `cnct-nucleo-sessao`, `cnct-nucleo-conhecimento` |
-| L2 · fábricas por tipo | `fabrica` | `cnct-fabrica-operador`, `cnct-fabrica-tribo` |
-| L3 · meta | `fabrica` | `cnct-fabrica-tipos` (a fábrica que cria tipos) |
+| L2 · construção | *(objeto direto — a fábrica é uma só)* | `cnct-fabrica`, `cnct-elicitacao` |
+| L2 · referências anteriores, por tipo | `fabrica` | `cnct-fabrica-operador`, `cnct-fabrica-navegacao` |
 
 > Skills de **conteúdo da empresa** (§5.3, família SDD: `discovery-intake`,
 > `refinement-technical`, …) **mantêm seus nomes de domínio** — viajam com o coletivo, não
@@ -153,6 +161,10 @@ pelo hook. Fábrica que reescreve espinha é defeito.
 | `cnct-nucleo-conhecimento` | nada (monta) | L1 | alta |
 | `cnct-fabrica-operador` | scaffold do vault-alvo (self-contained, estado zero) | L2 | alta |
 | `skill-creator` | fora de vault (utilitário de plataforma) | — (fora do catálogo) | alta |
+
+> `cnct-fabrica` e `cnct-elicitacao` **não entram aqui**: as duas escrevem no vault do coletivo e
+> leem o banco de perguntas de lá — são mecanismo com knowledge injetável (§5.2). A fábrica que
+> carregasse o próprio catálogo de tipos seria mecanismo puro, e é exatamente o desenho recusado.
 
 ### 5.2 Mecanismo com knowledge injetável (executor no plugin · knowledge no coletivo)
 
