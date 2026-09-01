@@ -1,5 +1,31 @@
 # Changelog — connect
 
+## 0.22.0 — 2026-09-01
+
+**Audit "in loco" (dogfooding do Connect na própria Viceri) achou identificador órfão empacotado no
+mecanismo, e um defeito de schema retido num template — nenhum dos dois visível sem alguém de fora
+tentar instalar do zero.**
+
+- **`GLOSSARIO.md`** (novo, raiz do plugin) — glossário de comportamento do produto: nome descritivo →
+  regra em uma frase → por que importa, sem citar `Dxx`/`ADR-N`/`Pxx`. O log de ADR (data, incidente,
+  quem decidiu) continua só no vault interno do Impulsa — não precisa ser resolvido por quem apenas
+  instala o Connect. Texto operante deve citar o nome da entrada, nunca o código cru, a partir de agora.
+- **`cnct-fabrica-operador/templates/CLAUDE.template.md`** — tirado o `(D104)` cru, trocado por
+  ponteiro ao glossário.
+- **`cnct-fabrica-operador/templates/meu-config.template.md`** (v1.1→v1.2) — **defeito real**, achado
+  por uma operadora em onboarding (Carol, squad Yamaha/Enio): o template ainda materializava a seção
+  `_cerebro/clientes/` inteira, schema que o próprio `SKILL.md` desta fábrica já proíbe em maiúsculas
+  ("Nunca materializar `_cerebro/clientes/`"). Corrigido para `_cerebro/vinculos/` (`vinculos-v1`).
+  Todo operador provisionado entre a introdução do schema `vinculos-v1` e esta correção nasceu com o
+  perfil no schema aposentado — candidato a item de audit/repair, não migração automática.
+- **`cnct-nucleo-escrita/templates/cnct-nucleo-escrita.template.md`** — `D96`/`D97`/`D35`/`P60` crus
+  trocados por ponteiro ao glossário.
+
+> ⚠️ **Achado de auditoria, não corrigido aqui:** o bump `b98381d "bump version"` (0.20.0→0.21.0) não
+> tem entrada de changelog — é a mesma classe de deslize que a 0.19.0 já registrou duas vezes (0.16.0
+> e a própria 0.19.0). Não reconstruí essa entrada por não ter certeza do que motivou o bump; fica
+> nomeado para quem tiver o contexto completar.
+
 ## 0.20.0 — 2026-08-27
 
 **Três cortes no custo de contexto, todos nascidos de medição em sessão real (26/08, 8ª

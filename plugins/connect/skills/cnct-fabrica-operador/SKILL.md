@@ -11,7 +11,7 @@ description: >
   Roda no estado zero — não exige coletivo montado. Estado zero é gatilho de
   nascimento, não erro (D97/D105).
 metadata:
-  version: "0.2.0"
+  version: "0.3.0"
   eixo: nucleo
   program: "Impulsa / Viceri"
   camada: "L2 — fábrica por tipo"

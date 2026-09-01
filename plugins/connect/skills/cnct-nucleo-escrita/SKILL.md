@@ -6,7 +6,7 @@ description: >
   CARREGAR sempre que o trabalho envolver salvar conhecimento em ./matriz ou
   em qualquer alias de sub-vault montado na sessão.
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
   eixo: nucleo
   program: "Impulsa / Viceri"
 ---
