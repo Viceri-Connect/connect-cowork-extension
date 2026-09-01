@@ -1,6 +1,7 @@
 # cnct-nucleo-escrita — Contrato de escrita (mecanismo, índice de vaults)
 
-> Entregue e mantido pelo **produto** (mecanismo, não conteúdo da empresa — corte `_`/conteúdo, D96).
+> Entregue e mantido pelo **produto** (mecanismo, não conteúdo da empresa — corte por prefixo `_`: pasta
+> com `_` é mecanismo, pasta sem `_` é conteúdo da empresa; ver `GLOSSARIO.md#corte-mecanismo-conteudo`).
 > Lido pelo executor `cnct-nucleo-escrita` (plugin `connect`) em runtime, **antes** de qualquer escrita
 > em qualquer vault desta instância. O executor não sabe onde nada mora — **este arquivo é a única
 > fonte que diz onde**. Editar aqui = comportamento muda na próxima sessão, sem reinstalar o plugin.
@@ -26,7 +27,7 @@ sozinho, segue o que está declarado aqui.
 | Matriz (conteúdo próprio) | `./matriz` | `./matriz/_inteligencia/skills/vault-write/vault-write.md` |
 | _(cada sub-vault novo entra aqui quando ganhar manifesto no grafo)_ | | |
 
-> Este índice é espelho de leitura do grafo (nunca fonte paralela — D97/P60): todo vault novo que
+> Este índice é espelho de leitura do grafo (nunca fonte paralela — `GLOSSARIO.md#indice-e-espelho`): todo vault novo que
 > ganhar manifesto em `vault-config.md` § "Grafo de entidades" entra aqui como linha nova, mesma
 > convenção de localização. Se um vault um dia precisar de convenção diferente, a exceção é
 > declarada nesta tabela — o executor segue a exceção, nunca o padrão, quando ela existir.
@@ -34,7 +35,8 @@ sozinho, segue o que está declarado aqui.
 ## Se a taxonomia não existir no vault alvo
 
 Reportar a lacuna ao operador — nunca herdar taxonomia de outro vault, nunca inventar. Ausência
-de taxonomia é gatilho de elicitação (D97), não erro silencioso nem motivo para adiar a escrita
+de taxonomia é **gatilho de elicitação** (o vault nasce e ainda não tem taxonomia própria — ver
+`GLOSSARIO.md#gatilho-de-nascimento`), não erro silencioso nem motivo para adiar a escrita
 usando uma regra emprestada.
 
 ---
@@ -43,8 +45,9 @@ usando uma regra emprestada.
 
 - Todo arquivo escrito ou atualizado ganha `[[wikilinks]]` para os arquivos mencionados; nota
   nova é linkada de pelo menos uma existente (nunca nota solta).
-- Ponteiro é **tipado** (D35): `[[wikilink]]` só para nota do mesmo vault; artefato externo → path
-  nomeando a natureza; fato derivável (path de mount, vault ativo) → resolver, nunca apontar.
+- Ponteiro é **tipado** (`GLOSSARIO.md#ponteiro-tipado`): `[[wikilink]]` só para nota do mesmo vault;
+  artefato externo → path nomeando a natureza; fato derivável (path de mount, vault ativo) →
+  resolver, nunca apontar.
 - **Escrita é in loco.** O arquivo é editado onde já vive (alias montado na sessão) — a exceção é
   quando o conteúdo nasce nesta sessão como entregável (docx/xlsx/pptx/skill/pdf): aí o caminho é
   gerar → entregar → depositar no destino, e este contrato não se aplica (é output, não vault).

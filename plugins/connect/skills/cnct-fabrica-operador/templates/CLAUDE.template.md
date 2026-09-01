@@ -1,7 +1,7 @@
 # Memory — {{NOME}}
 
 > **CAMADA 0 — Hot cache pessoal (só o DELTA).**
-> A **espinha** do dois-cérebros — protocolo de início de sessão em camadas, regra de escrita/wikilinks, calibração "identificador nunca vem sozinho", check de atualizações, "antes de tocar código" — **não vive aqui**. É mecanismo, provida por `config/protocolo-mecanismo.md` do Connect e injetada no contexto pelo hook de início de sessão (D104). Este arquivo guarda só o que é **seu** e não deriva da espinha.
+> A **espinha** do dois-cérebros — protocolo de início de sessão em camadas, regra de escrita/wikilinks, calibração "identificador nunca vem sozinho", check de atualizações, "antes de tocar código" — **não vive aqui**. É mecanismo: vem sempre de `config/protocolo-mecanismo.md` do Connect, injetada no contexto pelo hook de início de sessão — nunca copiada ou reescrita em arquivo de operador (ver `GLOSSARIO.md#espinha-e-mecanismo` no repo do plugin, se quiser o porquê). Este arquivo guarda só o que é **seu** e não deriva da espinha.
 
 ---
 
