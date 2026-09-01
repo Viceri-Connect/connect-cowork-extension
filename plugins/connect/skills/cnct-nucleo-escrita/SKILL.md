@@ -13,7 +13,7 @@ metadata:
 
 # cnct-nucleo-escrita — escrita governada
 
-Executor genérico (mecanismo, D96). Não sabe onde nada mora — quem sabe é o contrato da
+Executor genérico (mecanismo). Não sabe onde nada mora — quem sabe é o contrato da
 matriz. Toda especificidade de conteúdo vive no *knowledge*, nunca aqui.
 
 ## Quando disparar
@@ -42,7 +42,7 @@ ser personalizado à mão assim que o primeiro sub-vault ganhar manifesto no gra
 
 **Passo 3 — Carregar a taxonomia do vault alvo**, no caminho que o contrato do Passo 2
 indicou. **Se não existir:** reportar a lacuna ao operador — nunca herdar taxonomia de
-outro vault, nunca inventar. É gatilho de elicitação (D97), não erro silencioso.
+outro vault, nunca inventar. É gatilho de elicitação, não erro silencioso.
 
 **Passo 4 — Aplicar**, na ordem: regras universais do contrato (Passo 2) → panorama de
 camadas, decisão de pasta, testes de classificação e checklist específicos da taxonomia

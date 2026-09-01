@@ -1,5 +1,34 @@
 # Changelog — connect
 
+## 0.23.0 — 2026-09-01
+
+**Fecha a limpeza de identificador cru que a 0.22.0 começou, e ocupa o slot de maior precedência do
+contexto com governança em vez de deixá-lo vazio.**
+
+- **Identificador cru extinto de todo texto operante** — `Dxx`/`Pxx`/`ADR-N`/`CAx` saíram de
+  `config/protocolo-mecanismo.md` (injetado em toda sessão), dos **8** `SKILL.md` de `cnct-*`, dos três
+  contratos (`contrato-navegacao`, `contrato-manifesto`, `contrato-tipos`), do `FRAMEWORK.md` e do
+  `CONCEITOS.md`. Onde a frase perdia o apoio ao perder o código, entrou o **nome** da entrada do
+  `GLOSSARIO.md`; onde o código só decorava uma afirmação já escrita por extenso, foi apagado.
+  Quem instala o Connect sem o vault interno do Impulsa não lê mais referência a nada.
+- **`GLOSSARIO.md` — 10 entradas novas**: `vault-declara-produto-nao-prescreve`, `manifesto-e-acervo`,
+  `grafo-nao-arvore`, `path-por-maquina`, `bloqueio-reporta-nunca-contorna`, `carregamento-lazy`,
+  `canal-injetado-governado`, `curadoria-pessoal-coletivo`, `preparar-e-parar`. Cada uma no formato
+  da lista: regra em uma frase → por que importa em uma frase.
+- **Strings emitidas para o agente também limpas** — as regras duras (`lib/regras.mjs`), os avisos de
+  `lib/render.mjs`/`navegacao.mjs`/`resolver.mjs`/`session.mjs`/`config-local.mjs`, o texto do arquivo
+  de governança (`lib/governanca.mjs`) e as **descrições das tools MCP** (`mcp/connect-mcp.mjs`), que
+  entram no contexto do agente como schema. **Comentários de código foram deixados como estão**: são
+  arqueologia de engenharia, lidos por quem mantém o plugin, não por quem navega o vault.
+- **`contrato-manifesto.md` §2** — removida a coluna `Fonte` da tabela de schema: as células eram
+  exclusivamente códigos de decisão, e a coluna existia só para hospedá-los.
+
+> ⚠️ **Reflexo a executar depois de instalar esta versão:** os `CLAUDE.md` de governança já publicados
+> (Matriz, Tribo Impulsa, Tribo MAPFRE) foram gerados pelo código anterior e ainda carregam
+> `(D108/D148)` na regra dura 2. `publicar_governanca` é *write-once por conteúdo* — republicar depois
+> da instalação regenera os três. Sem reinstalar, republicar não muda nada: o servidor MCP em execução
+> ainda é o código velho.
+
 ## 0.22.0 — 2026-09-01
 
 **Audit "in loco" (dogfooding do Connect na própria Viceri) achou identificador órfão empacotado no

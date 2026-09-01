@@ -60,13 +60,13 @@ Chamar a tool `configurar` com `vault_matriz` e/ou `cerebro_pessoal`.
 - Se vier `invalidos` (path não existe / placeholder OneDrive não sincronizado),
   explicar e **re-perguntar** só o que faltou — nunca assumir um caminho.
 - `home` (pasta fixa do Connect) usa o default do SO; só perguntar se o operador quiser mudar.
-- **Ausência de vault de operador não é erro — é gatilho de nascimento (D97/D105).** Se não
+- **Ausência de vault de operador não é erro — é gatilho de nascimento.** Se não
   há `cerebro_pessoal`, ou a pasta apontada está **em branco** (sem `_cerebro/meu-config.md`),
   **delegar à skill `cnct-fabrica-operador`**: ela elicita a identidade e materializa o vault do
   zero, e ao final chama `configurar` por conta própria. Não tentar montar um vault que ainda
   não existe.
 
-**Passo 2b — Conectar a matriz como pasta do projeto Cowork (ADR-18).**
+**Passo 2b — Conectar a matriz como pasta do projeto Cowork.**
 Depois de `configurar`, **peça ao operador para conectar a pasta da matriz ao projeto Cowork** —
 é uma pasta só, e é o que faz a camada 1 deixar de depender de um arquivo que pode não abrir.
 
@@ -87,7 +87,7 @@ bloco como contexto ativo; referenciar tudo por caminho relativo (ex.: `./matriz
 
 **Passo 3b — Ler a carta de navegação (a camada 1 que o vault declara).**
 O bloco de sessão injeta, verbatim, `_cerebro/camada-1.md` do vault montado — quem diz o
-que carregar e quando é o **vault**, não o produto (D98; contrato em
+que carregar e quando é o **vault**, não o produto (contrato em
 `config/contrato-navegacao.md`). Duas situações, nenhuma delas contornável:
 
 - **Carta presente** → ela é a fonte da navegação desta sessão: ponto de pouso, tabela
@@ -120,18 +120,18 @@ gestão"), ou ao abrir qualquer nota que declare `tipo`+`externo:true` no frontm
 3. Uma vez resolvido, o alias vale pro resto da sessão — não repetir `resolver` pro
    mesmo `conceito`; navegação dentro dele é path relativo normal.
 
-O modelo canônico é **grafo de manifestos** (D102): cada entidade é **manifesto**
-(frontmatter puro — nunca path/url, D35) + **acervo** (no diretório que cada operador
+O modelo canônico é **grafo de manifestos**: cada entidade é **manifesto**
+(frontmatter puro — nunca path/url) + **acervo** (no diretório que cada operador
 informa). O casamento conceito→entrada acontece **no `resolver`**, e o índice é
-**derivado** dos manifestos, nunca autorado (P60/D35); o path local vive só em
+**derivado** dos manifestos, nunca autorado; o path local vive só em
 `connect.config.json` (`subVaults`), nunca no vault.
 
 > ✅ **Estado do código (resolver v0.11.0):** o manifesto não guarda mais `fonte`/`url`
 > em nenhum formato — só `externo`, `criado-por`/`criado-em`, `entrada` (e o `conceito`
 > já existente, reaproveitado como chave local). O
 > `resolver` nunca advinha nem pergunta; devolve `status` pra esta skill decidir. Registro
-> autorado `sub-vaults.json` continua **removido** (contrato-manifesto §3). Corte de raiz
-> sobre o P69: não existe mais path pra formatar errado no coletivo.
+> autorado `sub-vaults.json` continua **removido** (contrato-manifesto §3). Corte de raiz:
+> não existe mais path pra formatar errado no coletivo.
 
 ## Regras
 

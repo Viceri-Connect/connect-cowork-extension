@@ -249,7 +249,7 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, ...ov
       status: 'origem-ausente',
       conceito: entry.conceito,
       origem: caminhoLocal,
-      avisos: [`origem nao existe: ${caminhoLocal} (se for OneDrive, sincronize "manter neste dispositivo"; sem acesso a fonte, procure quem governa — D97)`],
+      avisos: [`origem nao existe: ${caminhoLocal} (se for OneDrive, sincronize "manter neste dispositivo"; sem acesso a fonte, procure quem governa)`],
     };
   }
   if (!workspaceDir) {

@@ -1,7 +1,7 @@
 # Connect — Conceitos: instância, matriz, sub-vault, vault pessoal
 
 > Taxonomia canônica do produto. O que é cada coisa, o que **não** é, e por que a
-> distinção importa. Mecanismo (corte `_`/conteúdo, D96) — vale para qualquer empresa
+> distinção importa. Mecanismo (corte `_`/conteúdo) — vale para qualquer empresa
 > que instale o Connect.
 >
 > Versão 0.1.0 · 2026-08-17 · Impulsa / Viceri
@@ -33,13 +33,13 @@ conectando sub-contextos, e é ela que **define o que é filho**. Contém:
   quem governa e onde está a fonte de cada uma.
 
 A matriz **não hospeda o acervo pesado** dos filhos — só declara que existem e os governa
-(o acervo desce sob demanda, D103). Uma matriz governa, por exemplo, uma empresa e seus
+(o acervo desce sob demanda). Uma matriz governa, por exemplo, uma empresa e seus
 **sub-clientes** e **sub-processos**.
 
 ## 3. Sub-vault — um contexto-filho que a matriz define (N por instância)
 
 Um **sub-vault** é um contexto que a matriz declara e conecta: cliente, tribo, sub-processo,
-controle pessoal — qualquer tipo (D101). Tem manifesto na matriz + acervo na própria fonte.
+controle pessoal — qualquer tipo. Tem manifesto na matriz + acervo na própria fonte.
 
 > **Um vault de cliente é um sub-vault** (sub-cliente) governado pela matriz — **NÃO é uma
 > matriz Connect.** Um vault de cliente ser rico e completo (ter seu próprio `_cerebro`,
@@ -54,7 +54,7 @@ carregamento em camadas/lazy, e o **perfil mínimo do operador** (Camada 0) — 
 própria extensão**, não por um vault Obsidian pessoal. Consequências:
 
 - **O vault pessoal deixou de ser obrigatório.** A espinha vem de `config/protocolo-mecanismo.md`
-  (injetada pelo hook, D104); o **perfil do operador é gerido pelo Connect** e vive no
+  (injetada pelo hook); o **perfil do operador é gerido pelo Connect** e vive no
   **CONNECT_HOME** (§5).
 - **Coexistência.** Se o operador mantém o próprio vault Obsidian com protocolos próprios
   (`CLAUDE.md` etc.), os dois **convivem**: o Connect não força seu protocolo no vault do
@@ -87,7 +87,7 @@ precisa administrá-lo** — a única escolha que lhe importa é qual é a matri
 | **Vault pessoal** | 0 ou 1, **opcional** | enriquecimento do operador | vault Obsidian próprio |
 | **CONNECT_HOME** | 1 por máquina | estado do Connect (config + perfil + sessões) | `%LOCALAPPDATA%\Connect` |
 
-> Fontes de decisão: D96 (corte `_`/conteúdo), D97/D102 (manifesto+acervo, grafo), D101
-> (sub-vault tipado), D104 (espinha é mecanismo injetado), D105 (perfil do operador gerido
-> pela fábrica). Decisão desta sessão (2026-08-17): perfil do operador no CONNECT_HOME; vault
+> Regras de mecanismo que sustentam esta taxonomia (ver `GLOSSARIO.md`):
+> `corte-mecanismo-conteudo`, `manifesto-e-acervo`, `grafo-nao-arvore`, `espinha-e-mecanismo`.
+> Decisão desta sessão (2026-08-17): perfil do operador no CONNECT_HOME; vault
 > pessoal opcional; matriz↔instância 1:1 (um vault de cliente é sub-vault, não matriz).

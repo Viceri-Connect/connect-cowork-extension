@@ -15,7 +15,7 @@ metadata:
 
 # cnct-nucleo-encerramento — encerramento de sessão multi-vault
 
-Executor genérico (mecanismo, D96). Uma sessão Connect pode tocar mais de um vault (a
+Executor genérico (mecanismo). Uma sessão Connect pode tocar mais de um vault (a
 matriz + N sub-vaults resolvidos) — este executor nunca assume um único vault ativo.
 
 ## Protocolo
@@ -40,7 +40,7 @@ delega sempre.
 **Passo 4 — Persistir estado do operador.**
 Tasks pessoais (novas, concluídas, mudança de status) e delta de identidade vão em
 `./operador/TASKS.md` e `./operador/_cerebro/meu-config.md` — **direto**, sem passar por
-`cnct-nucleo-escrita` (não é conteúdo de vault, é estado gerido pelo Connect, D113). Se
+`cnct-nucleo-escrita` (não é conteúdo de vault, é estado gerido pelo Connect). Se
 `./operador` não estiver acessível ainda (Cowork não concedeu acesso à origem), solicitar
 o acesso antes de escrever — nunca pular o passo silenciosamente.
 
@@ -49,7 +49,7 @@ Para **cada coletivo** que a sessão tocou (um por alias do Passo 1, exceto `./o
 `./pessoal`), atualizar `./operador/_cerebro/vinculos/{coletivo}/estado.md` — **o hot cache do
 operador naquele coletivo**. Este passo existe porque a sua ausência foi medida: nenhum executor
 escrevia nesse arquivo, e o `estado.md` do vínculo `mapfre` **nasceu vazio e permaneceu vazio**
-enquanto o cérebro pessoal legado tinha a tabela cheia e fresca (P117).
+enquanto o cérebro pessoal legado tinha a tabela cheia e fresca.
 
 Forma do arquivo — é **hot cache**, e a forma é o que o mantém útil:
 
@@ -57,7 +57,7 @@ Forma do arquivo — é **hot cache**, e a forma é o que o mantém útil:
 - **Substitui, nunca acrescenta.** Zero histórico, zero `✅ DD/MM`, zero narrativa. Não é log nem
   changelog: o que deixou de ser corrente **sai da linha**.
 - A **fonte de verdade** é a nota do projeto no coletivo; aqui mora a **leitura do operador** sobre
-  ela (ADR-14: fato → acervo; leitura/urgência/próximo passo → vínculo).
+  ela (fato → acervo; leitura/urgência/próximo passo → vínculo).
 - Só entra alerta **cross-projeto** que muda o que o operador faz. Item de um projeto só vive na
   linha dele.
 - `atualizado:` no frontmatter recebe a data da sessão.
@@ -68,7 +68,7 @@ corrente não está na conversa, buscá-lo na nota do projeto no coletivo antes 
 fonte, a célula fica declarada como *a reconciliar* — nunca inventada.
 
 > **Vínculo tocado sem registro ainda** (`vinculos/{coletivo}/` inexistente): criar `estado.md` e
-> `config.md` no schema vigente (`vinculos-v1`, CA6–CA9 da `CONNECT-E2-01`) e reportar ao operador.
+> `config.md` no schema vigente (`vinculos-v1`) e reportar ao operador.
 > **Nunca** usar o schema antigo `_cerebro/clientes/{slug}/`.
 
 **Passo 5 — Despromoção obrigatória, por vault, antes de acrescentar.**
@@ -99,7 +99,7 @@ Este executor **não conhece hook nenhum**. Para cada vault do Passo 1, ler a se
 (`{alias}/_inteligencia/skills/cnct-nucleo-encerramento/cnct-nucleo-encerramento.md`) e
 executar os hooks declarados lá, **na ordem em que aparecem**. Adicionar, alterar ou remover
 hook é editar aquele knowledge — **sem reinstalar** este executor. Hook hardcoded aqui seria
-conhecimento de coletivo dentro do produto (corte `_`/conteúdo, D96).
+conhecimento de coletivo dentro do produto (corte `_`/conteúdo).
 
 - **Vault sem a seção, ou sem knowledge:** zero hooks naquele vault. Não é lacuna — é o caso
   normal de um coletivo que não registrou nenhum. Seguir em silêncio.
@@ -123,7 +123,7 @@ conhecimento de coletivo dentro do produto (corte `_`/conteúdo, D96).
 - Não cria conteúdo — se não está na conversa, não preenche.
 - Idempotente — rodar duas vezes não duplica.
 - **Nunca reescreve arquivo inteiro** — edita o mínimo necessário no destino.
-- **Não commita, e não menciona commit.** Preparar e parar; a validação é do operador (D167).
+- **Não commita, e não menciona commit.** Preparar e parar; a validação é do operador.
 - **Não atualiza `agents.md` de repositório nenhum.** Decisão técnica vai para a nota do
   projeto; `agents.md` só em sessão deliberada de refinamento técnico.
 - **`TASKS.md` do operador não é `tasks.md` de Delivery Hub** — nomes parecidos, destinos

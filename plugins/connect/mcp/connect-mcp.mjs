@@ -6,8 +6,8 @@
 // Superficie (decisao 2026-08-14 — sem entidade "cliente"):
 //   - iniciar_sessao           : bootstrap da sessao (scaffold + matriz + identidade + L1)
 //   - resolver                 : casa um CONCEITO no registro derivado; nunca guarda path
-//   - registrar_subvault_local : grava o path LOCAL de um conceito (por-maquina, D35)
-//   - resolver_repo            : caminho local de um repo de codigo (P64; nunca monta junction)
+//   - registrar_subvault_local : grava o path LOCAL de um conceito (por-maquina)
+//   - resolver_repo            : caminho local de um repo de codigo (nunca monta junction)
 //   - registrar_repo_local     : grava o path LOCAL de um repo (substitui o repos.md do vault)
 //   - listar_repos             : tabela local de repos, para conferencia do operador
 //   - mount_junction           : primitivo de mount (base do resolver)
@@ -95,7 +95,7 @@ const TOOLS = [
     description:
       'Resolve um CONCEITO numa entidade do registro derivado (varredura de manifestos — ' +
       'frontmatter `tipo` do cerebro pessoal e da matriz; contrato em config/contrato-manifesto.md). ' +
-      'O manifesto NUNCA guarda path/url (D35) — so declara `externo` (tem acervo fora da matriz?) e ' +
+      'O manifesto NUNCA guarda path/url — so declara `externo` (tem acervo fora da matriz?) e ' +
       '`criado-por`/`criado-em` (ja foi materializado?); o proprio `conceito` (chave de casamento) ' +
       'tambem indexa o path local. O path fica so em connect.config.json (subVaults). Nunca pergunta ' +
       'nada nem advinha path — devolve `status` pra ' +
@@ -119,7 +119,7 @@ const TOOLS = [
     name: 'registrar_subvault_local',
     description:
       'Grava, em connect.config.json (subVaults), o diretorio LOCAL (nesta maquina) onde um ' +
-      '`conceito` mora. Nunca vai pro vault — e por-operador, por-maquina (D35). Use depois que o ' +
+      '`conceito` mora. Nunca vai pro vault — e por-operador, por-maquina. Use depois que o ' +
       '`resolver` devolver "local-nao-configurado" (pergunte o caminho ao operador antes de chamar) ' +
       'ou quando uma fabrica acabou de materializar um sub-vault e ja sabe o path.',
     inputSchema: {
@@ -136,12 +136,12 @@ const TOOLS = [
     name: 'publicar_governanca',
     description:
       'Materializa `{vault}/CLAUDE.md` — o arquivo de GOVERNANCA na raiz de um vault de ' +
-      'conhecimento (ADR-18): declara que o acervo e governado, carrega as regras duras e APONTA ' +
+      'conhecimento: declara que o acervo e governado, carrega as regras duras e APONTA ' +
       'para `_cerebro/camada-1.md`. Nao copia o conteudo da carta. O harness carrega esse arquivo ' +
       'sozinho da raiz de pasta conectada e o rotula como *override* — e o slot de maior ' +
-      'precedencia do contexto, e sem isto ele fica sob autoria nao governada (D222/P145). ' +
+      'precedencia do contexto, e sem isto ele fica sob autoria nao governada. ' +
       'WRITE-ONCE: republicar sem mudanca devolve "inalterado" e NAO toca o arquivo (e o que ' +
-      'impede a copia de conflito em vault sincronizado — P144). RECUSA sobrescrever CLAUDE.md ' +
+      'impede a copia de conflito em vault sincronizado). RECUSA sobrescrever CLAUDE.md ' +
       'sem marcador do Connect, sempre: pode ser Camada 0 de operador, sonda ou conteudo de ' +
       'terceiro. Use na cnct-fabrica-navegacao, depois de materializar a carta. NUNCA escrever ' +
       'esse arquivo a mao — o marcador CNCT-GOV e gerado aqui.',
@@ -159,9 +159,9 @@ const TOOLS = [
     name: 'resolver_repo',
     description:
       'Resolve o CAMINHO LOCAL de um repositorio de codigo declarado (analogo do `resolver`, para ' +
-      'codigo — P64). Repo NAO e montado como junction: devolve o caminho real da maquina para o ' +
+      'codigo). Repo NAO e montado como junction: devolve o caminho real da maquina para o ' +
       'agente pedir acesso ao Cowork / usar como cwd. Path mora so em connect.config.json (tabela ' +
-      '`repos`), nunca no vault (D35). Nunca advinha: status "local-nao-configurado" significa ' +
+      '`repos`), nunca no vault. Nunca advinha: status "local-nao-configurado" significa ' +
       'PERGUNTE ao operador (ou ofereca clonar) e grave com registrar_repo_local — jamais procurar ' +
       'o repo por varredura de disco.',
     inputSchema: {
@@ -178,7 +178,7 @@ const TOOLS = [
       'Grava, em connect.config.json (tabela `repos`), o diretorio LOCAL onde um repositorio de ' +
       'codigo mora nesta maquina. Use depois de `resolver_repo` devolver "local-nao-configurado" ' +
       '(tendo perguntado ao operador) ou apos um clone conduzido na sessao. Substitui o antigo ' +
-      '`repos.md` no vault pessoal — path e por-maquina, nunca conteudo de vault (D35).',
+      '`repos.md` no vault pessoal — path e por-maquina, nunca conteudo de vault.',
     inputSchema: {
       type: 'object',
       properties: {

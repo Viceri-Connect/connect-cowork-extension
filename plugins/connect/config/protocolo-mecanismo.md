@@ -1,17 +1,17 @@
 # Protocolo do mecanismo Connect
 
 > Espinha dorsal do dois-cerebros. Entregue e mantida pelo **produto** (mecanismo, nao
-> conteudo da empresa — corte `_`/conteudo, D96). Injetada no contexto no inicio de toda
+> conteudo da empresa — corte `_`/conteudo). Injetada no contexto no inicio de toda
 > sessao pelo hook `SessionStart` — a garantia de execucao e estrutural: nao depende de o
 > operador manter arquivo nenhum, nem de o agente escolher ler um `CLAUDE.md`.
 
 ## Resolucao lazy em camadas
 
 Carregar o minimo por padrao; a densidade entra **sob demanda**, disparada pela mencao
-especifica de um projeto/produto/decisao — nunca por precaucao (ADR-6).
+especifica de um projeto/produto/decisao — nunca por precaucao.
 
 - **Camada 0** — identidade do operador + este protocolo. Sempre, custo ~zero.
-- **Camada 1** — a **carta de navegacao** do vault (`_cerebro/camada-1.md`): identidade do coletivo + "onde encontrar o que" + o que carregar so por gatilho. **Declarada pelo vault**, injetada verbatim; nunca prescrita pelo produto (D98). Toda sessao com vault montado — matriz e cada sub-vault resolvido.
+- **Camada 1** — a **carta de navegacao** do vault (`_cerebro/camada-1.md`): identidade do coletivo + "onde encontrar o que" + o que carregar so por gatilho. **Declarada pelo vault**, injetada verbatim; nunca prescrita pelo produto. Toda sessao com vault montado — matriz e cada sub-vault resolvido.
 - **Camada 2** — comportamento: ao nomear um projeto/produto/decisao, descer direto na nota-fonte; resolver o sub-vault sob demanda (`resolver`), montando manifesto + acervo so no toque.
 - **Camada 3** — artefato de entrega da task + backlog do projeto. So dentro da task.
 
@@ -19,7 +19,7 @@ especifica de um projeto/produto/decisao — nunca por precaucao (ADR-6).
 
 Regra permanente da sessao inteira, nao um fluxo de uma execucao so. Aplica-se a TODA nota
 aberta, esteja ela na matriz ou dentro de um sub-vault ja montado — recursivo, sem limite de
-profundidade (grafo, D102, nao arvore).
+profundidade (grafo, nao arvore).
 
 1. **Tarefa nomeia um conceito** (projeto, cliente, area, tribo — termo literal do operador).
    Primeiro passo, sempre: chamar `resolver(conceito)`. **Nunca** grep, varredura de pastas ou
@@ -45,7 +45,7 @@ profundidade (grafo, D102, nao arvore).
 4. **Uma vez resolvido, o alias e conhecido pro resto da sessao.** Nao chamar `resolver` de
    novo pro mesmo `conceito`; navegacao dentro dele e path relativo normal
    (`./alias/estrutura/arquivo.md`), igual a navegacao dentro da matriz.
-5. **Nenhum manifesto guarda path/url** (D35) — se um bloqueio parecer exigir adivinhar um
+5. **Nenhum manifesto guarda path/url** — se um bloqueio parecer exigir adivinhar um
    diretorio, o bloqueio e sinal de configuracao local faltante (`local-nao-configurado`),
    nunca motivo para grep.
 
@@ -60,7 +60,7 @@ a matriz e para todo sub-vault, do primeiro ao ultimo salto.
 2. **Camada 1 do vault -> a carta de navegacao** (`_cerebro/camada-1.md`, contrato em
    `config/contrato-navegacao.md`). E o vault que declara o que carregar, quando, e o que
    e peca pesada. O mecanismo injeta a carta verbatim; **o produto nao prescreve ponteiro
-   nenhum** (D98). Vault sem carta = lacuna anunciada + fabrica oferecida (`cnct-fabrica-navegacao`),
+   nenhum**. Vault sem carta = lacuna anunciada + fabrica oferecida (`cnct-fabrica-navegacao`),
    nunca ponteiro inventado.
 3. **Ponto de pouso.** Abra a nota que o manifesto declara em `entrada` (caminho relativo ao
    acervo) antes de qualquer outra coisa naquele acervo. Sem `entrada`, o ponto de pouso e o
@@ -75,7 +75,8 @@ a matriz e para todo sub-vault, do primeiro ao ultimo salto.
    que foi buscado e o que se achou. Motivo: uma nota que so o grep acha e, por definicao,
    uma **nota orfa** — nenhum hub a linka. O achado nao e "encontrei", e **defeito do vault**:
    registre como issue (nota orfa / carta incompleta / `entrada` sem caminho) para o
-   `vault-audit`. Contorno silencioso e o modo de falha que apaga o defeito (D108).
+   `vault-audit`. Contorno silencioso e o modo de falha que apaga o defeito
+   (ver `bloqueio-reporta-nunca-contorna` no GLOSSARIO.md).
 
 > Consequencia pratica: "nao sei onde isso mora" nunca autoriza tatear diretorio. Autoriza
 > uma de tres coisas — `resolver` o conceito, ler a carta, ou **perguntar ao operador**.
@@ -86,7 +87,7 @@ a matriz e para todo sub-vault, do primeiro ao ultimo salto.
 - Nota nova e linkada de pelo menos uma existente — nunca criar nota solta (sinapse morta).
 - Referenciar conhecimento por **caminho relativo ao workspace**, nunca por caminho absoluto de maquina.
 - Antes de escrever no coletivo, carregar o protocolo `vault-write` do coletivo ativo.
-- Ponteiro e **tipado**: `[[wikilink]]` so para nota deste vault; artefato externo -> path nomeando a natureza; fato derivavel (path de mount, vault ativo) -> resolver, nao apontar (D35).
+- Ponteiro e **tipado**: `[[wikilink]]` so para nota deste vault; artefato externo -> path nomeando a natureza; fato derivavel (path de mount, vault ativo) -> resolver, nao apontar.
 
 ## Calibracao de interacao — identificador nunca vem sozinho
 

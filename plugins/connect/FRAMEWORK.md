@@ -1,16 +1,17 @@
 # Connect — Framework do Catálogo de Skills
 
 > Padrão único ao qual toda skill do Connect adere. Ancorado no plugin (mecanismo, não
-> conteúdo da empresa — corte `_`/conteúdo, D96). Se uma skill não cabe neste padrão, o
+> conteúdo da empresa — corte `_`/conteúdo). Se uma skill não cabe neste padrão, o
 > defeito é da skill, não do padrão — parar e nomear antes de mexer.
 >
 > Versão 0.2.0 · 2026-08-15, revisto em 2026-08-24 · Impulsa / Viceri
 >
-> **Revisão de 24/08 (ADR-15/D174–D178):** nasce a §3.2 (namespace de origem — quem emite o nome),
+> **Revisão de 24/08:** nasce a §3.2 (namespace de origem — quem emite o nome),
 > `metadata.eixo` passa a ser obrigatório, a L3 ganha a responsabilidade de explodir processo em skill,
 > aparece a linha "fora das camadas" para fábrica cujo contrato é da empresa, e §5/§5.4/§6 são
 > atualizadas contra a auditoria das 6 skills. Origem da revisão: auditoria que achou 10 defeitos, dois
-> deles degradando o mecanismo em silêncio (P117, `cnct-fabrica-operador` no schema antigo).
+> deles degradando o mecanismo em silêncio (o estado do vínculo sem quem o escrevesse, e
+> `cnct-fabrica-operador` no schema antigo).
 
 ---
 
@@ -18,13 +19,14 @@
 
 Skill criada caso a caso apodrece: cada uma inventa onde escreve, o que carrega e como
 elicita. O catálogo do Connect é **um padrão que se auto-replica** — o produto para de ter
-uma resposta canônica por caso e passa a ter um **mecanismo de resposta** (D98 aplicado ao
-próprio catálogo). Toda skill nasce encaixada em uma camada (§3) e segue a mesma anatomia
+uma resposta canônica por caso e passa a ter um **mecanismo de resposta**
+(`vault-declara-produto-nao-prescreve`, no GLOSSARIO.md, aplicado ao próprio catálogo).
+Toda skill nasce encaixada em uma camada (§3) e segue a mesma anatomia
 (§2); tipos novos entram pela camada meta (§3, L3) sem esperar release.
 
 ---
 
-## 2. Anatomia de uma skill — executor × knowledge (corte D96)
+## 2. Anatomia de uma skill — executor × knowledge (corte `_`/conteúdo)
 
 Toda skill tem duas partes, e o **corte de camada** decide onde cada uma mora:
 
@@ -46,7 +48,7 @@ que knowledge legítimo viaja no plugin.
 
 ---
 
-## 3. Camadas do catálogo (D101)
+## 3. Camadas do catálogo
 
 O plugin entrega três camadas; só a terceira é opinativa.
 
@@ -55,10 +57,10 @@ O plugin entrega três camadas; só a terceira é opinativa.
 | **L1 · Primitivos** | mount + manifesto + acervo; restauração de contexto; escrita governada; encerramento; auditoria do vault. Agnóstico de tipo | `iniciar_sessao`, `resolver`, `mount_junction`, `cnct-nucleo-sessao`, `cnct-nucleo-escrita`, `cnct-nucleo-encerramento`, `cnct-nucleo-audit` | mecanismo, universal |
 | **L2 · Fábricas por tipo** (`cnct-fabrica-<tipo>`) | Uma por **tipo declarado pelo produto**: `operador`, `navegacao`, `papel`. Cada uma sabe **entrevistar** e **materializar** o seu tipo | `cnct-fabrica-operador` (referência), `cnct-fabrica-navegacao` | mecanismo, plural e extensível |
 | **L3 · Meta** | Criação/edição de **templates** para tipos que ainda não existem — a empresa cria o seu modelo sem esperar release. É também a camada que **explode processo em skill** sob demanda com o operador | `cnct-fabrica-tipos` *(a especificar — declarada desde 15/08)* | mecanismo |
-| **Fora das camadas · fábricas do coletivo** | Fábricas cujo **contrato é da empresa** — tribo, cliente, projeto, processo. Canônicas na matriz, entregues pelo plugin, **sem prefixo `cnct-`** (§3.2) | fábrica de tribo/cliente *(a especificar — P79; o vault da Tribo MAPFRE, criado à mão em 24/08, é o caso-zero dela)* | conteúdo da empresa |
+| **Fora das camadas · fábricas do coletivo** | Fábricas cujo **contrato é da empresa** — tribo, cliente, projeto, processo. Canônicas na matriz, entregues pelo plugin, **sem prefixo `cnct-`** (§3.2) | fábrica de tribo/cliente *(a especificar; o vault da Tribo MAPFRE, criado à mão em 24/08, é o caso-zero dela)* | conteúdo da empresa |
 
-> A fábrica não constrói o vault — constrói as **fábricas de cada tipo de vault** (D01 num
-> nível acima). O produto hospeda a declaração; não prescreve o "como" (D98).
+> A fábrica não constrói o vault — constrói as **fábricas de cada tipo de vault** (num
+> nível acima). O produto hospeda a declaração; não prescreve o "como".
 
 ### 3.1 Convenção de nomes — `cnct-<família>-<objeto>`
 
@@ -78,8 +80,7 @@ skill atua. Nome semântico e em PT — diz a camada e o objeto sem abrir o arqu
 
 ### 3.2 Quem emite o nome — o namespace é de ORIGEM, nunca de assunto
 
-> Ratificado em 2026-08-24 — **ADR-15** (acervo da tribo Impulsa, `projetos/Connect/adr/`; resolver o
-> conceito `impulsa`). A §3.1 resolvia o inventário existente e deixava aberto o caso que este framework
+> Ratificado em 2026-08-24. A §3.1 resolvia o inventário existente e deixava aberto o caso que este framework
 > passou a prometer na L3: **quem assina o nome quando uma fábrica cria skill nova**.
 
 O prefixo declara **quem detém o contrato e responde pela versão canônica** — porque é isso que o
@@ -105,7 +106,7 @@ empresa e mora em `_inteligencia/convencao-skills.md` da matriz, nunca aqui.
 
 > **Conformidade medida em 24/08:** 5 das 6 skills declaravam `metadata.version`; `cnct-fabrica-navegacao`
 > não declarava `metadata` nenhum — sem versão, o comparador não tem o que comparar. Corrigido, e a
-> exigência passa a ser do `contrato-skill.md` (a escrever — P115).
+> exigência passa a ser do `contrato-skill.md` (a escrever).
 
 ---
 
@@ -114,13 +115,13 @@ empresa e mora em `_inteligencia/convencao-skills.md` da matriz, nunca aqui.
 Toda skill de L2 segue o mesmo esqueleto. É o contrato que faz o catálogo se auto-replicar:
 
 1. **Localizar destino** — a pasta onde o sub-vault vai morar. Pasta em branco/ausente é o
-   **caso normal**, não erro: artefato ausente é gatilho de nascimento (D97). No Cowork,
+   **caso normal**, não erro: artefato ausente é gatilho de nascimento. No Cowork,
    conceder acesso à pasta.
-2. **Elicitar** — banco de perguntas **destilado do caso-zero** ([[caso-zero]], D72): as
+2. **Elicitar** — banco de perguntas **destilado do caso-zero** ([[caso-zero]]): as
    perguntas que já funcionaram com quem não é arquiteto. Uma por vez, cada uma explicando
    em uma linha *por que importa* (calibração "identificador nunca vem sozinho").
 3. **Materializar** — escrever o scaffold a partir dos **templates da própria skill**
-   (forma vazia, mecanismo D96), interpolando as respostas. Garantir cada arquivo no local
+   (forma vazia, mecanismo), interpolando as respostas. Garantir cada arquivo no local
    indicado; **nunca sobrescrever** o que já existe (a fábrica nasce, não migra à força).
 4. **Registrar o handshake** — chamar o primitivo que faz o mecanismo passar a resolver o
    novo sub-vault (`configurar`/`resolver`); confirmar com `estado_sessao`.
@@ -130,7 +131,7 @@ Toda skill de L2 segue o mesmo esqueleto. É o contrato que faz o catálogo se a
 **Invariante:** a fábrica materializa só o **delta**. A espinha do dois-cérebros (protocolo
 de sessão, regra de escrita, calibração, check de atualizações) **não** é reescrita por
 fábrica nenhuma — ela é mecanismo, provida por `config/protocolo-mecanismo.md` e injetada
-pelo hook (D104). Fábrica que reescreve espinha é defeito.
+pelo hook. Fábrica que reescreve espinha é defeito.
 
 ---
 
@@ -141,7 +142,7 @@ pelo hook (D104). Fábrica que reescreve espinha é defeito.
 > instância concreta** (o dogfooding) — as skills de conteúdo nomeadas (`discovery-*`,
 > `apf-orcamento`, …) são dessa empresa, não do produto. Outra empresa terá outro catálogo de
 > conteúdo; só as skills `cnct-*` (mecanismo) viajam no plugin.
-> P58 = pendência "taxonomia mecanismo-do-plugin × conteúdo-da-empresa". Confiança **alta**
+> Pendência aberta: a taxonomia "mecanismo-do-plugin × conteúdo-da-empresa". Confiança **alta**
 > onde o destino de escrita é inequívoco; **confirmar** onde a skill escreve nos dois lados.
 
 ### 5.1 Mecanismo puro (viaja 100% no plugin)
@@ -159,15 +160,15 @@ pelo hook (D104). Fábrica que reescreve espinha é defeito.
 > `vault-write` → `cnct-nucleo-escrita` · `session-close` → `cnct-nucleo-encerramento` ·
 > `vault-audit` → `cnct-nucleo-audit`. As duas primeiras continuavam **instaladas em paralelo**,
 > declarando as mesmas frases de gatilho palavra por palavra — daí o *"o encerramento às vezes não
-> dispara"* (P113). Enquanto o **entregador** não existir (P114), a desinstalação é ato manual do
+> dispara"*. Enquanto o **entregador** não existir, a desinstalação é ato manual do
 > operador: decisão registrada em vault não alcança inventário instalado.
 
 | Skill | Escreve em | Nota |
 |---|---|---|
 | `cnct-nucleo-escrita` | protocolo; contrato na matriz, taxonomia em `_inteligencia/skills/{skill}/` do vault alvo | mecanismo com regras da empresa |
 | `cnct-nucleo-audit` | `_automacoes/` (mecanismo); lê `criterios-customizados.md` (conteúdo) | mesmo padrão; é o produto se auditando, não a squad entregando |
-| `cnct-nucleo-encerramento` | orquestra escritas por vault; escreve **direto** só no perfil do operador (`TASKS.md` + `vinculos/{coletivo}/estado.md`) | orquestrador. O Passo 4b nasceu de defeito medido: o estado do vínculo não tinha quem escrevesse (P117) |
-| `elicitacao-captura` | `_inteligencia/`/caso-zero | ~~candidata a split~~ → **eixo próprio `dogfooding`** (24/08, D177). Ver §5.4 |
+| `cnct-nucleo-encerramento` | orquestra escritas por vault; escreve **direto** só no perfil do operador (`TASKS.md` + `vinculos/{coletivo}/estado.md`) | orquestrador. O Passo 4b nasceu de defeito medido: o estado do vínculo não tinha quem escrevesse |
+| `elicitacao-captura` | `_inteligencia/`/caso-zero | ~~candidata a split~~ → **eixo próprio `dogfooding`** (24/08). Ver §5.4 |
 | `tasks-sync` | `tasks.md` master (conteúdo) — executor genérico | conteúdo da empresa, eixo `processo-sdd` |
 
 ### 5.3 Conteúdo da empresa (processo SDD · knowledge no coletivo, produz em pasta sem `_`)
@@ -178,7 +179,7 @@ pelo hook (D104). Fábrica que reescreve espinha é defeito.
 mecanismo genérico (convenção-skills), mas a **skill como entrada de catálogo é da empresa**:
 seu knowledge vive no coletivo e viaja com o coletivo, não com o plugin.
 
-### 5.4 `elicitacao-captura` — de "candidata a split" a eixo próprio (D177, 24/08)
+### 5.4 `elicitacao-captura` — de "candidata a split" a eixo próprio (24/08)
 
 O **mecanismo** de captura passiva (sinais, MODOs A/B/C, o eixo *atrito de dogfooding*) é do
 produto; o **capturado** (o caso-zero da empresa) é conteúdo. A leitura de 15/08 concluiu daí que a
@@ -205,14 +206,14 @@ SDD têm essa propriedade. Passa a ter o eixo `dogfooding` (`metadata.eixo`), se
    nem classificar — é item de conformidade, não detalhe.
 5. Se é fábrica: seguir o **padrão §4** verbatim (elicitar do caso-zero · materializar do
    template · handshake · delegar moldagens · só delta). E, se o destino pode já existir, **passo de
-   migração com inventário e diff** — não só de nascimento (P119).
+   migração com inventário e diff** — não só de nascimento.
 6. Rodar no **estado zero**? Se sim, self-contained.
-7. Nunca reescrever a espinha (D104). Nunca sobrescrever artefato existente. **Nunca citar skill-irmã
+7. Nunca reescrever a espinha. Nunca sobrescrever artefato existente. **Nunca citar skill-irmã
    sem conferir o nome contra a §3.2** — foi assim que `fabrica-papel` entrou neste catálogo.
 
 ---
 
-> Fontes de decisão (nota do projeto no coletivo): D96 (corte `_`/conteúdo), D97 (ausência =
-> nascimento), D98 (produto não prescreve, hospeda), D101 (sub-vault tipado + camadas),
-> D104 (espinha é mecanismo injetado), D72 (caso-zero como fonte da elicitação). Pendências:
-> P58 (taxonomia), P61 (realinhamento do `resolver`).
+> Regras de mecanismo que sustentam este framework (ver `GLOSSARIO.md`):
+> `corte-mecanismo-conteudo`, `gatilho-de-nascimento`, `vault-declara-produto-nao-prescreve`,
+> `espinha-e-mecanismo`. Pendências abertas: a taxonomia mecanismo × conteúdo e o
+> realinhamento do `resolver`.

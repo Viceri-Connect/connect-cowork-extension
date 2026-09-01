@@ -11,7 +11,7 @@ description: Materializa ou completa a CARTA DE NAVEGAÇÃO (`_cerebro/camada-1.
 # cnct-fabrica-navegacao — a camada 1 que o vault declara
 
 > **Camada L2 (fábrica por tipo).** Objeto: o artefato de **interior** de um vault.
-> Contrato: `config/contrato-navegacao.md` (mecanismo, D96). Molde das perguntas: destilado de
+> Contrato: `config/contrato-navegacao.md` (mecanismo). Molde das perguntas: destilado de
 > um coletivo maduro que navega bem **sem** Connect — a prova de que curadoria de navegação
 > não é derivável por varredura, é decisão de quem governa o vault.
 
@@ -22,7 +22,7 @@ acervo, **o mecanismo fica cego**: sem carta, não há ponto de pouso, não há 
 fronteira declarada — e o vazio força o contorno (`grep`), que a espinha proíbe.
 
 O produto **não pode** preencher esse vazio por prescrição: decidir que "`organizacao/` é o
-eixo de governança" é conteúdo da empresa (D98). O que o produto faz é **exigir a resposta**,
+eixo de governança" é conteúdo da empresa. O que o produto faz é **exigir a resposta**,
 **conduzir a elicitação** e **garantir que a resposta chega ao contexto** toda sessão.
 
 ## Passo 1 — Localizar o vault e ler o que já existe
@@ -60,7 +60,7 @@ apresente a resposta encontrada para ratificação.
   destino sem listar diretório. Propósito, não conteúdo ("uma nota por projeto", não a lista
   de projetos).
 - "Alguma pasta é **peça pesada** (não carregar sem gatilho)?" — é o que protege o orçamento
-  de token (ADR-6).
+  de token.
 
 **Ordem de entrada**
 - "Chegando aqui sem contexto, qual nota se abre primeiro?" — é o ponto de pouso; se o
@@ -77,7 +77,7 @@ apresente a resposta encontrada para ratificação.
 
 **Fronteiras**
 - "O que as pessoas vão procurar aqui e **não** mora aqui?" — cada item vira `conceito` a
-  resolver, fechando o loop com o manifesto. Nunca caminho de máquina, nunca URL (D35).
+  resolver, fechando o loop com o manifesto. Nunca caminho de máquina, nunca URL.
 
 **Opcionais, quando houver sinal**
 - Modelo relacional ("X tem N Y; Y não contém X") — pergunte se a estrutura tiver dois eixos
@@ -98,19 +98,19 @@ apresente a resposta encontrada para ratificação.
    menos uma nota existente (nunca nota solta).
 4. Nunca sobrescrever: se `camada-1.md` existir, aplicar só o delta.
 
-### Passo 3b — Publicar a governança na raiz (ADR-18)
+### Passo 3b — Publicar a governança na raiz
 
 Depois da carta, chamar a tool **`publicar_governanca`** com a raiz do vault. Ela materializa
 `{vault}/CLAUDE.md` — o arquivo que o harness carrega sozinho da raiz de pasta conectada e
 rotula como *override*. Sem ele, o slot de maior precedência do contexto fica sob autoria não
-governada (D222/P145).
+governada.
 
 - **Nunca escrever esse arquivo à mão.** O marcador `CNCT-GOV-{vault}` é gerado pela tool; um
   arquivo digitado a mão não é reconhecido como governado e vira issue no início da sessão.
 - **Ele não copia a carta** — declara que o vault é governado, carrega as regras duras e aponta
-  para `_cerebro/camada-1.md`. Se você sentir vontade de colar o conteúdo da carta ali, é a
-  ADR-17 tentando voltar: ela caiu porque espelho de conteúdo exige escrita recorrente, e
-  escrita recorrente em vault sincronizado produz cópia de conflito (P144).
+  para `_cerebro/camada-1.md`. Se você sentir vontade de colar o conteúdo da carta ali, não cole:
+  espelho de conteúdo exige escrita recorrente, e escrita recorrente em vault sincronizado
+  produz cópia de conflito.
 - **Só em vault de conhecimento.** Perfil de operador nunca — lá `CLAUDE.md` é a Camada 0.
 - **Status `recusado`** significa que já existe um `CLAUDE.md` sem marcador do Connect ali.
   **Não force e não apague**: mostre o arquivo ao operador e pergunte. Pode ser Camada 0
@@ -141,8 +141,10 @@ governada (D222/P145).
 
 ---
 
-> Fontes de decisão: D96 (mecanismo × conteúdo), D97 (ausência = nascimento), D98 (produto
-> hospeda, não prescreve), D103 (acervo lazy, ponteiro tipado), D104 (espinha injetada),
-> D120 (`entrada`), ADR-6 (token-efficiency lazy), ADR-18 (canal injetado recebe governança e
-> ponteiro — Passo 3b; substitui a ADR-17, cujo espelho de conteúdo caiu pela P144).
+> Regras de mecanismo que sustentam esta fábrica (ver `GLOSSARIO.md`):
+> `corte-mecanismo-conteudo` (mecanismo × conteúdo), `gatilho-de-nascimento` (ausência =
+> nascimento), `vault-declara-produto-nao-prescreve` (produto hospeda, não prescreve),
+> `carregamento-lazy` (acervo lazy, token-efficiency), `ponteiro-tipado`,
+> `espinha-e-mecanismo` (espinha injetada), `canal-injetado-governado` (canal injetado recebe
+> governança e ponteiro — Passo 3b).
 > Contrato: `config/contrato-navegacao.md`.

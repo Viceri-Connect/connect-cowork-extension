@@ -24,7 +24,7 @@
 // ---------------------------------------------------------------------------
 export const REGRAS_DURAS = [
   '1. Referencie conhecimento por caminho relativo ao workspace — nunca por caminho absoluto de maquina.',
-  '2. Mount da junction da o caminho estavel; ele NAO concede leitura. Se um caminho declarado nao abrir, PECA a concessao ao operador — varredura, `grep` exploratorio e automacao de SO sao contorno, nao alternativa (D108/D148).',
+  '2. Mount da junction da o caminho estavel; ele NAO concede leitura. Se um caminho declarado nao abrir, PECA a concessao ao operador — varredura, `grep` exploratorio e automacao de SO sao contorno, nao alternativa.',
   '3. Ao nomear um conceito (projeto, cliente, area, tribo), chame `resolver` ANTES de procurar qualquer coisa. Nunca comece por glob/grep.',
   '4. Dentro de um vault, navegue na ordem: carta de navegacao -> ponto de pouso declarado -> ponteiro declarado. Varredura e ultimo recurso e DEIXA MARCA (reporte).',
   '5. Antes de criar ou editar arquivo em qualquer vault, carregue o protocolo de escrita (`cnct-nucleo-escrita`). Nao pule, mesmo com destino obvio.',

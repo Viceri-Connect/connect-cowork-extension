@@ -165,7 +165,7 @@ export function iniciarSessao({ sessionId, ...override } = {}) {
   }
   if (!identidade || identidade._ausente) {
     identidade = null;
-    avisos.push('perfil do operador ainda nao provisionado ({CONNECT_HOME}/operador) — rode a cnct-fabrica-operador para materializa-lo (D105). O vault pessoal Obsidian e opcional.');
+    avisos.push('perfil do operador ainda nao provisionado ({CONNECT_HOME}/operador) — rode a cnct-fabrica-operador para materializa-lo. O vault pessoal Obsidian e opcional.');
   }
 
   // 4. carga L1 da matriz

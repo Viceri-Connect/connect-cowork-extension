@@ -88,7 +88,7 @@ export function migrarHomeLegado(home, legadoOverride) {
       path.join(legado, 'MIGRADO.md'),
       `# Home legado do Connect\n\n` +
       `Migrado para \`${base}\` em ${new Date().toISOString().slice(0, 10)}.\n\n` +
-      `Pasta de aplicativo e inalcancavel pelas file tools do harness (P93) — o home saiu\n` +
+      `Pasta de aplicativo e inalcancavel pelas file tools do harness — o home saiu\n` +
       `daqui na 0.13.0. Nada foi apagado; esta pasta pode ser removida a mao quando voce\n` +
       `confirmar que a nova esta funcionando.\n`,
       'utf8',

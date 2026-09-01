@@ -153,7 +153,7 @@ export function lerCarta(vaultRoot, alias = 'vault') {
   if (!md) {
     return {
       ...vazio,
-      avisos: [`vault sem carta de navegacao (${CARTA_CANONICA.replace(/\\/g, '/')}) — camada 1 NAO declarada. O mecanismo nao inventa ponteiros (D98); ofereca a cnct-fabrica-navegacao ao operador (D97)`],
+      avisos: [`vault sem carta de navegacao (${CARTA_CANONICA.replace(/\\/g, '/')}) — camada 1 NAO declarada. O mecanismo nao inventa ponteiros; ofereca a cnct-fabrica-navegacao ao operador — ausencia de carta e gatilho de nascimento, nao erro`],
     };
   }
 

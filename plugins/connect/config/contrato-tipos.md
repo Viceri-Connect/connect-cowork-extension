@@ -6,11 +6,11 @@
 > entro?). Este responde a pergunta que vem antes das duas: **"isto ainda não existe — o que
 > precisa nascer, e como o mecanismo passa a enxergar o que nasceu?"**
 >
-> Mecanismo, entregue e mantido pelo produto (corte `_`/conteúdo, D96): o Connect declara a
+> Mecanismo, entregue e mantido pelo produto (corte `_`/conteúdo): o Connect declara a
 > **exigência** — o que um tipo precisa declarar para ser construível. A empresa responde o
 > **como** — quais tipos existem e qual a estrutura mínima de cada um, no
 > `_cerebro/modelo-roteamento.md` § *Estrutura mínima e herança* da sua matriz. O produto não
-> prescreve a lista de tipos (D98).
+> prescreve a lista de tipos.
 >
 > Versão 0.1.0 · 2026-08-25 · Impulsa / Viceri
 
@@ -18,8 +18,8 @@
 
 ## 1. O problema que este contrato fecha
 
-A `cnct-fabrica` é **uma** mente construtora, com o tipo vindo do knowledge (D186) — não uma
-skill por tipo. Em 25/08 o lado do coletivo ficou pronto (D204): a estrutura mínima por destino e
+A `cnct-fabrica` é **uma** mente construtora, com o tipo vindo do knowledge — não uma
+skill por tipo. Em 25/08 o lado do coletivo ficou pronto: a estrutura mínima por destino e
 as semânticas de descida passaram a viver no `modelo-roteamento`, estendendo o contrato que já
 governa a escrita, em vez de ganhar catálogo próprio. **Faltava a metade do produto** — e a
 ausência tem três consequências medidas:
@@ -40,7 +40,7 @@ ausência tem três consequências medidas:
 
 > **Por que não vira catálogo do produto.** Um catálogo próprio permitiria à fábrica **ignorar o
 > que a matriz já declara** — e o viés medido do construtor é criar, porque artefato novo é
-> visível e reuso não é (D204, caso-zero de 25/08: três peças propostas, três já existiam sob
+> visível e reuso não é (caso-zero de 25/08: três peças propostas, três já existiam sob
 > outro nome). Lendo o roteamento do coletivo alvo, ela não consegue ignorar. Este contrato
 > declara o **schema** e o **handshake**; a lista de tipos nunca mora aqui.
 
@@ -54,7 +54,7 @@ ausência tem três consequências medidas:
 | Quem escreve | quem governa aquele coletivo | o produto |
 | Quando se aplica | todo tipo cujo nascimento pressupõe um coletivo montado | tipo cujo nascimento **precede a existência de qualquer coletivo** |
 | Hoje qualifica | todos os demais | **exatamente um**: `operador` |
-| Ausência | lacuna reportada → elicitação com o operador (D97) | defeito do produto, não do coletivo |
+| Ausência | lacuna reportada → elicitação com o operador | defeito do produto, não do coletivo |
 
 **O teste que decide, e é objetivo:** *para construir este tipo, a fábrica precisa ler alguma
 declaração do coletivo?* Se sim, o tipo é do coletivo. Se a resposta for "não há coletivo ainda",
@@ -62,8 +62,8 @@ declaração do coletivo?* Se sim, o tipo é do coletivo. Se a resposta for "nã
 cresce só quando um tipo novo passa nesse teste.
 
 > ⚠️ **Consequência declarada sobre o `FRAMEWORK.md` §3.** As camadas L2 (*"uma fábrica por tipo
-> declarado pelo produto"*) e L3 (`cnct-fabrica-tipos`) descrevem o desenho plural que a **D186**
-> fechou. Este contrato o substitui: há **uma** fábrica, e "criar um tipo novo" deixa de ser skill
+> declarado pelo produto"*) e L3 (`cnct-fabrica-tipos`) descrevem o desenho plural que a decisão
+> de fábrica única fechou. Este contrato o substitui: há **uma** fábrica, e "criar um tipo novo" deixa de ser skill
 > meta e passa a ser **preencher as células deste schema** no roteamento do coletivo. A §3 do
 > FRAMEWORK está em dívida de atualização — declarado aqui para não voltar por esquecimento.
 
@@ -80,7 +80,7 @@ campo faltante, nunca supre por conta própria.
 | 2 | **família** | `artefato` ou `contexto` (§4) | é o que **deduz o modo** de construção — nunca se pergunta ao operador |
 | 3 | **estrutura mínima** | o que precisa existir para um destino daquele tipo ser válido | é o que a fábrica **garante** e o que o audit **verifica**; sem isso "nasceu certo?" não tem resposta |
 | 4 | **semântica de descida** | `delta` · `exigência-e-resposta` · `não desce` | confundi-las é erro de modelagem: uma pede raiz única, a outra pede obrigação de resposta por unidade |
-| 5 | **forma canônica** | **ponteiro** para o template do coletivo (`99 - Templates e Modelos Globais/`), nunca molde embutido | scaffold aponta, nunca copia (D200) — molde próprio é a terceira cópia da mesma forma |
+| 5 | **forma canônica** | **ponteiro** para o template do coletivo (`99 - Templates e Modelos Globais/`), nunca molde embutido | scaffold aponta, nunca copia — molde próprio é a terceira cópia da mesma forma |
 | 6 | **handshake** | o que fecha o nascimento (§5) | é o que distingue *materializado* de *alcançável*; sem ele a fábrica gera órfão |
 
 > **O que o schema deliberadamente NÃO tem: um campo de "modo".** O modo se deduz da família
@@ -122,7 +122,7 @@ Exemplos vivos desta instância: `processo`, `glossario`, `identificador`, `poli
 | # | Passo | Sem ele |
 |---|---|---|
 | 1 | **Manifesto na matriz** — nota da entidade com `tipo`/`papel`/`externo`, e a aresta declarada **nos dois lados** | `resolver` devolve `origem-ausente`: o acervo existe e o grafo não o declara |
-| 2 | **`registrar_subvault_local(conceito, path)`** — o path mora só em `connect.config.json`, nunca no vault (D35) | `resolver` devolve `local-nao-configurado` a cada máquina nova |
+| 2 | **`registrar_subvault_local(conceito, path)`** — o path mora só em `connect.config.json`, nunca no vault | `resolver` devolve `local-nao-configurado` a cada máquina nova |
 | 3 | **Carta de navegação** (`_cerebro/camada-1.md`, 5 seções do contrato de navegação) + `_cerebro/vault-config.md` com `tipo-vault` | monta e o agente não sabe navegar — a lacuna que a `cnct-fabrica-navegacao` existe para fechar |
 
 **Verificação de fechamento, não opcional:** a fábrica chama `resolver(conceito)` ao terminar e
@@ -145,7 +145,7 @@ o audit vai reportar depois**, o que é pior do que não construir: cria trabalh
 ### 5.3 Regra comum às duas famílias
 
 - **Nunca sobrescrever.** Estrutura existente é completada **por delta**; o que já está lá é
-  fonte, não rascunho. Ausência é gatilho de nascimento (D97); presença é gatilho de conferência.
+  fonte, não rascunho. Ausência é gatilho de nascimento; presença é gatilho de conferência.
 - **Nascimento é atômico do ponto de vista do operador.** Se um passo do handshake falha, a
   fábrica reporta o estado parcial nomeando o que ficou pendente — jamais silencia.
 - **Todo contexto que nasce a partir de 24/08 declara `tipo-vault`.** A ausência passa a ser sinal
@@ -159,23 +159,23 @@ o audit vai reportar depois**, o que é pior do que não construir: cria trabalh
   neste plugin — exceto os do estado zero (§2), que são exceção declarada e testável, não aberta.
 - **O modo se deduz do tipo, nunca se pergunta.** Pergunta de classificação de mecanismo dirigida
   ao operador é defeito de desenho.
-- **Scaffold aponta, nunca copia** (D200). A forma canônica vive nos templates do coletivo.
+- **Scaffold aponta, nunca copia.** A forma canônica vive nos templates do coletivo.
 - **Antes de declarar um tipo, procurar a casa que já governa aquilo.** Corolário do construtor
-  sem arquiteto (D186/D204): o viés do agente é criar; o do produto tem de ser resolver.
+  sem arquiteto: o viés do agente é criar; o do produto tem de ser resolver.
 - **Materializado ≠ alcançável.** Nenhuma construção é declarada completa sem o handshake (§5).
 - **A fábrica lê o roteamento do coletivo alvo em runtime** — não guarda cópia local do que a
-  matriz declara. Cópia local desatualizada é o modo de falha mais observado (D34/D35).
+  matriz declara. Cópia local desatualizada é o modo de falha mais observado.
 
 ---
 
 ## 7. Face de verificação
 
-Par exigência → resposta → verificação (D29/D30/D99). **Estado honesto de cada check** —
+Par exigência → resposta → verificação. **Estado honesto de cada check** —
 mecanismo (o plugin garante) × pendente (hoje depende de disciplina, e por isso não é garantia):
 
 | # | Check | Estado |
 |---|---|---|
-| 1 | Todo tipo invocado tem os 6 campos do schema (§3) declarados na fonte | **pendente** — depende do executor da `cnct-fabrica` (P124) |
+| 1 | Todo tipo invocado tem os 6 campos do schema (§3) declarados na fonte | **pendente** — depende do executor genérico da `cnct-fabrica`, ainda não especificado |
 | 2 | A família é declarada, e o modo nunca é perguntado ao operador | **pendente** — idem |
 | 3 | Contexto criado devolve `resolver → resolvido` com zero avisos (§5.1) | **pendente** — o primitivo existe (`resolver`); falta quem o chame como gate |
 | 4 | Artefato criado tem linha de gatilho na carta do vault (§5.2) | **pendente** — é o check que hoje ninguém faz |
@@ -183,10 +183,10 @@ mecanismo (o plugin garante) × pendente (hoje depende de disciplina, e por isso
 | 6 | Estrutura mínima existe antes de a escrita rotear item para o destino | **pendente** — `cnct-nucleo-escrita` deve **recusar** destino sem estrutura, em vez de criar pasta |
 
 > **Seis pendentes e nenhum mecanismo — e isso é o estado honesto, não uma omissão.** Este
-> contrato é a **especificação** que faltava; o executor é a **P124**, que ele desbloqueia. A
-> distância entre contrato e garantia é exatamente a família de defeito D104/D152/D157/D168/D181/
-> D190: *a norma existe, o executor não*. Declará-la aqui é o que impede a sexta ocorrência de
-> virar a sétima em silêncio.
+> contrato é a **especificação** que faltava; o **executor genérico da fábrica**, que ele
+> desbloqueia, ainda não foi especificado. A distância entre contrato e garantia é exatamente a
+> família de defeito recorrente: *a norma existe, o executor não*. Declará-la aqui é o que
+> impede a sexta ocorrência de virar a sétima em silêncio.
 
 ---
 
@@ -212,9 +212,11 @@ Lido pela fábrica como:
 
 ---
 
-> Fontes de decisão: D96 (corte `_`/conteúdo), D97 (ausência = nascimento), D98 (produto hospeda,
-> não prescreve), D186 (fábrica única, o tipo vem do knowledge), D199 (duas famílias, o modo se
-> deduz), D200 (scaffold aponta; estado zero é regra com teste), D204 (o contrato da fábrica é o
-> `modelo-roteamento` estendido), ADR-6 (token-efficiency lazy), ADR-15 (namespace de origem).
-> Pendências: fecha **P134**; desbloqueia **P124** (especificação do executor). Irmã: **P115**
-> (`contrato-skill.md`, também citado por convenção vigente e nunca materializado).
+> Regras de mecanismo que sustentam este contrato (ver `GLOSSARIO.md`):
+> `corte-mecanismo-conteudo`, `gatilho-de-nascimento`, `vault-declara-produto-nao-prescreve`,
+> `carregamento-lazy`. Decisões de desenho já fechadas e assumidas aqui: fábrica única, com o
+> tipo vindo do knowledge; duas famílias, com o modo deduzido; scaffold aponta, e o estado zero
+> é regra com teste; o contrato da fábrica é o `modelo-roteamento` estendido; namespace de
+> origem. Pendências: este contrato fecha a especificação dos tipos e desbloqueia o executor
+> genérico da fábrica, ainda não especificado. Irmão: o `contrato-skill.md`, também citado por
+> convenção vigente e nunca materializado.

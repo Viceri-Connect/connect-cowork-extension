@@ -9,7 +9,7 @@ description: >
   detecta ausência de vault de operador e delega. Convenção cnct-fabrica-<tipo>: esta é
   a fábrica do tipo "operador" (implementação de referência do padrão em FRAMEWORK.md).
   Roda no estado zero — não exige coletivo montado. Estado zero é gatilho de
-  nascimento, não erro (D97/D105).
+  nascimento, não erro.
 metadata:
   version: "0.3.0"
   eixo: nucleo
@@ -25,16 +25,17 @@ fábrica (`FRAMEWORK.md` §4).
 
 ## Princípio (por que é mecanismo no plugin)
 
-- Vault de operador é um **tipo** de sub-vault (D101); esta é a fábrica desse tipo
+- Vault de operador é um **tipo** de sub-vault; esta é a fábrica desse tipo
   (convenção `cnct-fabrica-<tipo>`).
 - A **espinha** (protocolo de sessão, regra de escrita, calibração, check de
   atualizações, "antes de tocar código") já é provida pelo mecanismo em
   `config/protocolo-mecanismo.md` e injetada pelo hook. A fábrica materializa **só o
-  delta** do operador — **nunca** reescreve a espinha (D104).
+  delta** do operador — **nunca** reescreve a espinha
+  (`GLOSSARIO.md#espinha-e-mecanismo`).
 - Roda no **estado zero**: instalação nova, sem coletivo, pasta em branco. Por isso é
   **self-contained** — seu knowledge (banco de perguntas, templates) é embutido, não
   depende de ler conhecimento de coletivo (que pode nem existir). Artefato ausente =
-  **gatilho de nascimento** (D97).
+  **gatilho de nascimento** (`GLOSSARIO.md#gatilho-de-nascimento`).
 
 ## Quando disparar
 
@@ -83,7 +84,7 @@ reportar e pular.**
 |---|---|---|
 | `_cerebro/meu-config.md` | `templates/meu-config.template.md` | identidade cross-cliente; `{{DATA_INSTALACAO}}`=hoje, `{{NOME}}`, `{{EMAILS}}`, `{{PAPEIS}}` |
 | `CLAUDE.md` | `templates/CLAUDE.template.md` | Camada 0 mínima = **só o delta** (a espinha vem do protocolo-mecanismo) |
-| `_cerebro/vinculos/.gitkeep` | — | pasta vazia; **um registro por coletivo** (cliente, tribo, área) entra depois. Schema vigente: `vinculos-v1` (CA6–CA9 da `CONNECT-E2-01`, emenda 18/08). ⚠️ **Nunca** materializar `_cerebro/clientes/` — schema aposentado |
+| `_cerebro/vinculos/.gitkeep` | — | pasta vazia; **um registro por coletivo** (cliente, tribo, área) entra depois. Schema vigente: `vinculos-v1`. ⚠️ **Nunca** materializar `_cerebro/clientes/` — schema aposentado |
 | `_cerebro/memory/MEMORY.md` | inline | `# Memória profunda — {{NOME}}\n\n> Índice. Notas de memória entram aqui, cada uma linkada.` |
 | `_cerebro/atualizacoes-aplicadas.md` | inline | cabeçalho do log do check de atualizações + lista vazia |
 | `TASKS.md` | inline | `# TASKS — {{NOME}}` + colunas kanban vazias (A fazer / Fazendo / Feito) |
@@ -92,21 +93,22 @@ Se o Passo 2.4 trouxe um coletivo: semear `_cerebro/vinculos/{coletivo}/` com **
 schema `vinculos-v1`:
 
 - `config.md` — o vínculo em si: papel efetivo do operador naquele coletivo, e-mail de contexto se
-  houver. **Sem path** (D35: o path local vive só em `connect.config.json`, gravado por
-  `registrar_subvault_local` — nunca no vault, nem no perfil).
+  houver. **Sem path** — o path local vive só em `connect.config.json`, gravado por
+  `registrar_subvault_local`, nunca no vault, nem no perfil
+  (`GLOSSARIO.md#path-por-maquina`).
 - `estado.md` — hot cache do operador naquele coletivo, **com cabeçalho de forma e tabela vazia**:
   uma linha por projeto, uma frase por célula, **substitui e nunca acumula**, fonte de verdade é a nota
   do projeto no coletivo. Quem passa a mantê-lo é o `cnct-nucleo-encerramento` (Passo 4b) — a fábrica
   só o **nasce com a forma certa**.
 
-> **`repos.md` não é criado** — o registro de repositório foi substituído pelo primitivo `resolver_repo`
-> (P64/D127). Materializá-lo aqui recria o schema que já foi aposentado.
+> **`repos.md` não é criado** — o registro de repositório foi substituído pelo primitivo `resolver_repo`.
+> Materializá-lo aqui recria o schema que já foi aposentado.
 
 > ⚠️ **`estado.md` vazio é o estado normal de um vínculo recém-nascido — e é diferente de vínculo com
 > dado perdido.** O arquivo declara qual dos dois é, na própria nota de cabeçalho: *"nasceu vazio nesta
 > instalação"* × *"a reconciliar"*. A distinção existe porque a confusão entre as duas já custou: em
 > 24/08 um `estado.md` nasceu vazio ao lado de uma tabela cheia no acervo legado, e por nove dias
-> ninguém soube dizer se faltava dado ou faltava fonte (P117/P119).
+> ninguém soube dizer se faltava dado ou faltava fonte.
 
 **Passo 4 — Registrar o handshake com o mecanismo.**
 Sendo o destino `{CONNECT_HOME}/operador`, o mecanismo **já descobre o perfil sozinho** — o
@@ -119,11 +121,11 @@ como enriquecimento (`./pessoal`) — isso é opcional e independente do perfil.
 Para cada papel estável coletado, a **moldagem de papel** materializa a estrutura mínima
 daquele papel no vault. Isso é da skill-irmã **`cnct-fabrica-papel`** (framework de papéis) — nome
 corrigido em 24/08: era citado como `fabrica-papel`, que **não existe e viola a convenção de nome**
-(`cnct-` é do produto, e "papel" é conceito do produto — ADR-15/D174).
+(`cnct-` é do produto, e "papel" é conceito do produto).
 Enquanto ela não existe, registrar os papéis em `meu-config.md` (já feito no Passo 3) e
 **deixar a pendência nomeada** ao operador — não embutir a moldagem aqui.
 
-**Passo 6 — Operador que já existe: migrar com inventário, nunca sobrescrever (P119).**
+**Passo 6 — Operador que já existe: migrar com inventário, nunca sobrescrever.**
 Esta fábrica **nasce** um operador; quando o destino já tem perfil, ela não recria — mas também **não
 pode simplesmente parar**, porque foi assim que 4 convenções com gatilho se perderam em 24/08 (regra de
 empacotamento de skill, projetos exemplo, limpeza em reestruturação de vault, destino de artefato — uma
@@ -142,7 +144,7 @@ fosse podada). Protocolo:
 ## Regras
 
 - **Nunca hardcodar cliente** nem assumir `mapfre`/`viceri` — tudo vem da elicitação.
-- **Nunca reescrever a espinha** no `CLAUDE.md` do operador — é mecanismo (D104). O
+- **Nunca reescrever a espinha** no `CLAUDE.md` do operador — é mecanismo. O
   `CLAUDE.md` do operador é **só delta**.
 - **Dado pessoal fica no vault do operador**, nunca no plugin. Os templates são forma vazia.
 - **Não sobrescrever** arquivo existente — a fábrica **nasce**, não migra à força (migrar a
@@ -152,8 +154,8 @@ fosse podada). Protocolo:
 
 ## Supersede
 
-- `Template-Onboarding-Vault-Individual` do coletivo (D27/D70) → **superado por esta
-  fábrica genérica** (D105): a versão do coletivo era a instância Viceri; a forma sobe para
+- `Template-Onboarding-Vault-Individual` do coletivo → **superado por esta
+  fábrica genérica**: a versão do coletivo era a instância Viceri; a forma sobe para
   o produto.
 
 <!-- SKILL-END cnct-fabrica-operador v0.2.0 · L2 · ref. FRAMEWORK.md §4 -->

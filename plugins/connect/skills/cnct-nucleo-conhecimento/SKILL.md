@@ -12,7 +12,7 @@ metadata:
   version: "0.4.0"
   eixo: nucleo
   program: "Impulsa / Viceri"
-  status: "a reclassificar — P118: knowledge disfarçado de executor, gatilhos colidem com cnct-nucleo-sessao"
+  status: "a reclassificar — knowledge disfarçado de executor, gatilhos colidem com cnct-nucleo-sessao"
 ---
 
 # Connect — protocolo de contexto por caminho dinâmico
@@ -36,7 +36,7 @@ demanda (MCP).
 4. **A camada 1 é do vault, não do produto.** O que carregar e quando vem da **carta de
    navegação** (`_cerebro/camada-1.md`) daquele vault, injetada verbatim ao montar
    (contrato: `config/contrato-navegacao.md`). O mecanismo não inventa ponteiro: vault sem
-   carta monta com **lacuna anunciada** e a `cnct-fabrica-navegacao` oferecida (D97/D98).
+   carta monta com **lacuna anunciada** e a `cnct-fabrica-navegacao` oferecida.
 5. **Ordem de resolução canônica** (espinha, seção própria): conceito → `resolver` → carta →
    ponto de pouso (`entradaResolvida`) → salto só por ponteiro declarado → fronteira volta ao
    `resolver`. Varredura é último recurso e **deixa marca**: nota que só o grep acha é nota
@@ -53,16 +53,16 @@ chame a tool MCP `iniciar_sessao`.
 
 Quando uma skill precisa atuar num **sub-vault tipado** (um conceito/entidade com casa
 própria — um delivery hub, um vault de squad, a gestão pessoal), o Connect o entrega
-como um novo atalho no workspace. Modelo canônico (D102): cada entidade é **manifesto**
+como um novo atalho no workspace. Modelo canônico: cada entidade é **manifesto**
 (frontmatter da própria nota, na matriz) + **acervo** (na fonte da entidade); o grafo de
 dependências entre vaults é declarado nos manifestos, não numa árvore rígida.
 
 - **Casamento conceito→entidade acontece no `resolver`** (MCP), mas **quem decide o que
-  fazer com o `status`** é a skill (D93/P61) — o `resolver` nunca pergunta nada nem
+  fazer com o `status`** é a skill — o `resolver` nunca pergunta nada nem
   advinha path, só devolve o fato.
-- **Índice derivado**, nunca autorado (P60/D35): enumerar entidades é varredura de
-  manifestos; registro paralelo às notas está proibido (D97).
-- **Path é sempre por-operador, por-máquina** (D35): nenhum manifesto declara diretório
+- **Índice derivado**, nunca autorado: enumerar entidades é varredura de
+  manifestos; registro paralelo às notas está proibido.
+- **Path é sempre por-operador, por-máquina**: nenhum manifesto declara diretório
   ou URL. O `resolver` casa a entidade (por `conceito`) e devolve `status`; o path local
   mora só em `connect.config.json` (`subVaults`, indexado por `conceito`), gravado por
   `registrar_subvault_local`.
@@ -73,7 +73,7 @@ dependências entre vaults é declarado nos manifestos, não numa árvore rígid
 ## Resolve-on-touch — regra permanente, não fluxo de uma vez
 
 Vale pra **toda nota aberta**, na matriz ou já dentro de um sub-vault montado, em
-**qualquer** ponto da sessão — recursivo, sem limite de profundidade (grafo, D102, não
+**qualquer** ponto da sessão — recursivo, sem limite de profundidade (grafo, não
 árvore de profundidade 1). Nota com `tipo`+`externo:true` no frontmatter é fronteira:
 resolver antes de seguir referência pra dentro dela. Uma vez resolvido nesta sessão, o
 alias é conhecido e estável — não repetir `resolver` pro mesmo `conceito`.
