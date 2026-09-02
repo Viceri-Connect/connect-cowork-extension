@@ -73,7 +73,7 @@ linha *por que importa*:
 4. **Já existe um coletivo/matriz?** (a pasta com `_cerebro/vault-config.md`). → se sim,
    pedir caminho + `slug` do cliente para semear o primeiro registro; se não, **seguir** —
    o vault de operador nasce sem coletivo, e o registro de cliente entra depois (via a
-   fábrica de cliente / `demand-intake`).
+   fábrica de cliente / `discovery-intake`).
 
 **Passo 3 — Materializar o scaffold (a forma genérica).**
 Criar em `{DESTINO}`, a partir dos **templates desta skill** (`templates/`), interpolando

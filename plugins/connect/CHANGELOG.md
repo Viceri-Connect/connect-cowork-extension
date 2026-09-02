@@ -1,5 +1,50 @@
 # Changelog — connect
 
+## 0.27.0 — 2026-09-02
+
+**A varredura de liberação: nove bloqueantes que a padronização da topologia criou, e um defeito de
+mecanismo que engolia declaração em silêncio.**
+
+Auditoria de prontidão para dois operadores novos, disparada pela pergunta certa do operador — *"há
+pendência antes de eu liberar?"*. O achado central: **padronizar a topologia canônica quebrou tudo
+que a declarava**, e nada disso apareceria antes de o primeiro operador novo criar um projeto.
+
+- **Declaração de alcance perdida em silêncio — defeito de mecanismo.** Uma linha de tabela separada
+  do próprio cabeçalho (por um blockquote, um parágrafo) era lida como **cabeçalho novo** e a
+  declaração descartada sem aviso. Aconteceu na carta de processo `sdd`: **10 declarações viraram 9**
+  e a de `squads/{squad}` sumiu — só apareceu porque alguém foi contar. O parser passou a **denunciar**
+  a linha órfã, e M1 reporta como corrente quebrada. Declaração engolida sem aviso é a mesma classe
+  de defeito que estas métricas existem para combater, um andar acima.
+- **VIC-018 fechada — identidade do operador falhando em silêncio.** `lerIdentidade` exigia o valor
+  na mesma linha; lista YAML de bloco (a forma que o operador escreve naturalmente, e que o próprio
+  template sugere ao pedir *"e-mail(s)"*) produzia `papeis: []` e `emails: []` **com a sessão subindo
+  sem aviso**. Agora o parser de frontmatter entra como segunda fonte e **campo presente e vazio é
+  declarado** — antes era indistinguível de perfil ausente.
+- **`camada-1.template.md` alinhado à v0.6.0.** Não tinha `## Alcance`, `processo:` nem `topologia:`:
+  todo vault criado pela `cnct-fabrica-navegacao` nascia com M1 em falha e **todo arquivo reportado
+  como órfã**. A fábrica entregava o artefato da v0.5.0 num produto v0.6.0.
+- **`cnct-fabrica-navegacao` parou de validar o teto que o contrato riscou** (≤250 linhas) e passou a
+  **chamar `medir_navegacao`** no Passo 4. Antes declarava "carta verificada" pelo critério que o
+  próprio produto mediu como inoperante, sem rodar a métrica que reprovaria o artefato — "ok" falso é
+  pior que nenhuma verificação.
+- **`{vault}/CLAUDE.md` deixou de ser órfã falsa.** Vive na raiz, logo não era coberto por
+  `CASAS_MECANISMO` (que olha o primeiro segmento): a M1 reportava 1 órfã em cada vault, e o check 7
+  **exige** o arquivo. O produto cobrando do coletivo a declaração de algo que o produto impõe.
+- **O template de `cnct-nucleo-escrita` parou de prescrever topologia.** Declarava
+  `projetos/{projeto}/adr/` literalmente, e o defeito não era o caminho estar velho — era o produto
+  prescrever forma, contra `vault-declara-produto-nao-prescreve`. Agora aponta para a carta de
+  processo do coletivo.
+- **`contrato-manifesto.md`** — `entrada` passa a ser **caminho relativo**, não nome de nota;
+  contradizia `contrato-navegacao.md` §4 desde a v0.5.0 dele.
+- **`contrato-tipos.md`** — `estrutura mínima` → **topologia**, e o check 6 (*"recusar destino sem
+  estrutura"*) foi **retirado**: implementá-lo como escrito faria a escrita ser recusada num vault
+  recém-provisionado, porque ele não tem `adr/`.
+- **P118 mitigada** — `cnct-nucleo-conhecimento` deixou de reivindicar *"iniciar sessão"*, *"restaurar
+  contexto"*, *"montar"*: é knowledge, não executor, e roteá-la no primeiro contato entregava teoria
+  sobre junctions em vez de perguntar onde fica a matriz — a sessão nunca montava.
+- **`cnct-fabrica-operador`** — `demand-intake` (renomeada há versões) → `discovery-intake`, e
+  `SKILL-END` sincronizado com `metadata.version`.
+
 ## 0.26.0 — 2026-09-02
 
 **A declaração de alcance vira corrente, e a conformidade de herança para de reprovar o nascimento.**
@@ -29,7 +74,7 @@ medido — não de revisão de código.
   contrariava *ausência é gatilho de nascimento, não erro*.
 - **Filtro de topologia na herança.** A carta de processo declara uma linha por topologia; sem
   filtrar pela do vault, a topologia não usada casa com os diretórios internos dele — medido:
-  `projetos/{ciclo}/{projeto}` casou com `projetos/Connect/adr`, `.../backlog` e `.../historico`, e
+  `projetos/{ciclo}/{projeto}` casou com `projetos/ativos/Connect/adr`, `.../backlog` e `.../historico`, e
   o medidor passou a exigir hubs que nunca deveriam existir. Três defeitos inventados pelo próprio
   medidor.
 - **M5 ganha mais duas classes**, pelo mesmo motivo de sempre (falso positivo treina a ignorar o

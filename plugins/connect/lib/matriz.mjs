@@ -23,6 +23,7 @@ import { fileURLToPath } from 'node:url';
 import { lerCarta } from './navegacao.mjs';
 import { verificarRaiz } from './governanca.mjs';
 import { resolverHeranca } from './heranca.mjs';
+import { parseFrontmatter } from './frontmatter.mjs';
 
 // Raiz deste modulo — usada para achar a config de mecanismo do proprio plugin,
 // de forma robusta ao local de instalacao (nunca path absoluto de maquina).
@@ -73,18 +74,46 @@ export function lerIdentidade(cerebroPessoalRoot) {
     .map((s) => s.replace(/["']/g, '').trim())
     .filter(Boolean);
 
-  const papeis = asList(kv['papeis-estaveis']);
+  // VIC-018 — `parseKeyValues` exige o valor NA MESMA LINHA, e a lista YAML de
+  // bloco (`papeis-estaveis:` seguido de `  - Dev`) e a forma que o operador
+  // escreve naturalmente, alem de ser o que o proprio template sugere ao pedir
+  // "e-mail(s)" e "papel por coletivo". O resultado era `papeis: []` e
+  // `emails: []` COM A SESSAO SUBINDO SEM AVISO: camada 0 parcial, e nenhuma
+  // skill sabia que o operador tem papel. Aberta em 01/09, medida aqui.
+  //
+  // Correcao: o parser de frontmatter do produto (que ja le lista de bloco)
+  // entra como segunda fonte, e a ausencia passa a ser DECLARADA.
+  const fm = parseFrontmatter(md);
+  const doFm = (chave) => {
+    const v = fm[chave];
+    if (Array.isArray(v)) return v.map(String).map((x) => x.trim()).filter(Boolean);
+    return v ? [String(v).trim()] : [];
+  };
+
+  const papeis = asList(kv['papeis-estaveis']).length
+    ? asList(kv['papeis-estaveis'])
+    : doFm('papeis-estaveis');
   // Campo generico (agnostico de empresa): `emails` (lista) ou `email` (escalar).
   // NUNCA um campo especifico de empresa (ex.: `email-viceri`) — isso e conteudo
   // da instancia, nao contrato do produto.
-  const emails = asList(kv['emails'] || kv['email']);
+  const emails = asList(kv['emails'] || kv['email']).length
+    ? asList(kv['emails'] || kv['email'])
+    : [...doFm('emails'), ...doFm('email')].filter(Boolean);
+
+  // Campo presente e vazio NAO e o mesmo que perfil ausente, e os dois eram
+  // indistinguiveis: `session.mjs` so avisava na ausencia do arquivo.
+  const lacunas = [];
+  if (!(kv['nome'] || fm.nome)) lacunas.push('nome');
+  if (!emails.length) lacunas.push('emails');
+  if (!papeis.length) lacunas.push('papeis-estaveis');
 
   return {
     _origem: cfgPath,
-    nome: kv['nome'] || null,
+    nome: kv['nome'] || (fm.nome ? String(fm.nome) : null),
     email: emails[0] || null,
     emails,
     papeis,
+    lacunas,
   };
 }
 

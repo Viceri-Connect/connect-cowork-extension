@@ -78,7 +78,7 @@ campo faltante, nunca supre por conta própria.
 |---|---|---|---|
 | 1 | **nome** | o termo pelo qual o operador o chama (`processo`, `tribo`, `glossario`) | é a chave de casamento; sem ele o gatilho da conversa não alcança o tipo |
 | 2 | **família** | `artefato` ou `contexto` (§4) | é o que **deduz o modo** de construção — nunca se pergunta ao operador |
-| 3 | **estrutura mínima** | o que precisa existir para um destino daquele tipo ser válido | é o que a fábrica **garante** e o que o audit **verifica**; sem isso "nasceu certo?" não tem resposta |
+| 3 | **topologia** | a **forma** do caminho que os destinos daquele tipo usam | é o que a fábrica **materializa** e o que a M7 **verifica**. ⚠️ **Corrigido em 02/09:** era *estrutura mínima — o que precisa existir*, e verificar existência reprovava todo destino recém-nascido: vault sem projeto não tem casa de ADR, e ela nasce no refinamento, não no provisionamento. Ver `contrato-navegacao.md` §9.3 |
 | 4 | **semântica de descida** | `delta` · `exigência-e-resposta` · `não desce` | confundi-las é erro de modelagem: uma pede raiz única, a outra pede obrigação de resposta por unidade |
 | 5 | **forma canônica** | **ponteiro** para o template do coletivo (`99 - Templates e Modelos Globais/`), nunca molde embutido | scaffold aponta, nunca copia — molde próprio é a terceira cópia da mesma forma |
 | 6 | **handshake** | o que fecha o nascimento (§5) | é o que distingue *materializado* de *alcançável*; sem ele a fábrica gera órfão |
@@ -100,7 +100,7 @@ Exemplos vivos desta instância: `processo`, `glossario`, `identificador`, `poli
 `navegacao` são **artefato**; `tribo`, `cliente`, `projeto`, `operador` são **contexto**.
 
 **Relação com os eixos que já existem** (conceituação completa no acervo da tribo Impulsa,
-`projetos/Connect/formas-e-tipos-de-vault.md` §2.1–2.2 — resolver o conceito `impulsa`):
+`projetos/ativos/Connect/formas-e-tipos-de-vault.md` §2.1–2.2 — resolver o conceito `impulsa`):
 
 - `tipo`/`papel` descrevem a **entidade** e são declarados pela empresa, no manifesto.
 - **forma** (`matriz` · `sub-vault` · `operador`) é do produto e vive no `vault-config.md` do
@@ -180,7 +180,7 @@ mecanismo (o plugin garante) × pendente (hoje depende de disciplina, e por isso
 | 3 | Contexto criado devolve `resolver → resolvido` com zero avisos (§5.1) | **pendente** — o primitivo existe (`resolver`); falta quem o chame como gate |
 | 4 | Artefato criado tem linha de gatilho na carta do vault (§5.2) | **pendente** — é o check que hoje ninguém faz |
 | 5 | Nada é sobrescrito; estrutura existente é completada por delta | **pendente** |
-| 6 | Estrutura mínima existe antes de a escrita rotear item para o destino | **pendente** — `cnct-nucleo-escrita` deve **recusar** destino sem estrutura, em vez de criar pasta |
+| 6 | ~~Estrutura mínima existe antes de a escrita rotear item para o destino~~ — **retirado em 02/09**. Implementar como escrito faria a escrita ser **recusada** num vault recém-provisionado, porque ele não tem `adr/`. O que substitui é a M7 (compatibilidade topológica), que passa em vault sem instância por construção | **retirado** — a verificação certa é de FORMA do caminho, nunca de existência de pasta |
 
 > **Seis pendentes e nenhum mecanismo — e isso é o estado honesto, não uma omissão.** Este
 > contrato é a **especificação** que faltava; o **executor genérico da fábrica**, que ele

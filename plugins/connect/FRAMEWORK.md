@@ -125,7 +125,7 @@ Toda skill de L2 segue o mesmo esqueleto. É o contrato que faz o catálogo se a
 1. **Localizar destino** — a pasta onde o sub-vault vai morar. Pasta em branco/ausente é o
    **caso normal**, não erro: artefato ausente é gatilho de nascimento. No Cowork,
    conceder acesso à pasta.
-2. **Elicitar** — banco de perguntas **destilado do caso-zero** ([[caso-zero]]): as
+2. **Elicitar** — banco de perguntas **destilado do caso-zero** do coletivo (o playbook daquele acervo; resolver o conceito, nunca apontar caminho de vault do produto): as
    perguntas que já funcionaram com quem não é arquiteto. Uma por vez, cada uma explicando
    em uma linha *por que importa* (calibração "identificador nunca vem sozinho").
 3. **Materializar** — escrever o scaffold a partir dos **templates da própria skill**

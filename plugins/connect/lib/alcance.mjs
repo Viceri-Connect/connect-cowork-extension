@@ -101,6 +101,7 @@ export function recortarSecao(md, tituloNormalizado) {
 export function parseTabelaAlcance(secaoMd) {
   const linhas = String(secaoMd ?? '').split(/\r?\n/).map((l) => l.trim());
   const decls = [];
+  const ignoradas = [];
   let cols = null;
 
   for (const l of linhas) {
@@ -110,6 +111,22 @@ export function parseTabelaAlcance(secaoMd) {
 
     if (!cols) {
       cols = celulas.map((c) => semAcento(c));
+      // Uma linha de tabela separada do proprio cabecalho (por um blockquote,
+      // uma linha em branco, um paragrafo) e lida como cabecalho NOVO e a
+      // declaracao dela e perdida. Aconteceu de verdade em 02/09: a linha de
+      // `squads/{squad}` na carta de processo `sdd` ficou depois de uma nota e
+      // as 10 declaracoes viraram 9 — em silencio, e so apareceu porque alguem
+      // foi contar. Declaracao engolida sem aviso e a mesma classe de defeito
+      // que este modulo existe para combater, um andar acima. Heuristica: um
+      // "cabecalho" cuja primeira celula parece caminho ou padrao de arquivo
+      // nao e cabecalho, e um cabecalho legitimo comeca por 'casa'/'nivel'.
+      const primeira = cols[0] || '';
+      const pareceDeclaracao = /[\/{}]|\.md$/.test(limparCelula(celulas[0] || ''));
+      const pareceCabecalho = ['casa', 'nivel', 'caminho'].some((n) => primeira.startsWith(n));
+      if (pareceDeclaracao && !pareceCabecalho) {
+        ignoradas.push(celulas.join(' | '));
+        cols = null;
+      }
       continue;
     }
     const get = (...nomes) => {
@@ -139,6 +156,7 @@ export function parseTabelaAlcance(secaoMd) {
 
     decls.push({ casa: casa ?? '', padrao, grau, filtros, hub });
   }
+  if (ignoradas.length) decls.ignoradas = ignoradas;
   return decls;
 }
 
@@ -152,11 +170,11 @@ export function lerDeclaracoes(md) {
   const { corpo } = extrairFrontmatter(md);
   const { secao } = recortarSecao(corpo, SECAO_ALCANCE);
   const daTabela = parseTabelaAlcance(secao);
-  if (daTabela.length) return { decls: daTabela, forma: 'tabela' };
+  if (daTabela.length) return { decls: daTabela, forma: 'tabela', ignoradas: daTabela.ignoradas || [] };
 
   // Sem tabela: quem chama decide se cai no `alcance:` do frontmatter (forma
   // legada da v0.5.0, mantida para nao quebrar vault que ja migrou).
-  return { decls: [], forma: 'ausente' };
+  return { decls: [], forma: 'ausente', ignoradas: daTabela.ignoradas || [] };
 }
 
 // ---------------------------------------------------------------------------
@@ -271,7 +289,10 @@ export function resolverCorrente({
         visitados.add(abs);
 
         const md = readIfExists(abs);
-        const { decls: doHub } = lerDeclaracoes(md);
+        const { decls: doHub, ignoradas: ignHub } = lerDeclaracoes(md);
+        for (const ig of ignHub || []) {
+          defeitos.push(`o hub \`${rel}\` tem uma linha de alcance FORA da tabela (\`${ig}\`) — separada do proprio cabecalho, ela e lida como cabecalho novo e a declaracao e perdida. O nivel que ela cobria fica sem cobertura`);
+        }
         if (!doHub.length) {
           // Hub sem `## Alcance` NAO e defeito, e a razao e medida: exigir a
           // secao de todo hub obrigaria as 17 notas de projeto de um acervo de

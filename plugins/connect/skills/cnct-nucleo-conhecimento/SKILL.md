@@ -1,18 +1,20 @@
 ---
 name: cnct-nucleo-conhecimento
-description: >
-  This skill should be used when the user asks to "restaurar contexto", "iniciar
-  sessao do Connect", "consultar a matriz", "ler o vault", "montar"/"desmontar"
-  uma knowledge root, or refers to files under a mounted alias (ex.: ./matriz,
-  ./pessoal) inside the Cowork workspace. Defines the Connect protocol for reaching
-  knowledge through dynamic, workspace-relative paths backed by junctions/symlinks,
-  and for starting a session (iniciar_sessao) or mounting on demand via the
-  connect MCP server.
+description: >-
+  CONCEITUAÇÃO do protocolo de conhecimento do Connect: o que é knowledge root, junction,
+  alias montado no workspace, e a ordem de resolução canônica. Carregar quando o operador
+  perguntar COMO o mecanismo alcança conhecimento ("por que junction?", "o que é alias
+  montado?", "por que não posso usar grep?"), ou ao depurar um alias que não abre.
+  ⚠️ NÃO usar para INICIAR sessão, restaurar contexto, montar a matriz nem conduzir o 1º
+  uso — isso é da `cnct-nucleo-sessao`, que tem protocolo executável e a configuração
+  guiada. Esta skill é conceito, não executor: reivindicar aqueles gatilhos fazia o
+  operador novo receber teoria sobre junctions em vez de ser perguntado onde fica a
+  matriz, e a sessão nunca montava (P118, corrigido em 02/09).
 metadata:
   version: "0.4.0"
   eixo: nucleo
   program: "Impulsa / Viceri"
-  status: "a reclassificar — knowledge disfarçado de executor, gatilhos colidem com cnct-nucleo-sessao"
+  status: "knowledge, não executor — quem conduz início de sessão e 1º uso é a cnct-nucleo-sessao"
 ---
 
 # Connect — protocolo de contexto por caminho dinâmico

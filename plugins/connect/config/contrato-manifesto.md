@@ -57,7 +57,7 @@ relativa (corte de raiz 17/08).
 | `conceito` / `alias` | não (default: slug do arquivo) | Chave **estável** de casamento — já existia no contrato anterior. Reaproveitada: também indexa a tabela local `subVaults` (por-operador, por-máquina). Declare quando o slug do arquivo não for estável o bastante |
 | `externo` | não (default `false`) | Booleano: esta entidade tem acervo **fora** da matriz? `false`/omitido = conteúdo mora inline na própria matriz, nada a montar |
 | `criado-por` / `criado-em` | não | Quem e quando **declarou que o acervo já foi materializado**. Ausência dos dois = a entidade foi concebida mas o acervo ainda não nasceu (`pendente-criacao`) — nunca inferido, sempre um operador que preenche |
-| `entrada` | não | Nome da nota-hub **dentro do acervo** — só faz sentido com `externo:true`. É onde o mecanismo pousa assim que monta, sem tatear diretório |
+| `entrada` | não | **Caminho relativo à raiz do acervo** da nota-hub onde o mecanismo pousa assim que monta, sem tatear diretório — só faz sentido com `externo:true`. Ex.: `_cerebro/camada-1.md`. ⚠️ **Nome puro de nota** (sem caminho) é aceito como **legado** e resolvido por busca limitada que **deixa marca** (aviso + issue): a busca é o sintoma de um manifesto incompleto, nunca o caminho normal. Fonte da regra: `contrato-navegacao.md` §4 — esta linha dizia *nome da nota* e contradizia aquele contrato desde a v0.5.0 dele |
 | `depende-de` | quando houver relação | Arestas do **grafo**: relação declarada para outros vaults. Cada item: `{ alvo, relacao }`. **Bidirecional explícito** — os dois lados declaram a aresta (ver §4) |
 
 > **Onde foi `fonte`/`url`:** removido inteiro. Path é sempre por-operador, por-máquina —

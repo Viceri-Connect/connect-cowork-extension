@@ -25,7 +25,7 @@ import {
 } from './navegacao.mjs';
 import { lerCartaProcesso } from './heranca.mjs';
 import { estimarTokens, extrairFrontmatter } from './frontmatter.mjs';
-import { resolverCorrente } from './alcance.mjs';
+import { resolverCorrente, lerDeclaracoes } from './alcance.mjs';
 
 // Casas do MECANISMO — cobertas por construcao, nunca exigidas da carta de um
 // vault. Sao do produto (corte `_`/conteudo, D96): obrigar cada vault a declarar
@@ -35,6 +35,11 @@ export const CASAS_MECANISMO = ['_cerebro', '_inteligencia', '_automacoes'];
 
 // Arquivos e diretorios que nao sao conteudo de vault e nunca contam como orfa.
 const IGNORAR_DIR = new Set(['.git', '.obsidian', 'node_modules', '.connect', '.trash']);
+// `CLAUDE.md` entra aqui porque o PRODUTO o materializa (check 7 o exige) e ele
+// vive na RAIZ — logo nao e coberto por CASAS_MECANISMO, que olha o primeiro
+// segmento do caminho. Sem esta linha, a M1 reportava 1 orfa falsa em cada
+// vault: o produto cobrando do coletivo a declaracao de um arquivo que o proprio
+// produto impoe, que e exatamente o que o contrato proibe.
 const IGNORAR_ARQ = new Set(['claude.md', '.gitkeep', '.gitignore', '.ds_store', 'thumbs.db']);
 
 const escaparRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -343,6 +348,16 @@ export function medirVault({
     declaracoesIniciais: raizes,
     instanciasDaCasa: (casa) => instanciasDaCasa(vaultRoot, casa),
   });
+
+  // Linha de alcance que caiu fora da propria tabela: declaracao perdida em
+  // silencio. Medido em 02/09 na carta de processo `sdd` — 10 declaracoes viraram
+  // 9 e o defeito so apareceu porque alguem foi contar.
+  for (const [rotulo, texto] of [['carta local', carta.inline], ['carta de processo', cartaProcesso?.inline]]) {
+    if (!texto) continue;
+    for (const ig of lerDeclaracoes(texto).ignoradas || []) {
+      corrente.defeitos.push(`a ${rotulo} tem uma linha de alcance FORA da tabela (\`${ig}\`) — a declaracao dela e perdida em silencio, e o nivel que ela cobria fica sem cobertura`);
+    }
+  }
   const declaracoes = corrente.decls.map((d) => normalizarDeclaracao(d, d.origem || 'corrente')).filter(Boolean);
 
   const heranca = {

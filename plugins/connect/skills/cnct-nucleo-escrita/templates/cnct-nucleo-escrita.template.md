@@ -54,11 +54,18 @@ usando uma regra emprestada.
 - **Teste de admissão de histórico:** um arquivo tem UM tempo verbal (presente ou passado, nunca
   os dois); quem escreve histórico declara quem resgata e quando — sem isso não é histórico, é
   resíduo, não escrever.
-- **Casa da ADR/RNF:** nascem em `projetos/{projeto}/adr/ADR-{N}-{slug}.md` e
-  `projetos/{projeto}/rnf/RNF-{N}-{slug}.md` — nunca em prosa dentro de doc de visão. Índice de
-  cada pasta tem nome semântico (nunca `README.md`), aponta e não transcreve.
-- **Decisão sem decisão não é ADR** — questão aberta, dependente de dado externo/produção, vive em
-  `adr/decisoes-abertas.md` do projeto, com dono e o que a desbloqueia.
+- **Casa da ADR/RNF:** arquivo próprio, com identidade e ciclo de vida — **nunca** em prosa dentro
+  de doc de visão. Índice de cada pasta tem nome semântico (nunca `README.md`), aponta e não
+  transcreve. **Onde exatamente é a casa, quem diz é a carta de processo do coletivo**
+  (`_cerebro/processos/{processo}.md`), não este contrato: topologia é declaração de quem executa o
+  processo, e o produto hospeda a declaração em vez de prescrevê-la.
+  > ⚠️ **Corrigido em 2026-09-02.** Este template declarava `projetos/{projeto}/adr/` literalmente, e
+  > o defeito não era o caminho estar velho — era o **produto prescrevendo topologia**, contra
+  > `vault-declara-produto-nao-prescreve`. Toda instância materializada a partir daqui nascia com uma
+  > forma que o coletivo não decidiu, e no dia em que a topologia canônica mudou, a prescrição passou
+  > a apontar para fora dela.
+- **Decisão sem decisão não é ADR** — questão aberta, dependente de dado externo/produção, vive no
+  arquivo de decisões abertas do projeto, com dono e o que a desbloqueia.
 - **Despromoção antes de acrescentar:** para todo destino que a sessão vai tocar, classificar
   *substitui* (estado, próximo passo, cabeçalho) × *acumula* (decisões, pendências, capturas,
   histórico); nunca podar sem confirmar duplicação na fonte primeiro.

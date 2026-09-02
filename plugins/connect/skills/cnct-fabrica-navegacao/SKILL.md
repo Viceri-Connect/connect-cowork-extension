@@ -120,7 +120,17 @@ governada.
 
 ## Passo 4 — Verificar de verdade (não declarar sucesso)
 
-1. Reler o arquivo escrito e rodar a validação: 5 seções presentes, ≤ 250 linhas.
+1. Reler o arquivo escrito e rodar a validação: **5 seções obrigatórias presentes** (§3) e a
+   seção `## Alcance` declarada.
+   ⚠️ **O teto de 250 linhas foi RISCADO** (contrato §5, check 4): linha é a grandeza errada, e a
+   medição é a prova — as quatro cartas desta instância tinham 124–147 linhas, todas abaixo do
+   limite, custavam ~1.900 a ~3.600 tokens cada, e o aviso **nunca disparou em nenhuma**. Não
+   validar por contagem de linha.
+1b. **Chamar a tool `medir_navegacao`** com o diretório do vault, e reportar M1 a M7 ao operador.
+   Sem isso a fábrica declara "carta verificada" pelo critério que o produto mediu como inoperante,
+   e não roda a métrica que reprovaria o artefato — "ok" falso é pior que nenhuma verificação.
+   Falha esperada num vault recém-nascido: nenhuma. Vault sem conteúdo é conformante por
+   construção; M1 sem `## Alcance` declarado, sim, reprova — e é o que esta chamada pega.
 2. **Conferir cada caminho citado** — ponteiro morto na carta é pior que carta ausente, porque
    custa uma tentativa de leitura e ensina o agente a desconfiar do índice.
 3. Reiniciar o contexto do vault (`resolver` de novo, ou `iniciar_sessao` se for a matriz) e

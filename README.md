@@ -7,7 +7,7 @@ No início de cada sessão o Connect **restaura a identidade do operador**, mont
 da camada 1**. Sub-vaults descem **sob demanda**, resolvidos por conceito — a
 governança que mora na matriz desce para todos os sub-vaults.
 
-> Conceituação, ADRs e backlog canônicos vivem no vault matriz (`projetos/Connect/`).
+> Conceituação, ADRs e backlog canônicos vivem no vault matriz (`projetos/ativos/Connect/`).
 > O banco de provas anterior (plugin CLI do lab) fica em `D:\Impulsa\lab\lab\connect`.
 
 ## Instalação no Cowork

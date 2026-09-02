@@ -166,6 +166,12 @@ export function iniciarSessao({ sessionId, ...override } = {}) {
   if (!identidade || identidade._ausente) {
     identidade = null;
     avisos.push('perfil do operador ainda nao provisionado ({CONNECT_HOME}/operador) — rode a cnct-fabrica-operador para materializa-lo. O vault pessoal Obsidian e opcional.');
+  } else if (identidade.lacunas?.length) {
+    // Perfil PRESENTE e incompleto era indistinguivel de perfil ausente: a
+    // sessao subia com camada 0 parcial e sem sinal (VIC-018). Campo vazio
+    // agora e declarado, porque skill que decide por papel nao tem como saber
+    // que o papel nao chegou.
+    avisos.push(`perfil do operador incompleto — sem ${identidade.lacunas.join(', ')} em ${identidade._origem}. A sessao sobe, mas skill que decide por papel ou por e-mail vai operar sem esse dado. Se voce preencheu como lista YAML e mesmo assim aparece aqui, reporte: e defeito de leitura, nao de escrita.`);
   }
 
   // 4. carga L1 da matriz
