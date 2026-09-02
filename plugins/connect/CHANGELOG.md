@@ -1,5 +1,94 @@
 # Changelog — connect
 
+## 0.26.0 — 2026-09-02
+
+**A declaração de alcance vira corrente, e a conformidade de herança para de reprovar o nascimento.**
+
+Correção da 0.25.0 no mesmo dia, e as duas metades vieram de crítica do operador sobre o resultado
+medido — não de revisão de código.
+
+- **`lib/alcance.mjs` — a corrente `carta → hub da casa → nível`.** A 0.25.0 pôs uma entrada por
+  **nível** na carta, e isso violava o critério que o alcance implementa: a §7 arbitra risco de
+  varredura, depois **massa no caminho**, depois saltos, e declara que *mais saltos costuma ser
+  melhor*. Concentrar a declaração na carta maximiza a massa cobrada de **todos** que passam para
+  economizar saltos, que só quem vai paga. Agora a carta declara **casa + quem a governa** e o hub
+  declara o nível dele. Cobertura transitiva, e cada sessão paga só as casas em que entra.
+- **Classe de defeito nova, que a forma anterior não tinha como detectar:** casa delegada cujo hub
+  **não existe** — a corrente quebra ali e o nível abaixo fica sem cobertura, com a carta parecendo
+  completa. Hub que existe e **não declara** `## Alcance` **não** é defeito: exigir a seção de todo
+  hub obrigaria as 17 notas de projeto de um acervo de cliente a repetir a forma do processo, que é
+  *deltas, não cópias* violado um andar abaixo. Quem cobra o resultado é a M1, nomeando a órfã.
+- **Declaração em tabela `## Alcance`, não em frontmatter.** Array de objeto em YAML não é editável
+  na view de Properties do Obsidian, e estes vaults são operados no Obsidian — forma do produto que
+  atrita com a ferramenta em que o produto vive é defeito de dogfooding. A seção é recortada da
+  injeção, como já era o frontmatter. A forma legada segue sendo lida.
+- **M7 deixa de exigir existência de pasta.** Passa a verificar **compatibilidade topológica**:
+  o processo declara `topologia:`, o vault declara qual usa. A versão anterior reprovava todo vault
+  recém-nascido — vault que a fábrica acabou de provisionar não tem projeto, logo não tem casa de
+  ADR, de backlog nem de RNF, e essas nascem no refinamento. Reprovar o estado normal de nascimento
+  contrariava *ausência é gatilho de nascimento, não erro*.
+- **Filtro de topologia na herança.** A carta de processo declara uma linha por topologia; sem
+  filtrar pela do vault, a topologia não usada casa com os diretórios internos dele — medido:
+  `projetos/{ciclo}/{projeto}` casou com `projetos/Connect/adr`, `.../backlog` e `.../historico`, e
+  o medidor passou a exigir hubs que nunca deveriam existir. Três defeitos inventados pelo próprio
+  medidor.
+- **M5 ganha mais duas classes**, pelo mesmo motivo de sempre (falso positivo treina a ignorar o
+  relatório): caminho que existe no **governante** e não aqui é ponteiro cross-vault a tipar, não
+  morto; e padrão de nomenclatura declarado na tabela nunca é ponteiro.
+- **`config/contrato-navegacao.md` → v0.6.0** — §0 com a tabela das duas correções, §8.0 reescrita
+  (a corrente, a tabela, a raiz explícita como `.`), §8.0.1 nova (o corte entre declarar na carta e
+  delegar ao hub, e por que hub sem alcance não é defeito), §9.3 e §9.4 com `topologia:`.
+- **`tests/spike-heranca.mjs` — 58 testes** (era 43), cobrindo a corrente, as três classes de
+  delegação, e o que a M7 **deixou** de reprovar: vault sem projeto e projeto sem casa de ADR passam,
+  e o relatório diz **por que** passou em vez de passar calado.
+
+## 0.25.0 — 2026-09-02
+
+**A herança de processo deixa de ser norma escrita e passa a ser mecanismo.**
+
+O `contrato-navegacao.md` v0.4.0 declarava as §§7–9 sob o cabeçalho *norma declarada, mecanismo
+pendente* e dizia na cara: `processo:` não era lido em runtime, a carta de processo não existia como
+artefato, as sete métricas não rodavam. Consequência medida: um vault que violasse as §§7–9 montava
+e navegava normalmente, sem aviso — e a carta podada à mão em 26/08 voltou **26% maior em cinco
+dias**, acima de onde estava antes da poda. Redução sem teto mecânico não persiste.
+
+- **`lib/heranca.mjs` — herança de processo.** O vault declara `processo:` no frontmatter da própria
+  `_cerebro/camada-1.md` e herda a carta daquele processo, em `_cerebro/processos/{processo}.md` no
+  vault que governa o processo. O mecanismo a injeta **uma vez por sessão, não uma vez por vault** —
+  registro em `.connect/heranca.json` no workspace da sessão (arquivo e não variável de módulo: o
+  servidor MCP é longo-vivo, atende várias sessões e pode reiniciar no meio de uma). É o fim da
+  escala linear do piso: N vaults do mesmo processo passam a pagar uma carta de processo + N deltas.
+  **Ausência de `processo:` não é lacuna** — degrada para o comportamento anterior sem quebrar.
+  `processo:` declarado **sem** carta correspondente é lacuna ruidosa, porque o vault podado não tem
+  de onde herdar o que foi removido dele.
+- **`lib/metricas.mjs` — M1 a M7 implementadas**, expostas pela tool **`medir_navegacao`** e
+  chamadas pelo modo AUDIT do `cnct-nucleo-audit` (Passo 2b). M1 torna o **check 6** (nota órfã)
+  computável pela primeira vez; M3 substitui o check 4 e mede **tokens**, não linhas; M5 fecha o
+  check 3 e M6 o check 5. A precondição dura da M1 é obedecida no código: resolver a herança é o
+  passo 1, porque medir cobertura sem ela produz órfã falsa por arquivo herdado.
+- **`lib/frontmatter.mjs` — parser mínimo, zero dependência.** Suporta o subconjunto que os
+  contratos usam, incluindo **lista de objetos**, que é o que a declaração de `alcance:` exige.
+  Recusa o que não entende em vez de adivinhar.
+- **O frontmatter da carta deixa de ser injetado.** `processo:` e `alcance:` são declaração para o
+  mecanismo; ao contexto do agente vai só o **corpo**. Sem isso, declarar bem custaria tokens em
+  toda sessão e o teto da M3 puniria justamente o vault que cumpre o contrato — incentivo invertido.
+- **M5 classifica em quatro naturezas em vez de uma.** Fundi-las produziu 16 falsos positivos na
+  primeira execução real: *morto* (falha) · *ambíguo* (existe, não a partir da raiz) · *fora do
+  vault* (arquivo do produto ou de outro vault — é ponteiro que deveria ser tipado) · *herdado sem
+  casa* (domínio da M7, não duplicado). Falso positivo em métrica de ponteiro é pior que métrica
+  ausente: treina a ignorar o relatório.
+- **Orçamentos de M3 e M4 fixados** (delta local ≤ 1.400 tok · carta de processo ≤ 2.000 ·
+  caminho de entrada ≤ 4.000), calibrados **depois** da primeira carta de processo publicada, como a
+  v0.4.0 previu. O teto do delta é o delta honesto do vault mais complexo já podado (~1.265 tok) com
+  ~10% de folga: escolhido para morder quando a carta reabsorve mecanismo, não para caber.
+- **`config/contrato-navegacao.md` → v0.5.0.** §0 reescrita (não há mais metade sem mecanismo) ·
+  §8.0 nova, declarando a forma legível por máquina do `alcance:` · §9.3 declara a casa canônica da
+  carta de processo e o registro de injeção · §5 com os checks 3, 4, 5 e 6 promovidos a mecanismo ·
+  §9.4 com orçamentos e o rationale da calibração.
+- **`config/protocolo-mecanismo.md`** ganha *"O que a carta de um vault NÃO repete"* — a lista do que
+  é mecanismo e entra uma vez por sessão. Sem esse destino declarado, a poda das cartas não teria
+  para onde mandar o que sai delas.
+
 ## 0.24.0 — 2026-09-01
 
 **A mente construtora existe, e ganha o par que a faz melhorar sozinha.**

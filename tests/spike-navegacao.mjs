@@ -17,7 +17,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { lerCarta, validarCarta, resolverEntrada, SECOES_OBRIGATORIAS } from '../plugins/connect/lib/navegacao.mjs';
+import { lerCarta, validarCarta, resolverEntrada, SECOES_OBRIGATORIAS, ORCAMENTO_TOKENS_DELTA } from '../plugins/connect/lib/navegacao.mjs';
 import { montarL1 } from '../plugins/connect/lib/matriz.mjs';
 import { blocoCarta } from '../plugins/connect/lib/render.mjs';
 
@@ -118,9 +118,25 @@ ok(cartaC.validacao.faltando.includes('ordem de entrada') && cartaC.validacao.fa
 ok(fs.readFileSync(path.join(vaultC, '_cerebro', 'CLAUDE.md'), 'utf8').startsWith('# Contexto Coletivo'),
   'vault legado permanece intocado depois da leitura');
 
-// --- validacao de peso ----------------------------------------------------
-const gorda = ['# x', ...Array.from({ length: 300 }, (_, i) => `linha ${i}`)].join('\n');
-ok(validarCarta(gorda).avisos.some((a) => a.includes('indice virando conteudo')), 'carta acima de 250 linhas gera aviso de peso');
+// --- validacao de peso (v0.5.0: TOKENS, nao linhas) -----------------------
+// Linha era a grandeza errada e a medicao provou: as quatro cartas reais desta
+// instancia tinham 124-147 linhas — todas abaixo do limite de 250 — e custavam
+// ~1.900 a ~3.600 tokens cada. O aviso nunca disparou em nenhuma delas.
+const muitasLinhasLeve = ['# x', ...Array.from({ length: 300 }, () => 'a')].join('\n');
+ok(!validarCarta(muitasLinhasLeve).avisos.some((a) => a.includes('orcamento')),
+  '300 linhas curtas NAO disparam aviso de peso (linha nao e a grandeza cobrada)');
+
+const poucasLinhasPesada = ['# x', ...Array.from({ length: 40 }, () => 'x'.repeat(200))].join('\n');
+const vp = validarCarta(poucasLinhasPesada);
+ok(vp.avisos.some((a) => a.includes('orcamento do delta local')),
+  '40 linhas acima do orcamento em tokens disparam aviso (M3)');
+ok(vp.tokens > ORCAMENTO_TOKENS_DELTA, 'validarCarta devolve a massa em tokens');
+
+// O frontmatter e declaracao para o mecanismo e NAO e cobrado do contexto:
+// contabiliza-lo puniria o vault que declara `alcance:` corretamente.
+const comFrontmatter = `---\nprocesso: sdd\nalcance:\n  - casa: projetos/{projeto}\n    padrao: "{projeto}.md"\n    grau: derivavel\n---\n\n# x\n\ncorpo curto\n`;
+ok(validarCarta(comFrontmatter).tokens < 10, 'M3 mede o corpo, nunca o frontmatter');
+
 ok(SECOES_OBRIGATORIAS.length === 5, 'contrato exige 5 secoes');
 
 // --- entrada: caminho declarado ------------------------------------------

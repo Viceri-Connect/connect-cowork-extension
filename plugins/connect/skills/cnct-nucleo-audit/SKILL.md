@@ -123,6 +123,21 @@ Repetir para cada vault tocado:
 
 1. Ler a capa (`issues.md`) daquele vault. Se não existir, criar vazia.
 2. Rodar os checks de mecanismo (3a) — sempre.
+2b. **Chamar a tool `medir_navegacao`** com o diretório de origem daquele vault — as sete
+   métricas do interior (M1 cobertura/órfãs · M2 grau de padrão · M3 massa da carta em
+   tokens · M4 massa do caminho de entrada · M5 ponteiro morto · M6 fronteiras ·
+   M7 conformidade de herança), contrato `config/contrato-navegacao.md` §9.4.
+   **Não reimplementar nenhuma delas aqui**, e não conferir à mão o que a tool confere:
+   até a v0.4.0 do contrato as sete eram norma escrita sem mecanismo, e o resultado medido
+   foi carta podada à mão voltando **26% maior em cinco dias** — verificação por disciplina
+   não persiste, é o defeito que esta chamada fecha.
+   Cada métrica em `falha` vira issue na capa, com o `motivo` devolvido pela tool na íntegra.
+   ⚠️ **M1 depende de a herança estar resolvida** e a tool já resolve — não medir cobertura
+   por conta própria, porque herança não resolvida produz órfã falsa, uma por arquivo
+   coberto pela carta de processo.
+   ⚠️ **M5 classifica em quatro naturezas** (*morto* · *ambíguo* · *fora do vault* ·
+   *herdado sem casa*): só *morto* é falha. Abrir issue para ambíguo ou para ponteiro
+   herdado é duplicar o que a M7 já reporta, e alarme duplicado treina a ignorar os dois.
 3. Rodar os módulos/critérios do `vault-audit.md` daquele vault (3b), dentro do escopo
    efetivo: `audit-config` do operador (`meu-config.md`) → senão `audit-defaults` do
    `vault-config.md` daquele vault → senão escopo pessoal apenas.

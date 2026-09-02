@@ -22,6 +22,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { lerCarta } from './navegacao.mjs';
 import { verificarRaiz } from './governanca.mjs';
+import { resolverHeranca } from './heranca.mjs';
 
 // Raiz deste modulo — usada para achar a config de mecanismo do proprio plugin,
 // de forma robusta ao local de instalacao (nunca path absoluto de maquina).
@@ -107,7 +108,19 @@ export function lerIdentidade(cerebroPessoalRoot) {
 // E o recorte da ADR-18 §6 cai de graca: `montarL1` e para vault de CONHECIMENTO;
 // o perfil do operador entra por `montarL1Pessoal`, onde `CLAUDE.md` e a Camada 0
 // legitima e nao pode ser tratada como ocupacao indevida.
-export function montarL1(matrizRoot, aliasMatriz = 'matriz') {
+// HERANCA DE PROCESSO (contrato-navegacao.md §9, v0.5.0): a carta local declara
+// `processo:` e o mecanismo resolve a carta daquele processo no vault que o
+// governa, injetando-a UMA VEZ POR SESSAO. O terceiro parametro e opcional de
+// proposito — `montarL1(root, alias)` continua valido e simplesmente nao herda,
+// que e exatamente a degradacao que o contrato §9.3 declara ("ausencia de
+// `processo:` nao e lacuna").
+export function montarL1(matrizRoot, aliasMatriz = 'matriz', opcoes = {}) {
+  const {
+    governanteRoot = matrizRoot,   // a matriz governa os processos; para ela mesma, e ela
+    aliasGovernante = 'matriz',
+    workspaceDir = null,
+  } = opcoes;
+
   const cerebro = path.join(matrizRoot, '_cerebro');
   const vaultConfig = readIfExists(path.join(cerebro, 'vault-config.md'));
   const carta = lerCarta(matrizRoot, aliasMatriz);
@@ -118,16 +131,27 @@ export function montarL1(matrizRoot, aliasMatriz = 'matriz') {
   // identidade de vault tiver casa declarada (P101/P103).
   const governanca = verificarRaiz(matrizRoot);
 
+  const heranca = resolverHeranca({
+    carta,
+    governanteRoot,
+    aliasGovernante,
+    workspaceDir,
+  });
+
   return {
     identidadeVault: parseKeyValues(vaultConfig), // empresa, cliente, contexto, ponto focal
     vaultConfigInline: vaultConfig,
     alias: aliasMatriz,
     carta,
+    heranca,
     governanca,
     // `governanca.avisos` NAO entra aqui de proposito: ele e renderizado como
     // SECAO propria (`blocoGovernanca`), no topo do bloco acionavel. Somar aos
     // avisos faria o mesmo texto sair duas vezes — secao no topo e bullet no fim.
-    avisos: carta.avisos,
+    // Lacuna de heranca entra nos avisos: `processo:` declarado sem carta de
+    // processo e o modo de falha que a §7 classifica como o pior (silencioso),
+    // porque o vault podado nao tem de onde herdar o que foi removido dele.
+    avisos: [...carta.avisos, ...(heranca.avisos || [])],
   };
 }
 

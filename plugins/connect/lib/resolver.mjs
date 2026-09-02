@@ -270,7 +270,15 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, ...ov
   // informacao (lacuna anunciada), nao motivo para omitir a camada.
   let l1 = null;
   try {
-    l1 = montarL1(caminhoLocal, aliasFinal);
+    // O sub-vault nao governa processo nenhum: quem governa e a matriz. Passar o
+    // `workspaceDir` e o que faz a carta de processo ser cobrada UMA vez na
+    // sessao — o segundo sub-vault que declarar o mesmo processo recebe apenas o
+    // ponteiro, e e disso que vem o fim da escala linear do piso (§9.3).
+    l1 = montarL1(caminhoLocal, aliasFinal, {
+      governanteRoot: cfg.vaultMatriz,
+      aliasGovernante: 'matriz',
+      workspaceDir,
+    });
   } catch { /* nunca derruba a resolucao por causa da camada 1 */ }
 
   // Ponto de pouso — `entrada` do manifesto resolvida a CAMINHO real. Sem isso,

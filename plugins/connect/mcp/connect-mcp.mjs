@@ -21,7 +21,8 @@ import { readFileSync } from 'node:fs';
 import { mount, unmount, listMounts } from '../lib/mount.mjs';
 import { iniciarSessao, gravarConfig, estadoSessao, registrarSubVaultLocal } from '../lib/session.mjs';
 import { resolver } from '../lib/resolver.mjs';
-import { renderContexto, renderResolucao } from '../lib/render.mjs';
+import { renderContexto, renderResolucao, renderMetricas } from '../lib/render.mjs';
+import { medirVault } from '../lib/metricas.mjs';
 import { resolverRepo, registrarRepoLocal, listarRepos } from '../lib/repos.mjs';
 import { publicarGovernanca } from '../lib/governanca.mjs';
 
@@ -195,6 +196,26 @@ const TOOLS = [
     inputSchema: { type: 'object', properties: {} },
   },
   {
+    name: 'medir_navegacao',
+    description:
+      'Roda as sete metricas do interior de um vault (M1 cobertura/orfas · M2 grau de padrao · M3 massa da ' +
+      'carta em tokens, separada em delta local x carta de processo · M4 massa do caminho de entrada · ' +
+      'M5 ponteiro morto, inclusive os ponteiros herdados resolvidos NESTE vault · M6 fronteiras nomeiam ' +
+      'conceito · M7 conformidade de heranca) — contrato-navegacao.md §9.4. Resolve a HERANCA antes de medir: ' +
+      'e precondicao dura da M1, porque medir cobertura sem resolver o processo herdado produz orfa falsa em ' +
+      'massa. Use no modo AUDIT do cnct-nucleo-audit, ao podar uma carta, e sempre que o operador pedir o ' +
+      'custo de contexto de um vault. Nao corrige nada — mede e reporta.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        vault_dir: { type: 'string', description: 'Diretorio raiz do vault a medir (a origem real, nao o alias).' },
+        alias: { type: 'string', description: 'Alias do vault na sessao, so para rotular a saida (default: "vault").' },
+        pouso: { type: 'string', description: 'Caminho relativo do ponto de pouso declarado no manifesto (M4). Se ausente, e derivado da secao de ordem de entrada da carta.' },
+      },
+      required: ['vault_dir'],
+    },
+  },
+  {
     name: 'mount_junction',
     description:
       'Monta uma junction (Windows) ou symlink (POSIX) dentro do workspace da sessao, expondo um ' +
@@ -285,6 +306,19 @@ function handleToolCall(id, params) {
         const structured = bloco ? dedupInline(r) : r;
         const text = bloco || JSON.stringify(r, null, 2);
         return ok(id, { content: [{ type: 'text', text }], structuredContent: structured });
+      }
+      case 'medir_navegacao': {
+        // A matriz e quem governa os processos: e dela que sai a carta de processo
+        // a resolver antes de medir cobertura (precondicao dura da M1).
+        const est = estadoSessao({});
+        const r = medirVault({
+          vaultRoot: args.vault_dir,
+          alias: args.alias || 'vault',
+          governanteRoot: est?.matriz?.path || null,
+          aliasGovernante: 'matriz',
+          pouso: args.pouso || null,
+        });
+        return ok(id, { content: [{ type: 'text', text: renderMetricas(r) }], structuredContent: r });
       }
       case 'registrar_subvault_local':
         return ok(id, toolText(registrarSubVaultLocal({ conceito: args.conceito, caminho: args.caminho, home: args.home })));

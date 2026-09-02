@@ -23,6 +23,8 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { parseFrontmatter, extrairFrontmatter, estimarTokens } from './frontmatter.mjs';
+import { lerDeclaracoes, corpoSemAlcance } from './alcance.mjs';
 
 export const CARTA_CANONICA = path.join('_cerebro', 'camada-1.md');
 export const CARTA_LEGADA = path.join('_cerebro', 'CLAUDE.md');
@@ -41,6 +43,40 @@ export const SECOES_OBRIGATORIAS = [
   { chave: 'fronteiras', sinonimos: ['fronteiras', 'fronteira', 'o que nao mora aqui', 'o que fica fora'] },
 ];
 
+// ---------------------------------------------------------------------------
+// Orcamentos — a face de verificacao do PESO (contrato-navegacao.md §9.4).
+//
+// O teto por LINHAS foi retirado na v0.5.0 por medicao, nao por gosto: as quatro
+// cartas desta instancia tinham 124-147 linhas — todas confortavelmente abaixo
+// do limite de 250 — e custavam ~1.900 a ~3.600 tokens cada, somando ~9.837
+// numa sessao de quatro vaults. O aviso NUNCA disparou em nenhuma delas. Linha
+// e a grandeza errada; token e a grandeza cobrada.
+//
+// M3 mede em DUAS PARTES com donos diferentes, e a separacao e de justica, nao
+// de contabilidade: quem escreve a carta local nao controla o processo herdado.
+//   - delta local     -> dono: quem governa aquele vault
+//   - carta de processo -> dono: quem governa o processo (paga 1x por sessao)
+//
+// Os numeros abaixo foram calibrados DEPOIS da primeira carta de processo
+// publicada — a v0.4.0 deixou os orcamentos em branco de proposito justamente
+// para nao calibrar sobre o conteudo que a §9 remove.
+//
+// COMO FORAM ESCOLHIDOS (02/09), porque um teto sem criterio e um numero que
+// alguem vai afrouxar na primeira vez que incomodar:
+//   - o delta honesto do vault mais complexo, ja podado, mediu ~1.265 tok. O
+//     orcamento e esse valor com ~10% de folga. Nao foi escolhido para caber:
+//     foi escolhido para MORDER no ponto em que a carta comeca a reabsorver
+//     mecanismo e processo — que e o defeito medido (poda de 26/08 desfeita em
+//     cinco dias, +26% sobre o ponto de partida).
+//   - a carta de processo mede ~1.809 tok e e paga UMA vez por sessao. Folga
+//     equivalente.
+//   - teto generoso demais nao avisa nunca (foi o defeito das 250 linhas);
+//     apertado demais avisa sempre, e alarme constante e alarme desligado.
+export const ORCAMENTO_TOKENS_DELTA = 1400;     // carta local (delta) por vault
+export const ORCAMENTO_TOKENS_PROCESSO = 2000;  // carta de processo, 1x por sessao
+export const ORCAMENTO_TOKENS_ENTRADA = 4000;   // M4: carta + vault-config + pouso
+
+// Mantido exportado por compatibilidade de import (nao ha mais aviso por linha).
 export const LIMITE_LINHAS_CARTA = 250;
 
 const semAcento = (s) => String(s)
@@ -107,12 +143,22 @@ export function validarCarta(md) {
   }
 
   const linhas = md ? md.split(/\r?\n/).length : 0;
+  // Mede o que e COBRADO do contexto, nao o tamanho do arquivo. O frontmatter
+  // (`processo:`, `alcance:`) e declaracao para o MECANISMO — quem a le e o
+  // resolvedor de heranca e as metricas, nao o agente — e por isso nao e
+  // injetado (ver blocoCarta). Contabilizar o que nao e entregue faria o teto
+  // punir o vault por declarar bem, que e o oposto do incentivo desejado.
+  const tokens = estimarTokens(corpoSemAlcance(md));
   const avisos = [];
-  if (linhas > LIMITE_LINHAS_CARTA) {
-    avisos.push(`carta de navegacao com ${linhas} linhas (> ${LIMITE_LINHAS_CARTA}) — indice virando conteudo; mover peso para a nota de destino`);
+
+  // Check 4 do contrato, na grandeza corrigida (M3, parte "delta local"). O
+  // orcamento e o da carta LOCAL: se este vault herda um processo, a carta de
+  // processo tem orcamento proprio e dono proprio (ver ORCAMENTO_TOKENS_*).
+  if (tokens > ORCAMENTO_TOKENS_DELTA) {
+    avisos.push(`carta de navegacao com ~${tokens} tokens (> ${ORCAMENTO_TOKENS_DELTA} de orcamento do delta local, contrato-navegacao.md §9.4/M3) — o excedente costuma ser mecanismo ou processo reescrito na carta; declare \`processo:\` e herde, ou mova o peso para a nota de destino`);
   }
 
-  return { ok: faltando.length === 0, presentes, faltando, linhas, avisos };
+  return { ok: faltando.length === 0, presentes, faltando, linhas, tokens, avisos };
 }
 
 // ---------------------------------------------------------------------------
@@ -133,6 +179,9 @@ export function lerCarta(vaultRoot, alias = 'vault') {
     caminhoRelativo: null,
     inline: null,
     validacao: null,
+    frontmatter: {},
+    processo: null,
+    alcance: [],
     avisos: [],
   };
   if (!vaultRoot || !fs.existsSync(vaultRoot)) return vazio;
@@ -167,13 +216,44 @@ export function lerCarta(vaultRoot, alias = 'vault') {
     avisos.push(`carta incompleta — secoes obrigatorias ausentes: ${validacao.faltando.join(', ')} (contrato-navegacao.md §3)`);
   }
 
+  // Frontmatter da carta — a casa da declaracao de heranca (`processo:`) e da
+  // declaracao de alcance (`alcance:`, contrato §8). Sao os dois campos que a
+  // v0.5.0 passou a LER em runtime; antes existiam so como norma escrita.
+  const frontmatter = parseFrontmatter(md);
+  const processo = frontmatter.processo ? String(frontmatter.processo).trim() : null;
+
+  // Declaracao de alcance: a tabela `## Alcance` do corpo e a forma CANONICA
+  // (§8.0). O `alcance:` do frontmatter e aceito como forma legada da v0.5.0 —
+  // ler as duas evita quebrar vault que migrou na janela de um dia, e a tabela
+  // vence quando as duas existem.
+  const daTabela = lerDeclaracoes(md).decls;
+  const doFrontmatter = Array.isArray(frontmatter.alcance)
+    ? frontmatter.alcance.filter((x) => x && typeof x === 'object').map((d) => ({
+      casa: d.casa ?? '',
+      padrao: d.padrao ?? null,
+      grau: d.grau ? String(d.grau).toLowerCase() : null,
+      filtros: Array.isArray(d.filtros) ? d.filtros : (d.filtros ? [d.filtros] : []),
+      hub: d['indice-autorado'] ?? null,
+      recursivo: String(d.recursivo ?? '').toLowerCase() === 'true',
+    }))
+    : [];
+  const alcance = daTabela.length ? daTabela : doFrontmatter;
+  const formaAlcance = daTabela.length ? 'tabela' : (doFrontmatter.length ? 'frontmatter-legado' : 'ausente');
+
   return {
     presente: true,
     origem,
     caminho,
     caminhoRelativo: `./${alias}/${rel.replace(/\\/g, '/')}`,
+    // `inline` = o arquivo inteiro (quem precisa do frontmatter usa este).
+    // `corpo`  = o que vai para o contexto do agente.
     inline: md.replace(/\s+$/, ''),
+    corpo: corpoSemAlcance(md),
     validacao,
+    frontmatter,
+    processo,
+    alcance,
+    formaAlcance,
     avisos,
   };
 }

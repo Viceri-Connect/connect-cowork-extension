@@ -19,7 +19,7 @@ export function blocoCarta(carta, rotulo = 'vault') {
     const proc = carta.origem === 'legado' ? ' (hot cache legado — migracao pendente)' : '';
     L.push(`> Camada 1 declarada por \`${carta.caminhoRelativo}\`${proc} — injetada verbatim:`);
     L.push('');
-    L.push(carta.inline);
+    L.push(carta.corpo ?? carta.inline);
     if (carta.validacao && !carta.validacao.ok) {
       L.push('');
       L.push(`> ⚠️ Carta incompleta (${rotulo}) — secoes obrigatorias ausentes: ${carta.validacao.faltando.join(', ')}. Ofereca completar via \`cnct-fabrica-navegacao\`.`);
@@ -31,6 +31,110 @@ export function blocoCarta(carta, rotulo = 'vault') {
     L.push('> para materializar a carta — ausencia e gatilho de nascimento, nao erro.');
   }
   return L;
+}
+
+// ---------------------------------------------------------------------------
+// blocoHeranca — a CARTA DE PROCESSO herdada pelo vault (contrato §9).
+//
+// A regra que este bloco materializa: a carta de processo entra UMA VEZ POR
+// SESSAO, nao uma vez por vault. O primeiro vault que declara `processo: X`
+// paga a injecao verbatim; do segundo em diante sai so o ponteiro, porque o
+// conteudo ja esta no contexto. E daqui que vem o fim da escala linear do piso
+// (medido em 01/09: 4 vaults, ~9.837 tokens so de cartas).
+//
+// Silencio deliberado em 'sem-processo': vault que nao declara processo nao
+// herda e isso NAO e lacuna (§9.3). Emitir linha nesse caso seria cobrar
+// contexto para dizer que nada aconteceu.
+// ---------------------------------------------------------------------------
+export function blocoHeranca(heranca, rotulo = 'vault') {
+  const L = [];
+  if (!heranca || heranca.status === 'sem-processo') return L;
+
+  const cp = heranca.cartaProcesso;
+
+  if (heranca.status === 'ausente') {
+    L.push(`> ⚠️ **Lacuna de heranca (${rotulo}):** o vault declara \`processo: ${heranca.processo}\` e a carta`);
+    L.push('> daquele processo NAO existe. O que a carta local deixou de repetir por herdar nao tem');
+    L.push('> de onde vir: a navegacao esta incompleta por construcao, nao por descuido. Ofereca a');
+    L.push('> `cnct-fabrica-navegacao` (modo processo) ao operador — nao supra por varredura.');
+    return L;
+  }
+
+  if (heranca.status === 'ja-injetada') {
+    L.push(`> Processo herdado: **${heranca.processo}** — carta em \`${cp?.caminhoRelativo}\`, **ja injetada`);
+    L.push('> nesta sessao** por outro vault do mesmo processo. Ela vale igual aqui; nao esta repetida');
+    L.push('> porque repetir e o custo que a heranca existe para eliminar.');
+    return L;
+  }
+
+  L.push(`> Processo herdado: **${heranca.processo}** — carta de processo declarada por`);
+  L.push(`> \`${cp?.caminhoRelativo}\`, injetada verbatim **uma vez nesta sessao** (vale para todo vault`);
+  L.push('> que declare o mesmo processo; os proximos recebem so o ponteiro):');
+  L.push('');
+  L.push(cp?.corpo ?? cp?.inline ?? '');
+  return L;
+}
+
+// ---------------------------------------------------------------------------
+// renderMetricas — relatorio legivel de medirVault() (M1..M7, contrato §9.4).
+//
+// Reporta e para. Nao corrige, nao oferece corrigir, nao ordena por gravidade
+// inventada: a ordem e a do contrato, porque a arbitragem de peso ja esta lah
+// (§7 — risco de varredura domina, massa depois, saltos por ultimo) e reordenar
+// aqui seria o mecanismo opinando sobre o criterio.
+// ---------------------------------------------------------------------------
+export function renderMetricas(r) {
+  const L = [];
+  if (!r) return '';
+  if (r.erro) {
+    return `## Metricas de navegacao — nao medido\n\n- Vault: \`${r.vault || '—'}\` (./${r.alias})\n- Motivo: ${r.erro}`;
+  }
+
+  const icone = (s) => (s === 'ok' ? '✅' : s === 'falha' ? '❌' : '—');
+
+  L.push(`## Metricas de navegacao — ./${r.alias}`);
+  L.push('');
+  L.push(`- Processo declarado: ${r.processo ? `\`${r.processo}\`` : '_nenhum_ (nao herda; nao e lacuna — contrato §9.3)'}`);
+  if (r.processo) {
+    L.push(`- Carta de processo: ${r.heranca.cartaPresente ? `\`${r.heranca.caminho}\`` : '**AUSENTE — heranca quebrada**'}`);
+    L.push(`- Declaracoes de alcance: ${r.heranca.declaracoesHerdadas} herdada(s) + ${r.heranca.declaracoesLocais} local(is)`);
+  }
+  L.push(`- Resumo: ${r.resumo.ok} ok · ${r.resumo.falha} falha · ${r.resumo.naoAplicavel} nao aplicavel`);
+  L.push('');
+
+  for (const m of Object.values(r.metricas)) {
+    L.push(`### ${icone(m.status)} ${m.id} — ${m.nome}`);
+    if (m.motivo) L.push(`- ${m.motivo}`);
+    if (m.id === 'M1' && m.orfasTotal) {
+      L.push(`- ${m.orfasTotal} de ${m.total} arquivo(s) sem cobertura${m.orfasTotal > m.orfas.length ? ` (mostrando ${m.orfas.length})` : ''}:`);
+      for (const o of m.orfas) L.push(`  - \`${o}\``);
+    }
+    if (m.id === 'M2') for (const d of m.defeitos || []) L.push(`- ${d}`);
+    if (m.id === 'M3') {
+      for (const p of m.partes || []) {
+        L.push(`- ${p.ok ? 'ok' : '**acima**'}: ${p.parte} — ~${p.tokens} tok / orcamento ${p.orcamento}. Dono: ${p.dono}`);
+      }
+    }
+    if (m.id === 'M4') {
+      L.push(`- total ~${m.total} tok / orcamento ${m.orcamento}`);
+      for (const c of m.componentes || []) L.push(`  - ${c.componente}: ~${c.tokens} tok`);
+    }
+    if (m.id === 'M5') {
+      for (const p of m.mortos || []) L.push(`- **morto:** \`${p.caminho}\` — citado por ${p.origem}, nao existe em lugar nenhum do vault`);
+      for (const p of m.ambiguos || []) L.push(`- ambiguo: \`${p.caminho}\` (${p.origem}) nao resolve da raiz; existe como \`${p.resolveEm}\`. Resolve para quem ja sabe onde esta — que e quem a carta nao serve`);
+      for (const p of m.fora || []) L.push(`- fora do vault: \`${p.caminho}\` (${p.origem}) — ${p.natureza}. Nao e ponteiro morto: e ponteiro que deveria ser tipado`);
+      if (m.herdadosSemCasa?.length) {
+        L.push(`- ${m.herdadosSemCasa.length} ponteiro(s) herdado(s) sem casa neste vault (\`${m.herdadosSemCasa.map((p) => p.caminho).join('`, `')}\`) — nao contam como morto aqui: e a M7 que reporta, e duplicar treinaria a ignorar as duas`);
+      }
+    }
+    if (m.id === 'M6') for (const v of m.violacoes || []) L.push(`- ${v}`);
+    if (m.id === 'M7' && m.faltando?.length) for (const f of m.faltando) L.push(`- falta: \`${f}\``);
+    L.push('');
+  }
+
+  L.push('> Este relatorio MEDE e para. Correcao e decisao do operador — e poda de carta sem');
+  L.push('> a carta de processo publicada nao persiste (medido: -17% em 26/08, +26% cinco dias depois).');
+  return L.join('\n');
 }
 
 // ---------------------------------------------------------------------------
@@ -165,6 +269,15 @@ export function renderResolucao(res, { cartaInline = true } = {}) {
       L.push('>');
       L.push(`> ⚠️ Carta incompleta (${res.conceito}) — secoes ausentes: ${c.validacao.faltando.join(', ')}. Ofereca \`cnct-fabrica-navegacao\`.`);
     }
+  }
+  // Carta de processo herdada — sempre no texto, mesmo com `cartaInline: false`.
+  // Motivo: ela e a metade da camada 1 deste vault que NAO esta na carta local
+  // (§9.2), e omiti-la aqui deixaria o agente com o delta sem o processo — pior
+  // que a carta gorda, porque parece completa.
+  const blocoH = blocoHeranca(res.l1?.heranca, res.conceito);
+  if (blocoH.length) {
+    L.push('');
+    L.push(...blocoH);
   }
   if (res.avisos?.length) {
     L.push('');
@@ -444,6 +557,11 @@ export function renderContexto(report, { acionavel = true } = {}) {
     if (iv['vault-focal-nome']) L.push(`- Ponto focal: ${iv['vault-focal-nome']}`);
     L.push('');
     L.push(...blocoCarta(report.l1.carta, 'matriz'));
+    const blocoH = blocoHeranca(report.l1.heranca, 'matriz');
+    if (blocoH.length) {
+      L.push('');
+      L.push(...blocoH);
+    }
     L.push('');
   }
 

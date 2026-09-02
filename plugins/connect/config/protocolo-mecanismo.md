@@ -81,6 +81,31 @@ a matriz e para todo sub-vault, do primeiro ao ultimo salto.
 > Consequencia pratica: "nao sei onde isso mora" nunca autoriza tatear diretorio. Autoriza
 > uma de tres coisas — `resolver` o conceito, ler a carta, ou **perguntar ao operador**.
 
+## O que a carta de um vault NAO repete — porque ja esta aqui
+
+A carta de navegacao de um vault (`_cerebro/camada-1.md`) declara **delta**: identidade e corte, os
+deltas do processo que ele executa, entidades e vocabulario locais, e quais conceitos vizinhos
+existem. Tudo abaixo e **mecanismo do produto**, entra por este protocolo uma vez por sessao, e
+**nao deve ser reescrito em carta nenhuma** — foi encontrado quase palavra por palavra em quatro
+cartas de vault, o que viola o invariante *deltas, nao copias* que o proprio contrato declara:
+
+- a **ordem de resolucao canonica** (conceito -> `resolver` -> carta -> pouso -> ponteiro) e o
+  principio de **nao pousar em folha**;
+- o **trigger de escrita** (carregar o protocolo antes de criar ou editar arquivo em vault) e o de
+  **encerramento**;
+- **ponteiro tipado**, e a regra de nao referenciar caminho absoluto de maquina;
+- **estado e kanban do operador** vivem no perfil gerido pelo Connect, nunca em acervo de coletivo;
+- **resolucao de repositorio de codigo** (o path e por-maquina, nunca vault);
+- **fonte unica do manifesto** — a existencia e a governanca de uma entidade moram na matriz, e o
+  acervo dela nao as duplica;
+- **varredura e ultimo recurso e deixa marca**.
+
+O que e do **processo** — e nao do produto — tambem sai da carta local, mas por outro caminho: vai
+para a **carta de processo** (`_cerebro/processos/{processo}.md` no vault que governa o processo),
+herdada por `processo:` no frontmatter da camada 1 e injetada **uma vez por sessao**. Sao destinos
+diferentes, e o corte entre eles e o corte `_`/conteudo: mecanismo e do produto, processo e da
+empresa. Colapsa-los num destino so reintroduz no acervo da empresa o que pertence ao produto.
+
 ## Regra de escrita
 
 - Todo arquivo escrito ou atualizado no vault ganha `[[wikilinks]]` para os arquivos mencionados.

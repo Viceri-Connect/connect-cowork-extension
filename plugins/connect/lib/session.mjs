@@ -171,7 +171,14 @@ export function iniciarSessao({ sessionId, ...override } = {}) {
   // 4. carga L1 da matriz
   let l1 = null;
   if (cfg.vaultMatriz && fs.existsSync(cfg.vaultMatriz)) {
-    l1 = montarL1(cfg.vaultMatriz, ALIAS_MATRIZ);
+    // `workspace` habilita o registro de injecao por sessao (heranca de processo,
+    // contrato §9.3): a carta de processo entra UMA vez, no primeiro vault que a
+    // declara, e os seguintes recebem so o ponteiro.
+    l1 = montarL1(cfg.vaultMatriz, ALIAS_MATRIZ, {
+      governanteRoot: cfg.vaultMatriz,
+      aliasGovernante: ALIAS_MATRIZ,
+      workspaceDir: workspace,
+    });
     // A governanca da raiz (`l1.governanca`) NAO vira aviso aqui: o render a emite
     // como secao propria no topo do bloco acionavel, porque aviso no fim ja se
     // provou insuficiente para o agente parar e agir (licao da 0.12.1).
