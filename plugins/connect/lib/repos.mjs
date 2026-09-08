@@ -27,6 +27,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { resolveConfig } from './session.mjs';
 import { gravarChaveLocal } from './config-local.mjs';
+import { lerTabela, casarPonteiro, montarChave, resumirCandidatos } from './ponteiro.mjs';
 
 const norm = (s) => String(s || '').toLowerCase().trim();
 
@@ -34,10 +35,17 @@ const norm = (s) => String(s || '').toLowerCase().trim();
 // registrarRepoLocal — grava o path local de UM repo (por-maquina, D35).
 // Chamada legitima: (a) handshake guiado, depois de `resolver_repo` devolver
 // 'local-nao-configurado'; (b) apos um clone que o proprio agente conduziu.
+//
+// `coletivo` (ADR-22 item 1): quando informado, a chave nasce escopada
+// (`mapfre/br-business-api`). Sem ele a chave e legada (so o conceito) e continua
+// valendo — nunca se reescreve config do operador sem que ele peca.
 // ---------------------------------------------------------------------------
-export function registrarRepoLocal({ home, conceito, caminho } = {}) {
+export function registrarRepoLocal({ home, conceito, caminho, coletivo = null, escopo = null } = {}) {
   if (!conceito) return { status: 'erro', motivo: 'conceito ausente' };
-  return gravarChaveLocal({ home, tabela: 'repos', chave: norm(conceito), caminho });
+  const chave = coletivo
+    ? montarChave({ coletivo, escopo: escopo ? [escopo] : [], conceito })
+    : norm(conceito);
+  return gravarChaveLocal({ home, tabela: 'repos', chave, caminho });
 }
 
 // ---------------------------------------------------------------------------
@@ -53,62 +61,77 @@ export function registrarRepoLocal({ home, conceito, caminho } = {}) {
 //   'sem-git'               — diretorio existe mas nao tem .git (pode ser pasta errada)
 //   'resolvido'             — caminho valido; pedir acesso ao Cowork e seguir
 // ---------------------------------------------------------------------------
-export function resolverRepo({ conceito, ...override } = {}) {
+export function resolverRepo({ conceito, coletivo = null, escopo = null, ...override } = {}) {
   const cfg = resolveConfig(override);
-  const tabela = cfg.repos || {};
-  const disponiveis = Object.keys(tabela);
+  const entradas = lerTabela(cfg.repos || {});
+  const disponiveis = entradas.map((e) => e.chave);
 
   if (!conceito) return { status: 'erro', motivo: 'conceito ausente', disponiveis };
 
   const chave = norm(conceito);
   // Casamento: exato SEMPRE vence. Fuzzy so como prefixo/substring do NOME
-  // REGISTRADO (uma direcao), com piso de 3 caracteres, e AMBIGUIDADE E RECUSADA.
+  // REGISTRADO (UMA direcao), com piso de 3 caracteres, e AMBIGUIDADE E RECUSADA.
   //
-  // Por que tao restrito: repo e superficie de ESCRITA (o agente vai commitar ali).
-  // O casamento bidirecional que existia aqui resolvia silenciosamente pro repo
-  // errado — `resolverRepo('connect-web-api')` (nao registrado) devolvia o caminho
-  // de `connect-web` com status 'resolvido'. Achado na revisao da 0.12.0: no lado
-  // do conhecimento, ambiguidade devolve 'ambigua' e se recusa a escolher; no lado
-  // do codigo o preco de errar e maior, entao a regra nao pode ser mais frouxa.
-  let hit = disponiveis.find((k) => k === chave);
-  if (!hit && chave.length >= 3) {
-    const candidatos = disponiveis.filter((k) => k.includes(chave));
-    if (candidatos.length > 1) {
-      return {
-        status: 'ambigua',
-        conceito: chave,
-        candidatos,
-        avisos: [`"${chave}" casa com ${candidatos.length} repos registrados (${candidatos.join(', ')}) — pergunte ao operador qual, nunca escolher por ordem da tabela`],
-      };
-    }
-    hit = candidatos[0];
+  // Por que tao restrito, e por que a ADR-22 NAO afrouxou isto: repo e superficie
+  // de ESCRITA (o agente vai commitar ali). O casamento bidirecional que existia
+  // aqui resolvia silenciosamente pro repo errado — `resolverRepo('connect-web-api')`
+  // (nao registrado) devolvia o caminho de `connect-web` com status 'resolvido'.
+  // Achado na revisao da 0.12.0, e reencontrado na varredura de drift da ADR-22:
+  // o item 6 dela chegou a propor bidirecional em todas as classes e foi emendado
+  // no mesmo dia por causa deste bloco. Termo mais longo que a chave, em repo,
+  // significa entrada AUSENTE — nao entrada parecida.
+  //
+  // O que a ADR-22 mudou aqui: o EIXO. Antes a tabela era plana, entao dois
+  // clientes com repo homonimo colidiam por construcao; agora `coletivo` filtra
+  // duro, e a recusa vem qualificada (`mapfre/br-business-api`), nao com dois
+  // nomes iguais que nao ajudam ninguem a escolher.
+  const m = casarPonteiro(entradas, { termo: chave, coletivo, escopo, bidirecional: false });
+
+  if (m.status === 'ambigua') {
+    const candidatos = resumirCandidatos(m.candidatos);
+    return {
+      status: 'ambigua',
+      conceito: chave,
+      candidatos,
+      coletivoUsado: m.desempatadoPor,
+      avisos: [`"${chave}" casa com ${candidatos.length} repos registrados (${candidatos.join(', ')}) — pergunte ao operador qual, ou repita informando \`coletivo\`. Nunca escolher por ordem da tabela.`],
+    };
   }
 
-  if (!hit) {
+  if (m.status === 'nenhum') {
     return {
       status: 'local-nao-configurado',
       conceito: chave,
       disponiveis,
-      avisos: [`esta maquina ainda nao sabe onde o repo "${chave}" mora — pergunte o diretorio ao operador (ou ofereca clonar) e grave com registrar_repo_local. Nunca procure por conta propria.`],
+      avisos: [`esta maquina ainda nao sabe onde o repo "${chave}" mora — pergunte o diretorio ao operador (ou ofereca clonar) e grave com registrar_repo_local, informando \`coletivo\`. Nunca procure por conta propria.`],
     };
   }
 
-  const caminho = tabela[hit];
+  const { caminho, chave: hit, coletivo: colDaChave } = m.entrada;
   if (!fs.existsSync(caminho)) {
     return {
       status: 'origem-ausente',
       conceito: hit,
+      coletivo: colDaChave,
+      desempatadoPor: m.desempatadoPor,
       caminho,
       avisos: [`repo registrado mas o diretorio nao existe: ${caminho} — confirmar com o operador (movido? nunca clonado nesta maquina?)`],
     };
   }
 
   const temGit = fs.existsSync(path.join(caminho, '.git'));
+  const avisos = temGit ? [] : [`${caminho} existe mas nao contem .git — confirmar se e a raiz do repo antes de usar`];
+  // Desempate por parametro e sempre DECLARADO (ADR-22 item 4): heuristica silenciosa
+  // e o modo de falha que esta ADR existe para extinguir.
+  if (m.desempatadoPor) avisos.push(`desempatado pelo coletivo "${m.desempatadoPor}"`);
+
   return {
     status: temGit ? 'resolvido' : 'sem-git',
     conceito: hit,
+    coletivo: colDaChave,
     caminho,
-    avisos: temGit ? [] : [`${caminho} existe mas nao contem .git — confirmar se e a raiz do repo antes de usar`],
+    desempatadoPor: m.desempatadoPor,
+    avisos,
   };
 }
 
@@ -117,14 +140,20 @@ export function resolverRepo({ conceito, ...override } = {}) {
 // ---------------------------------------------------------------------------
 export function listarRepos({ ...override } = {}) {
   const cfg = resolveConfig(override);
-  const tabela = cfg.repos || {};
+  const entradas = lerTabela(cfg.repos || {});
   return {
     configPath: cfg._configPath,
-    repos: Object.entries(tabela).map(([conceito, caminho]) => ({
-      conceito,
-      caminho,
-      existe: fs.existsSync(caminho),
-      git: fs.existsSync(path.join(caminho, '.git')),
+    repos: entradas.map((e) => ({
+      conceito: e.conceito,
+      coletivo: e.coletivo,
+      chave: e.chave,
+      caminho: e.caminho,
+      existe: fs.existsSync(e.caminho),
+      git: fs.existsSync(path.join(e.caminho, '.git')),
+      // Entrada sem coletivo declarado ainda funciona (shim), mas e o que
+      // reabre a colisao que a ADR-22 fechou — visivel na listagem de proposito.
+      legado: e.legado,
     })),
+    semColetivo: entradas.filter((e) => e.legado).map((e) => e.chave),
   };
 }

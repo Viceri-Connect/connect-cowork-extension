@@ -19,7 +19,8 @@
 import readline from 'node:readline';
 import { readFileSync } from 'node:fs';
 import { mount, unmount, listMounts } from '../lib/mount.mjs';
-import { iniciarSessao, gravarConfig, estadoSessao, registrarSubVaultLocal } from '../lib/session.mjs';
+import { iniciarSessao, gravarConfig, estadoSessao, registrarSubVaultLocal, resolveConfig } from '../lib/session.mjs';
+import { lerVinculo, coletivosComVinculo } from '../lib/vinculo.mjs';
 import { resolver } from '../lib/resolver.mjs';
 import { renderContexto, renderResolucao, renderMetricas } from '../lib/render.mjs';
 import { medirVault } from '../lib/metricas.mjs';
@@ -104,13 +105,20 @@ const TOOLS = [
       '(pergunte o diretorio e grave com registrar_subvault_local), origem-ausente, ou resolvido ' +
       '(monta, injeta a CARTA DE NAVEGACAO do sub-vault verbatim e devolve ' +
       '`entradaResolvida.caminhoRelativo` — o ponto de pouso ja resolvido a caminho real, ' +
-      'nunca nome de nota a caçar).',
+      'nunca nome de nota a caçar). ' +
+      'Resolve TAMBEM diretorio de output (Delivery Hub) quando o manifesto declara tipo de ' +
+      'diretorio: nesse caso devolve `classe: "diretorio"`, monta e entrega a concessao, e NAO ' +
+      'cobra carta de navegacao nem heranca de processo (ADR-22). ' +
+      'Devolve tambem `vinculo` — a leitura do operador sobre este coletivo, que pela ADR-14 vale ' +
+      'ANTES da carta. `ambigua` significa PERGUNTE (ou repita com `coletivo`), nunca escolha.',
     inputSchema: {
       type: 'object',
       properties: {
-        conceito: { type: 'string', description: 'Conceito ou gatilho a resolver (ex.: "gestao-financeira", "pensao").' },
+        conceito: { type: 'string', description: 'Conceito ou gatilho a resolver (ex.: "gestao-financeira", "delivery-hub").' },
         workspace_dir: { type: 'string', description: 'Diretorio de trabalho da sessao (estado_sessao.workspace).' },
         alias: { type: 'string', description: 'Sobrescreve o alias declarado no registro (opcional).' },
+        coletivo: { type: 'string', description: 'Desempate por coletivo (ex.: "mapfre"). Informe quando o conceito puder existir em mais de um coletivo — o mecanismo nunca adivinha por estado da sessao.' },
+        escopo: { type: 'string', description: 'Estreita mais o desempate (ex.: squad "novos-negocios"). Opcional.' },
         replace: { type: 'boolean', description: 'Se true, substitui um alias existente que aponte para outro destino.', default: false },
       },
       required: ['conceito', 'workspace_dir'],
@@ -120,14 +128,18 @@ const TOOLS = [
     name: 'registrar_subvault_local',
     description:
       'Grava, em connect.config.json (subVaults), o diretorio LOCAL (nesta maquina) onde um ' +
-      '`conceito` mora. Nunca vai pro vault — e por-operador, por-maquina. Use depois que o ' +
-      '`resolver` devolver "local-nao-configurado" (pergunte o caminho ao operador antes de chamar) ' +
-      'ou quando uma fabrica acabou de materializar um sub-vault e ja sabe o path.',
+      '`conceito` mora — sub-vault ou diretorio de output (Delivery Hub). Nunca vai pro vault — e ' +
+      'por-operador, por-maquina. Use depois que o `resolver` devolver "local-nao-configurado" ' +
+      '(pergunte o caminho ao operador antes de chamar) ou quando uma fabrica acabou de materializar ' +
+      'um sub-vault e ja sabe o path. SEMPRE informe `coletivo` quando souber: sem ele a chave nasce ' +
+      'sem escopo e reabre a colisao entre coletivos que a ADR-22 fechou.',
     inputSchema: {
       type: 'object',
       properties: {
         conceito: { type: 'string', description: 'Conceito devolvido pelo resolver (ver status local-nao-configurado).' },
         caminho: { type: 'string', description: 'Diretorio absoluto, nesta maquina, onde o acervo mora.' },
+        coletivo: { type: 'string', description: 'Coletivo dono (ex.: "mapfre"). Escopa a chave — informe sempre que souber.' },
+        escopo: { type: 'string', description: 'Escopo dentro do coletivo (ex.: squad "novos-negocios"). Use quando o mesmo conceito varia por squad, como o Delivery Hub.' },
         home: { type: 'string', description: 'Pasta fixa do Connect. Opcional; default por SO.' },
       },
       required: ['conceito', 'caminho'],
@@ -164,11 +176,18 @@ const TOOLS = [
       'agente pedir acesso ao Cowork / usar como cwd. Path mora so em connect.config.json (tabela ' +
       '`repos`), nunca no vault. Nunca advinha: status "local-nao-configurado" significa ' +
       'PERGUNTE ao operador (ou ofereca clonar) e grave com registrar_repo_local — jamais procurar ' +
-      'o repo por varredura de disco.',
+      'o repo por varredura de disco. ' +
+      'NAO use para Delivery Hub nem para pasta de entregaveis — isso e `resolver` (classe ' +
+      'diretorio). Aqui, "sem-git" quer dizer que a pasta provavelmente nao e um repo. ' +
+      'Status "ambigua" traz candidatos qualificados por coletivo: PERGUNTE ao operador ou repita ' +
+      'informando `coletivo`. O casamento aqui e proposital mais estrito que o do `resolver`: repo ' +
+      'e superficie de escrita, e termo mais longo que a chave significa repo AUSENTE.',
     inputSchema: {
       type: 'object',
       properties: {
         conceito: { type: 'string', description: 'Nome/conceito do repo (ex.: "connect-site", "connect").' },
+        coletivo: { type: 'string', description: 'Desempate por coletivo (ex.: "mapfre"). Informe quando dois clientes puderem ter repo de mesmo nome.' },
+        escopo: { type: 'string', description: 'Estreita mais o desempate (squad, produto). Opcional.' },
       },
       required: ['conceito'],
     },
@@ -185,6 +204,8 @@ const TOOLS = [
       properties: {
         conceito: { type: 'string', description: 'Nome/conceito do repo (chave estavel).' },
         caminho: { type: 'string', description: 'Diretorio absoluto da raiz do repo nesta maquina.' },
+        coletivo: { type: 'string', description: 'Coletivo dono do repo (ex.: "mapfre"). Informe SEMPRE que souber: sem escopo, dois clientes com repo homonimo colidem.' },
+        escopo: { type: 'string', description: 'Escopo dentro do coletivo (produto, squad). Opcional.' },
         home: { type: 'string', description: 'Pasta fixa do Connect. Opcional; default por SO.' },
       },
       required: ['conceito', 'caminho'],
@@ -192,8 +213,28 @@ const TOOLS = [
   },
   {
     name: 'listar_repos',
-    description: 'Lista a tabela local de repositorios (conceito, caminho, existe, tem .git) para o operador conferir ou curar.',
+    description:
+      'Lista a tabela local de repositorios (conceito, coletivo, caminho, existe, tem .git) para o ' +
+      'operador conferir ou curar. `semColetivo` traz as entradas em formato legado (sem escopo) — ' +
+      'sao as que ainda podem colidir entre clientes.',
     inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'estado_operador',
+    description:
+      'Le o registro de VINCULO do operador com um coletivo (`operador/_cerebro/vinculos/{coletivo}/`): ' +
+      'a leitura pessoal dele sobre aquele contexto — estado, ambientes locais, particularidades de ' +
+      'repo por-maquina. Pela ADR-14 isso vale ANTES da carta de navegacao do coletivo. ' +
+      'O `resolver` ja entrega esse recorte junto quando resolve; use esta tool quando precisar do ' +
+      'vinculo SEM resolver o coletivo, ou para listar com quais coletivos o operador tem vinculo. ' +
+      'Status "ausente" e o estado normal do primeiro contato, nunca erro.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        coletivo: { type: 'string', description: 'Coletivo (ex.: "mapfre"). Omita para listar todos os vinculos existentes.' },
+        home: { type: 'string', description: 'Pasta fixa do Connect. Opcional; default por SO.' },
+      },
+    },
   },
   {
     name: 'medir_navegacao',
@@ -286,7 +327,14 @@ function handleToolCall(id, params) {
       case 'estado_sessao':
         return ok(id, toolText(estadoSessao({ sessionId: args.session_id })));
       case 'resolver': {
-        const r = resolver({ conceito: args.conceito, workspaceDir: args.workspace_dir, alias: args.alias, replace: !!args.replace });
+        const r = resolver({
+          conceito: args.conceito,
+          workspaceDir: args.workspace_dir,
+          alias: args.alias,
+          coletivo: args.coletivo || null,
+          escopo: args.escopo || null,
+          replace: !!args.replace,
+        });
         // Quando resolve, devolve TAMBEM o bloco de contexto do sub-vault (ponto
         // de pouso + orientacao). Sem isso o agente ganharia um mount e nenhuma
         // orientacao — o defeito que o contrato-navegacao fecha.
@@ -321,15 +369,37 @@ function handleToolCall(id, params) {
         return ok(id, { content: [{ type: 'text', text: renderMetricas(r) }], structuredContent: r });
       }
       case 'registrar_subvault_local':
-        return ok(id, toolText(registrarSubVaultLocal({ conceito: args.conceito, caminho: args.caminho, home: args.home })));
+        return ok(id, toolText(registrarSubVaultLocal({
+          conceito: args.conceito,
+          caminho: args.caminho,
+          coletivo: args.coletivo || null,
+          escopo: args.escopo || null,
+          home: args.home,
+        })));
+      case 'estado_operador': {
+        const cfg = resolveConfig({ home: args.home });
+        if (!args.coletivo) {
+          return ok(id, toolText({
+            perfil: cfg.perfilOperador,
+            coletivos: coletivosComVinculo(cfg.perfilOperador),
+          }));
+        }
+        return ok(id, { content: [{ type: 'text', text: 'vinculo do operador — ver structuredContent' }], structuredContent: dedupInline({ vinculo: lerVinculo(cfg.perfilOperador, args.coletivo) }) });
+      }
       case 'configurar':
         return ok(id, toolText(gravarConfig({ vaultMatriz: args.vault_matriz, cerebroPessoal: args.cerebro_pessoal, home: args.home })));
       case 'publicar_governanca':
         return ok(id, toolText(publicarGovernanca(args.vault_dir, { vault: args.vault, nomeExibicao: args.nome_exibicao })));
       case 'resolver_repo':
-        return ok(id, toolText(resolverRepo({ conceito: args.conceito })));
+        return ok(id, toolText(resolverRepo({ conceito: args.conceito, coletivo: args.coletivo || null, escopo: args.escopo || null })));
       case 'registrar_repo_local':
-        return ok(id, toolText(registrarRepoLocal({ conceito: args.conceito, caminho: args.caminho, home: args.home })));
+        return ok(id, toolText(registrarRepoLocal({
+          conceito: args.conceito,
+          caminho: args.caminho,
+          coletivo: args.coletivo || null,
+          escopo: args.escopo || null,
+          home: args.home,
+        })));
       case 'listar_repos':
         return ok(id, toolText(listarRepos()));
       case 'mount_junction':

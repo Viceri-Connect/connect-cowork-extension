@@ -37,6 +37,18 @@ export function criarEntrega() {
     return valor;
   };
 
+  // `corpo` e o mesmo arquivo que `inline`, sem o frontmatter e sem a secao Alcance.
+  // Os dois SEMPRE viajaram juntos no structuredContent, e ninguem os le em par:
+  // `render.mjs` e `metricas.mjs` usam `corpo ?? inline` e rodam DENTRO do servidor,
+  // antes desta poda. Medido em 08/09 contra o vault da Tribo Impulsa: 905 tok de
+  // `l1.carta.corpo` + 1.275 de `cartaProcesso.corpo` = 2.180 tok por chamada de
+  // `resolver`, 37% do payload, sem um leitor do outro lado.
+  const podarCorpo = (bloco) => {
+    if (!bloco || typeof bloco !== 'object') return bloco;
+    if (!bloco.inline || !bloco.corpo) return bloco;
+    return { ...bloco, corpo: '<corpo elidido — identico ao `inline` sem frontmatter/Alcance; use `inline`>' };
+  };
+
   // Copia rasa em cada nivel tocado — nunca mutila o objeto do chamador.
   const dedup = (obj) => {
     if (!obj || typeof obj !== 'object') return obj;
@@ -45,7 +57,20 @@ export function criarEntrega() {
     for (const k of ['l1', 'l1Pessoal']) {
       if (out[k] && typeof out[k] === 'object') {
         out[k] = { ...out[k] };
-        if (out[k].carta?.inline) out[k].carta = { ...out[k].carta, inline: trate(out[k].carta.inline) };
+        if (out[k].carta?.inline) out[k].carta = podarCorpo({ ...out[k].carta, inline: trate(out[k].carta.inline) });
+        // Carta de PROCESSO: injetada uma vez por sessao por desenho (ADR-21/§9.3),
+        // e ate aqui escapava inteira do dedup — nos dois campos. O segundo sub-vault
+        // que declarasse `sdd` pagava a carta de novo, que e exatamente a escala
+        // linear que a heranca existe para eliminar.
+        if (out[k].heranca?.cartaProcesso?.inline) {
+          out[k].heranca = {
+            ...out[k].heranca,
+            cartaProcesso: podarCorpo({
+              ...out[k].heranca.cartaProcesso,
+              inline: trate(out[k].heranca.cartaProcesso.inline),
+            }),
+          };
+        }
         // `vaultConfigInline` NUNCA vai inteiro (corte de 26/08). Diferente da carta
         // e do hot cache, nenhum renderizador o consome: o `render.mjs` monta a secao
         // de identidade a partir de `identidadeVault`, que e o mesmo frontmatter ja

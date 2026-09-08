@@ -1,5 +1,60 @@
 # Changelog — connect
 
+## 0.28.0 — 2026-09-08
+
+**Um só conceito de "onde isso mora nesta máquina" — e o leitor que faltava para o vínculo do
+operador.** Ratificada pela `ADR-22` (12 situações de simulação, 2 quebras e 1 encaixe torto, os três
+corrigidos na decisão).
+
+- **Delivery Hub deixa de ser instrução morta.** Cinco skills instaladas (`discovery-doc`,
+  `discovery-intake`, `planning-sdd`, `tasks-sync`, `elicitacao-captura`) mandavam resolver o Hub por
+  `resolver_repo` — que só conhece repositório git e devolveria `sem-git`, status que nenhuma delas
+  trata. A instrução existia em cinco lugares e não executava em nenhum: o operador informava o path
+  na mão, sessão após sessão (**P149**, aberta em 31/08 no dogfooding MAPFRE). O `resolver` ganhou
+  **classe de artefato**: `diretorio` monta, devolve a concessão e **sai antes** de `montarL1` — não
+  cobra carta de navegação nem herança de processo de uma pasta que, por definição, nunca terá
+  nenhuma das duas. Custo medido: **~80 tok contra os ~5.958 do sub-vault**.
+- **Ponteiro local escopado por coletivo.** A tabela era plana (`conceito → path`), logo dois clientes
+  com repositório homônimo colidiam por construção. O operador já compensava à mão — o `repos.md`
+  legado da MAPFRE tem `⚠️ não confundir com self-bra-pipeline-mbaas (Portal ASC)` escrito em prosa.
+  A chave passa a ser `{coletivo}[/{escopo}]/{conceito}`, e o desempate é **parâmetro, nunca
+  adivinhação de estado da sessão** — com três coletivos montados, "usa o que está montado" não tem
+  critério. Ambiguidade vem **qualificada** (`mapfre/br-business-api`, não dois nomes iguais).
+- **Retrocompatibilidade sem tocar em config de ninguém.** O shim lê `chave: "caminho"` e
+  `chave: {caminho}`. Nenhuma config gravada em campo precisa mudar — e não há validador de schema no
+  produto, então mudança de shape só apareceria na sessão do operador. `listar_repos` passa a marcar
+  as entradas ainda sem coletivo, que são as que podem colidir.
+- **`resolver_repo` continua estrito, e agora está escrito por quê.** A varredura de drift da ADR-22
+  reencontrou o rationale de `lib/repos.mjs`: o casamento bidirecional já existiu ali e foi removido
+  na revisão da 0.12.0 porque `resolverRepo('connect-web-api')` (não registrado) devolvia o caminho de
+  `connect-web` como `resolvido`. O item 6 da ADR chegou a propor bidirecional em todas as classes e
+  **foi emendado no mesmo dia**. Repositório é superfície de escrita: termo mais longo que a chave
+  significa entrada **ausente**, não parecida.
+- **`resolver('tribo-impulsa')` passa a resolver.** O casamento era unidirecional
+  (`conceito.includes(termo)`), então termo mais específico que a chave nunca casava — medido em
+  sessão real: `tribo-impulsa` deu `nao-encontrado` e `impulsa` resolveu, duas chamadas para uma
+  resolução. Agora é bidirecional **nas classes de leitura**, e por isso a ambiguidade também passa a
+  ser recusada aqui: `casar('tribo')` casa três tribos e o código devolvia a primeira da varredura em
+  silêncio.
+- **P81 fechada — o vínculo do operador ganhou leitor.** `vinculos` tinha **zero** ocorrências em
+  `lib/`, `mcp/`, `hooks/` e `config/`: `daily-ingest`, `discovery-intake` e `tasks-sync` escreviam em
+  `operador/_cerebro/vinculos/{coletivo}/estado.md` e nada jamais leu. A **ADR-14** (D131, 18/08) já
+  tinha decidido que esse registro vale **antes** da carta de navegação do coletivo — faltava a
+  implementação, parada desde então. O `resolver` passa a entregar o recorte junto, deduplicado por
+  sessão; markdown segue sendo a casa, o MCP passa a ser o carteiro. Tool nova `estado_operador` para
+  quem precisa do vínculo sem resolver o coletivo.
+- **2.180 tokens por chamada de `resolver`, sem leitor do outro lado.** `carta.inline` e `carta.corpo`
+  são o mesmo arquivo (o segundo sem frontmatter e sem `## Alcance`) e sempre viajaram juntos no
+  `structuredContent`; `render.mjs` e `metricas.mjs` leem `corpo ?? inline` e rodam **dentro** do
+  servidor, antes da serialização. A carta de **processo** escapava inteira do dedup nos dois campos —
+  o segundo sub-vault que declarasse `sdd` pagava a carta de novo, que é a escala linear que a herança
+  existe para eliminar. Medido contra o vault da Tribo Impulsa: **1ª entrega 41% menor, 2ª 85% menor**,
+  com a carta íntegra na primeira (a ADR-6 nunca pediu economia na primeira entrega).
+- **`nao-encontrado` deixa de devolver o catálogo.** Eram ~155 conceitos, ~900 tok, para dizer "não
+  achei". Passa a devolver os 12 mais próximos e o total.
+- **`tests/spike-ponteiro-escopado.mjs`** — 41 checagens, uma por situação da simulação da ADR-22.
+  Suíte existente (11 spikes) verde, sem regressão.
+
 ## 0.27.0 — 2026-09-02
 
 **A varredura de liberação: nove bloqueantes que a padronização da topologia criou, e um defeito de

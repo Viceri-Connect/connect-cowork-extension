@@ -21,6 +21,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { mount, ensureDir, listMounts } from './mount.mjs';
 import { lerIdentidade, montarL1, montarL1Pessoal, lerProtocoloMecanismo } from './matriz.mjs';
+import { montarChave } from './ponteiro.mjs';
 // Fonte unica de CONNECT_HOME e da escrita do config (nao reimplementar aqui:
 // duas resolucoes independentes do mesmo cfgPath divergem com o tempo).
 import { gravarChaveLocal, defaultConnectHome, caminhoConfig, lerConfigBruta, gravarConfigBruta, migrarHomeLegado } from './config-local.mjs';
@@ -70,6 +71,12 @@ export function resolveConfig(override = {}) {
     // REPOSITORIO DE CODIGO (P64). Repo nunca e montado como junction (ver
     // lib/repos.mjs); o primitivo devolve o caminho real da maquina.
     repos: { ...(fileCfg.repos || {}), ...(override.repos || {}) },
+    // Raiz do perfil do operador. Derivada do home (nunca configuravel a parte —
+    // duas fontes para o mesmo caminho e o defeito que a migracao de home resolveu).
+    // Exposta aqui porque o `resolver` passou a ler o vinculo operador x coletivo
+    // (ADR-22 item 8 / P81) e nao tem outro jeito de alcancar o perfil sem
+    // reimplementar a derivacao — que e como duas fontes nascem.
+    perfilOperador: path.join(home, 'operador'),
     _configPath: fs.existsSync(cfgPath) ? cfgPath : null,
   };
 }
@@ -309,13 +316,18 @@ export function gravarConfig({ home, vaultMatriz, cerebroPessoal } = {}) {
 //   2. fabrica — ao materializar um sub-vault do zero, ja sabe o path que
 //      acabou de criar e se auto-registra (nunca precisa perguntar de novo).
 // ---------------------------------------------------------------------------
-export function registrarSubVaultLocal({ home, conceito, caminho } = {}) {
+export function registrarSubVaultLocal({ home, conceito, caminho, coletivo = null, escopo = null } = {}) {
   if (!conceito) return { status: 'erro', motivo: 'conceito ausente' };
   // Chave SEMPRE normalizada: o `resolver` procura por `entry.conceito`, que e
   // sempre lowercase. Gravar a chave crua (`Alpha-Tribo`) fazia o resolver devolver
   // 'local-nao-configurado' para sempre — loop infinito de handshake, o operador
   // informando o diretorio de novo a cada sessao (achado na revisao da 0.12.0).
-  const chave = String(conceito).toLowerCase().trim();
+  //
+  // Com `coletivo` (ADR-22 item 1) a chave nasce escopada — e o que permite dois
+  // clientes declararem um `delivery-hub` cada sem colidir. Sem ele, chave legada.
+  const chave = coletivo
+    ? montarChave({ coletivo, escopo: escopo ? [escopo] : [], conceito })
+    : String(conceito).toLowerCase().trim();
   const r = gravarChaveLocal({ home, tabela: 'subVaults', chave, caminho });
   // preserva o contrato de retorno anterior (conceito, nao chave/tabela)
   return r.status === 'gravado'

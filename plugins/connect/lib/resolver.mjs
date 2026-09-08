@@ -30,6 +30,33 @@ import { mount } from './mount.mjs';
 import { resolveConfig } from './session.mjs';
 import { montarL1 } from './matriz.mjs';
 import { resolverEntrada } from './navegacao.mjs';
+import { lerTabela, casarPonteiro, vizinhos } from './ponteiro.mjs';
+import { lerVinculo } from './vinculo.mjs';
+
+// ---------------------------------------------------------------------------
+// CLASSE DE ARTEFATO (ADR-22 item 2) — o que o `tipo` do manifesto implica.
+//
+// O produto tinha duas gramaticas para "onde isso mora nesta maquina": sub-vault
+// (aqui) e repo (lib/repos.mjs). O Delivery Hub, que e diretorio de OUTPUT e nao
+// vault de markdown, nao cabia em nenhuma — e cinco skills instaladas mandavam
+// resolve-lo por `resolver_repo`, que devolveria `sem-git`, status que nenhuma
+// delas trata. Instrucao morta em cinco lugares (P149).
+//
+// A classe decide comportamento, nao o tipo em si — tipo e vocabulario do coletivo
+// e o produto nao o conhece. Tipo declarado como diretorio de entrega resolve para
+// a classe `diretorio`: monta, devolve concessao, e NAO cobra carta de navegacao,
+// nem heranca de processo, nem ponto de pouso. E o que impede o payload de
+// sub-vault (~5.958 tok medidos em 08/09) de contaminar uma pasta de entregaveis.
+// ---------------------------------------------------------------------------
+const TIPOS_DIRETORIO = new Set([
+  'diretorio-entrega',
+  'delivery-hub',
+  'diretorio',
+]);
+
+export function classeDoTipo(tipo) {
+  return TIPOS_DIRETORIO.has(String(tipo || '').toLowerCase().trim()) ? 'diretorio' : 'vault';
+}
 
 // ---------------------------------------------------------------------------
 // Helpers de leitura / parse (zero-dep).
@@ -161,24 +188,69 @@ function walkMd(root, maxDepth = 4) {
 // Fuzzy-match (gatilho/substring) so faz sentido entre quem TEM acervo pra
 // montar — e' literalmente o unico caso em que resolver tem o que fazer.
 // ---------------------------------------------------------------------------
+// Duas mudancas da ADR-22 (itens 5 e 6), e elas se sustentam uma na outra:
+//
+//   (6) o casamento passa a ser BIDIRECIONAL. Antes so se testava
+//       `conceito.includes(termo)` — logo termo MAIS ESPECIFICO que a chave nunca
+//       casava. Medido em 08/09, em sessao real: `resolver('tribo-impulsa')` deu
+//       `nao-encontrado` com o registro inteiro, e `resolver('impulsa')` resolveu.
+//       O operador pagou duas chamadas por uma resolucao.
+//
+//   (5) por isso a ambiguidade passa a ser RECUSADA aqui tambem. Bidirecional
+//       sozinho pioraria o defeito latente que ja existia: `casar('tribo')` casa
+//       `tribo-grow`, `tribo-mapfre` e `tribo-cds-iu`, e o codigo devolvia o
+//       primeiro da travessia em silencio. Falhar ruidoso e o unico modo aceitavel
+//       — e e a mesma regra que o lado do repo ja aplicava desde a 0.12.0.
+//
+// Conceito exato continua vencendo sozinho: e como a skill chama quando sabe o nome.
 export function casar(registro, termo) {
-  if (!termo) return null;
+  const r = casarMuitos(registro, termo);
+  return r.status === 'unico' ? r.entrada : null;
+}
+
+export function casarMuitos(registro, termo) {
+  if (!termo) return { status: 'nenhum', candidatos: [] };
   const t = String(termo).toLowerCase().trim();
+  const nome = (e) => String(e.conceito).toLowerCase();
 
   // conceito exato: qualquer entidade, mesmo sem acervo (precisa achar pra
   // devolver 'sem-acervo-externo' quando alguem nomeia ela certinho).
-  let hit = registro.find((e) => String(e.conceito).toLowerCase() === t);
-  if (hit) return hit;
+  const exato = registro.find((e) => nome(e) === t);
+  if (exato) return { status: 'unico', entrada: exato };
 
   // gatilho/substring: restrito a quem tem acervo — nunca deixar uma tag
   // topica de doc de conteudo roubar o match de quem de fato monta algo.
   const candidatas = registro.filter((e) => e.externo);
-  hit = candidatas.find((e) => e.gatilhos.some((g) => String(g).toLowerCase() === t));
-  if (hit) return hit;
-  hit = candidatas.find((e) =>
-    String(e.conceito).toLowerCase().includes(t) ||
-    e.gatilhos.some((g) => String(g).toLowerCase().includes(t)));
-  return hit || null;
+
+  const porGatilho = candidatas.filter((e) => e.gatilhos.some((g) => String(g).toLowerCase() === t));
+  if (porGatilho.length === 1) return { status: 'unico', entrada: porGatilho[0] };
+  if (porGatilho.length > 1) return { status: 'ambigua', candidatos: porGatilho };
+
+  if (t.length < 3) return { status: 'nenhum', candidatos: [] };
+
+  // Fuzzy em DEGRAUS, e o degrau importa mais que o casamento em si.
+  //
+  // Medido em 08/09, contra o registro real da matriz: `casarMuitos('tribo-impulsa')`
+  // devolveu `ambigua` entre `impulsa`, `tribo-grow` e `tribo-mapfre` — as tres
+  // declaram o gatilho generico `tribo`, e o lado novo do bidirecional
+  // (`termo.includes(alvo)`) faz "tribo-impulsa".includes("tribo") casar todas.
+  // Sem degrau, o bidirecional teria apenas TROCADO a forma do defeito: de resolver
+  // a entidade errada em silencio para recusar uma resolucao que e obvia.
+  //
+  // Precedencia: casar pelo CONCEITO e mais forte que casar por gatilho, porque o
+  // conceito e a chave que o coletivo declarou como identidade. Ambiguidade so e
+  // recusada DENTRO do mesmo degrau — dois conceitos igualmente proximos e um
+  // empate real; conceito contra tag topica, nao.
+  const casa = (alvo) => alvo.includes(t) || t.includes(alvo);
+  const porNome = candidatas.filter((e) => casa(nome(e)));
+  if (porNome.length === 1) return { status: 'unico', entrada: porNome[0] };
+  if (porNome.length > 1) return { status: 'ambigua', candidatos: porNome };
+
+  const porTag = candidatas.filter((e) => e.gatilhos.some((g) => casa(String(g).toLowerCase())));
+  if (porTag.length === 1) return { status: 'unico', entrada: porTag[0] };
+  if (porTag.length > 1) return { status: 'ambigua', candidatos: porTag };
+
+  return { status: 'nenhum', candidatos: [] };
 }
 
 // ---------------------------------------------------------------------------
@@ -202,19 +274,42 @@ export function casar(registro, termo) {
 //   'erro-mount'            — falha ao criar a junction/symlink
 //   'resolvido'             — montado; usar `entrada` (se houver) pra pousar
 // ---------------------------------------------------------------------------
-export function resolver({ conceito, workspaceDir, alias, replace = false, ...override } = {}) {
+export function resolver({ conceito, workspaceDir, alias, replace = false, coletivo = null, escopo = null, ...override } = {}) {
   const cfg = resolveConfig(override);
   const roots = [cfg.cerebroPessoal, cfg.vaultMatriz].filter(Boolean);
   const registro = lerRegistro(roots);
-  const disponiveis = registro.map((e) => e.conceito);
+  const todos = registro.map((e) => e.conceito);
 
   if (!conceito) {
-    return { status: 'erro', motivo: 'conceito ausente', disponiveis };
+    return { status: 'erro', motivo: 'conceito ausente', disponiveis: vizinhos(todos, '', 20) };
   }
-  const entry = casar(registro, conceito);
-  if (!entry) {
-    return { status: 'nao-encontrado', conceito, disponiveis, avisos: [`nenhum manifesto casa com "${conceito}"`] };
+
+  const m = casarMuitos(registro, conceito);
+
+  if (m.status === 'ambigua') {
+    const candidatos = m.candidatos.map((e) => e.conceito);
+    return {
+      status: 'ambigua',
+      conceito,
+      candidatos,
+      avisos: [`"${conceito}" casa com ${candidatos.length} entidades (${candidatos.join(', ')}) — pergunte ao operador qual, ou chame de novo com o conceito exato. Escolher pela ordem da varredura ja resolveu para a entidade errada antes.`],
+    };
   }
+
+  if (m.status === 'nenhum') {
+    // `disponiveis` era o registro INTEIRO: ~155 conceitos, ~900 tok gastos para
+    // dizer "nao achei" (medido em 08/09). O agente precisa de pista, nao de
+    // catalogo — o catalogo ele pede quando quiser.
+    return {
+      status: 'nao-encontrado',
+      conceito,
+      disponiveis: vizinhos(todos, conceito),
+      totalNoRegistro: todos.length,
+      avisos: [`nenhum manifesto casa com "${conceito}" — os ${Math.min(12, todos.length)} conceitos mais proximos de ${todos.length} no registro estao em \`disponiveis\``],
+    };
+  }
+
+  const entry = m.entrada;
 
   if (!entry.externo) {
     return {
@@ -236,12 +331,33 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, ...ov
     };
   }
 
-  const caminhoLocal = cfg.subVaults?.[entry.conceito];
+  // Path local pela tabela ESCOPADA (ADR-22 item 1). O shim de `lerTabela` mantem
+  // valida toda chave plana ja gravada — config de operador nunca e reescrita
+  // sozinha, e nao ha validador de schema no produto que avisasse antes da sessao.
+  const entradasLocais = lerTabela(cfg.subVaults || {});
+  const local = casarPonteiro(entradasLocais, {
+    termo: entry.conceito,
+    coletivo,
+    escopo,
+    bidirecional: true,
+  });
+
+  if (local.status === 'ambigua') {
+    return {
+      status: 'ambigua-local',
+      conceito: entry.conceito,
+      candidatos: local.candidatos.map((c) => c.chave),
+      avisos: [`"${entry.conceito}" tem ${local.candidatos.length} caminhos registrados nesta maquina (${local.candidatos.map((c) => c.chave).join(', ')}) — informe \`coletivo\` para desempatar. Nunca escolher por ordem da tabela.`],
+    };
+  }
+
+  const caminhoLocal = local.status === 'unico' ? local.entrada.caminho : null;
   if (!caminhoLocal) {
     return {
       status: 'local-nao-configurado',
       conceito: entry.conceito,
-      avisos: [`esta maquina ainda nao sabe onde "${entry.conceito}" mora localmente — pergunte ao operador o diretorio e grave com registrarSubVaultLocal({ conceito: "${entry.conceito}", caminho })`],
+      classe: classeDoTipo(entry.tipo),
+      avisos: [`esta maquina ainda nao sabe onde "${entry.conceito}" mora localmente — pergunte ao operador o diretorio e grave com registrar_subvault_local({ conceito: "${entry.conceito}", coletivo, caminho })`],
     };
   }
   if (!fs.existsSync(caminhoLocal)) {
@@ -257,11 +373,48 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, ...ov
   }
 
   const aliasFinal = alias || entry.alias;
+  const classe = classeDoTipo(entry.tipo);
   let mountReport;
   try {
     mountReport = mount({ workspaceDir, alias: aliasFinal, source: caminhoLocal, replace });
   } catch (e) {
     return { status: 'erro-mount', conceito: entry.conceito, alias: aliasFinal, avisos: [e.message] };
+  }
+
+  // A concessao vale para as duas classes: montar nunca foi alcancar (M2, P97), e
+  // o Delivery Hub e justamente onde isso mais dói — pasta sincronizada por
+  // OneDrive exige concessao propria, e era o atrito manual de toda sessao (P149).
+  const concessao = {
+    necessaria: true,
+    caminho: caminhoLocal,
+    motivo: `sem acesso concedido a esta origem, \`./${aliasFinal}\` monta e nao abre — pedir ao operador, nunca contornar`,
+  };
+
+  // ---------------------------------------------------------------------------
+  // Classe `diretorio` (ADR-22 item 2): sai AQUI, antes de montarL1.
+  //
+  // Um diretorio de output nao tem carta de navegacao, nao herda processo e nao
+  // tem ponto de pouso — cobrar isso dele produziria "lacuna de navegacao" a cada
+  // resolucao, para um acervo que por definicao nunca vai ter carta. E o que faz
+  // esta classe custar ~80 tok em vez dos ~5.958 do sub-vault.
+  // ---------------------------------------------------------------------------
+  if (classe === 'diretorio') {
+    return {
+      status: 'resolvido',
+      classe,
+      conceito: entry.conceito,
+      tipo: entry.tipo,
+      papel: entry.papel,
+      coletivo: local.entrada.coletivo,
+      alias: aliasFinal,
+      origem: caminhoLocal,
+      caminhoRelativo: `./${aliasFinal}`,
+      mount: mountReport,
+      nota: `${entry.nota} — diretorio de OUTPUT do processo, nao vault: nao tem camada 1, nao herda processo, e nao e fonte para outro artefato de saida`,
+      concessao,
+      vinculo: lerVinculo(cfg.perfilOperador || null, local.entrada.coletivo || entry.conceito),
+      avisos: local.desempatadoPor ? [`desempatado pelo coletivo "${local.desempatadoPor}"`] : [],
+    };
   }
 
   // Camada 1 do sub-vault — MESMA forma da matriz (corolario do D97: o interior
@@ -291,17 +444,33 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, ...ov
     ...(entradaResolvida.avisos || []),
   ];
 
+  // Vinculo do operador com este coletivo (ADR-22 item 8, fecha P81).
+  //
+  // A ADR-14 (D131) decidiu em 18/08 que o vinculo operador x coletivo e lido ANTES
+  // da carta de navegacao do coletivo. A implementacao nunca aconteceu: em 08/09,
+  // `vinculos` tinha ZERO ocorrencias em todo o codigo — as skills escreviam e nada
+  // lia. Aqui o mecanismo vira o carteiro; a casa continua sendo markdown no perfil
+  // do operador, sujeito a mesma deduplicacao por sessao dos outros blocos longos.
+  const vinculo = lerVinculo(cfg.perfilOperador || null, local.entrada.coletivo || entry.conceito);
+  if (vinculo.avisos?.length) avisos.push(...vinculo.avisos);
+  if (local.desempatadoPor) avisos.push(`desempatado pelo coletivo "${local.desempatadoPor}"`);
+
   return {
     status: 'resolvido',
+    classe,
     conceito: entry.conceito,
     tipo: entry.tipo,
     papel: entry.papel,
+    coletivo: local.entrada.coletivo,
     alias: aliasFinal,
     origem: caminhoLocal,
     caminhoRelativo: `./${aliasFinal}`,
     entrada: entry.entrada || null,
     entradaResolvida,
     mount: mountReport,
+    // Ordem de leitura da ADR-14: o vinculo vem ANTES da carta. Aparece antes de
+    // `l1` no objeto de proposito — quem le o payload le nesta ordem.
+    vinculo,
     l1,
     nota: entry.nota,
     // M2 (24/08) — montar nao e alcancar. O harness aplica politica de acesso sobre o
@@ -309,11 +478,7 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, ...ov
     // nenhuma das 4 ocorrencias medidas (P97). O mecanismo declara a origem a conceder
     // em vez de deixar o agente descobrir por tentativa — e a alternativa a tentativa
     // e o contorno (D148), que e o que estamos tentando extinguir.
-    concessao: {
-      necessaria: true,
-      caminho: caminhoLocal,
-      motivo: `sem acesso concedido a esta origem, \`./${aliasFinal}\` monta e nao abre — pedir ao operador, nunca contornar`,
-    },
+    concessao,
     avisos,
   };
 }
