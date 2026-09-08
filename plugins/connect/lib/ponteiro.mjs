@@ -3,10 +3,10 @@
 //
 // Antes desta ADR o produto tinha duas: `subVaults` (mapa plano conceito->path,
 // lido por resolver.mjs) e `repos` (mapa plano conceito->path, lido por repos.mjs).
-// As duas sem eixo de coletivo — logo dois clientes com repo homonimo colidiam por
-// construcao, e o operador compensava a mao (o `⚠️ nao confundir com ...` do
-// tabela de repos legada de um operador — com `⚠️ nao confundir com X` escrito
-// a mao na coluna de notas — e o recibo disso).
+// As duas sem eixo de coletivo — logo dois coletivos com repo homonimo colidiam por
+// construcao, e o operador compensava a mao: a tabela de repos legada de um operador
+// trazia `⚠️ nao confundir com <o outro de nome parecido>` escrito na coluna de
+// notas, que e o recibo do defeito.
 //
 // O que este modulo e:
 //   - a CHAVE escopada `{coletivo}[/{escopo}]/{conceito}` e sua normalizacao;
@@ -98,7 +98,7 @@ export function lerTabela(tabela = {}) {
 //
 // Retorno: { status: 'unico'|'ambigua'|'nenhum', entrada?, candidatos?, desempatadoPor? }
 // ---------------------------------------------------------------------------
-export function casarPonteiro(entradas, { termo, coletivo = null, escopo = null, bidirecional = true } = {}) {
+export function casarPonteiro(entradas, { termo, coletivo = null, escopo = null, bidirecional = true, estrito = false } = {}) {
   const t = norm(termo);
   if (!t) return { status: 'nenhum', candidatos: [] };
 
@@ -135,8 +135,20 @@ export function casarPonteiro(entradas, { termo, coletivo = null, escopo = null,
   if (porConceito.length === 1) return { status: 'unico', entrada: porConceito[0], desempatadoPor };
   if (porConceito.length > 1) return { status: 'ambigua', candidatos: porConceito, desempatadoPor };
 
-  // (4) fuzzy
-  if (t.length >= PISO_FUZZY) {
+  // (4) fuzzy — SO quando o termo veio de humano/skill.
+  //
+  // `estrito` desliga esta etapa, e existe por um defeito medido em 08/09, no primeiro
+  // uso real: resolvendo o Delivery Hub de um coletivo, o termo era o conceito CANONICO
+  // ja casado no registro de manifestos (`{coletivo}-delivery-hub`), e o fuzzy
+  // bidirecional casou a entrada do VAULT daquele coletivo — porque o nome do coletivo e
+  // substring do conceito. O mecanismo devolveu `resolvido` apontando para o acervo de
+  // conhecimento no lugar do diretorio de entrega, em silencio.
+  //
+  // A licao e a mesma da assimetria de repo, um andar acima: fuzzy serve para adivinhar
+  // o que o humano quis dizer. Quando a chave JA e canonica, adivinhar so pode errar —
+  // e a resposta certa para "nao esta na tabela" e `local-nao-configurado`, que faz o
+  // mecanismo PERGUNTAR, nunca um vizinho parecido.
+  if (!estrito && t.length >= PISO_FUZZY) {
     const casa = (alvo) => (bidirecional ? (alvo.includes(t) || t.includes(alvo)) : alvo.includes(t));
     const fuzzy = universo.filter((e) => casa(e.conceito) || casa(e.chave));
     if (fuzzy.length === 1) return { status: 'unico', entrada: fuzzy[0], desempatadoPor };

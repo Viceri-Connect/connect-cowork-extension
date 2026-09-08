@@ -100,6 +100,39 @@ t('sit3: termo generico intra-coletivo => ambigua, nao chute', () =>
 t('piso de 3 caracteres respeitado', () =>
   casarPonteiro(E, { termo: 'br' }).status === 'nenhum');
 
+console.log('\n[modo estrito — regressao do 1o uso real, 08/09]');
+// Resolvendo o Delivery Hub de um coletivo, o termo que chega na tabela local e o
+// conceito CANONICO ja casado no registro (`{coletivo}-delivery-hub`). Com fuzzy
+// ligado, ele casava a entrada do VAULT daquele coletivo — porque o nome do coletivo
+// e substring do conceito — e o mecanismo devolvia `resolvido` apontando para o
+// acervo de conhecimento no lugar do diretorio de entrega, em silencio.
+//
+// O cenario exato importa: o defeito NAO aparece com o Hub ja registrado (ali o passo
+// de conceito exato resolve antes do fuzzy). Ele aparece no PRIMEIRO uso, quando o Hub
+// ainda nao tem caminho nesta maquina — que e justamente quando o mecanismo deveria
+// PERGUNTAR. Em vez de `local-nao-configurado`, o fuzzy entregava o vizinho.
+const SO_O_VAULT = lerTabela({ 'cliente-alfa': 'C:/vault-do-cliente-alfa' });
+t('sem estrito, Hub nao registrado casava o VAULT do coletivo — o defeito de 08/09', () => {
+  const r = casarPonteiro(SO_O_VAULT, { termo: 'cliente-alfa-delivery-hub', coletivo: 'cliente-alfa' });
+  return r.status === 'unico' && r.entrada.caminho === 'C:/vault-do-cliente-alfa';
+});
+t('ESTRITO: o mesmo caso vira `nenhum` -> local-nao-configurado -> o mecanismo PERGUNTA', () => {
+  const r = casarPonteiro(SO_O_VAULT, { termo: 'cliente-alfa-delivery-hub', coletivo: 'cliente-alfa', estrito: true });
+  return r.status === 'nenhum';
+});
+const E_HUB = lerTabela({
+  'cliente-alfa': 'C:/vault-do-cliente-alfa',
+  'cliente-alfa/cliente-alfa-delivery-hub': 'C:/HUB-alfa',
+});
+t('ESTRITO: com o Hub registrado, resolve o Hub e nao o vault', () => {
+  const r = casarPonteiro(E_HUB, { termo: 'cliente-alfa-delivery-hub', coletivo: 'cliente-alfa', estrito: true });
+  return r.status === 'unico' && r.entrada.caminho === 'C:/HUB-alfa';
+});
+t('ESTRITO nao quebra o vault do mesmo coletivo', () => {
+  const r = casarPonteiro(E_HUB, { termo: 'cliente-alfa', coletivo: 'cliente-alfa', estrito: true });
+  return r.status === 'unico' && r.entrada.caminho === 'C:/vault-do-cliente-alfa';
+});
+
 console.log('\n[casar de sub-vault — ADR-22 item 5]');
 const REG = [
   { conceito: 'tribo-alfa', externo: true, gatilhos: [] },
@@ -135,6 +168,18 @@ t('mas empate real DENTRO do degrau de gatilho segue recusado', () =>
   casarMuitos(REG_TAG, 'tribo').status === 'ambigua');
 t('conceito exato ainda vence tudo', () =>
   casarMuitos(REG_TAG, 'tribo-alfa').entrada.conceito === 'tribo-alfa');
+
+console.log('\n[desempate por coletivo no REGISTRO de manifestos]');
+const REG_HUB = [
+  { conceito: 'alfa-delivery-hub', escopo: 'cliente-alfa', externo: true, gatilhos: [] },
+  { conceito: 'beta-delivery-hub', escopo: 'cliente-beta', externo: true, gatilhos: [] },
+];
+t('dois coletivos com Hub => ambigua sem coletivo', () =>
+  casarMuitos(REG_HUB, 'delivery-hub').status === 'ambigua');
+t('com coletivo, o `escopo` do manifesto desempata', () =>
+  casarMuitos(REG_HUB, 'delivery-hub', 'cliente-beta').entrada?.conceito === 'beta-delivery-hub');
+t('coletivo sem candidato nao zera o universo (nao inventa vazio)', () =>
+  casarMuitos(REG_HUB, 'delivery-hub', 'cliente-gama').status === 'ambigua');
 
 console.log('\n[classe de artefato — ADR-22 item 2]');
 t('classe declarada `diretorio` e honrada', () => classeDeclarada('diretorio') === 'diretorio');

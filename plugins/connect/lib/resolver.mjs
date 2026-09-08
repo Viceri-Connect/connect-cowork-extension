@@ -121,6 +121,7 @@ export function parseManifesto(fmText) {
     criadoPor: top['criado-por'] || null,
     criadoEm: top['criado-em'] || null,
     entrada: top.entrada || null,
+    escopo: top.escopo || null, // coletivo dono, no vocabulario que o acervo ja usa
     conceito: top.conceito || top.alias || null, // default (slug) resolvido no walk
     alias: top.alias || null,
     gatilhos,
@@ -163,6 +164,7 @@ export function lerRegistro(roots = []) {
         tipo: man.tipo,
         papel: man.papel,
         classe: man.classe,
+        escopo: man.escopo,
         nota: `${man.tipo}${man.papel ? '/' + man.papel : ''} — manifesto derivado`,
         _fonte: root,
       });
@@ -224,10 +226,21 @@ export function casar(registro, termo) {
   return r.status === 'unico' ? r.entrada : null;
 }
 
-export function casarMuitos(registro, termo) {
+export function casarMuitos(registro, termo, coletivo = null) {
   if (!termo) return { status: 'nenhum', candidatos: [] };
   const t = String(termo).toLowerCase().trim();
   const nome = (e) => String(e.conceito).toLowerCase();
+
+  // Desempate por coletivo TAMBEM no registro de manifestos, nao so na tabela local
+  // (defeito irmao, medido no mesmo teste de 08/09): sem isto, dois coletivos com
+  // Delivery Hub declarado devolveriam `ambigua` e o parametro `coletivo` da skill
+  // nao teria como desfazer o empate. A chave e o campo `escopo` do manifesto, que
+  // o acervo ja declara ha tempo — nao inventamos campo novo.
+  if (coletivo) {
+    const col = String(coletivo).toLowerCase().trim();
+    const doColetivo = registro.filter((e) => String(e.escopo || '').toLowerCase() === col);
+    if (doColetivo.length) registro = doColetivo;
+  }
 
   // conceito exato: qualquer entidade, mesmo sem acervo (precisa achar pra
   // devolver 'sem-acervo-externo' quando alguem nomeia ela certinho).
@@ -301,7 +314,7 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, colet
     return { status: 'erro', motivo: 'conceito ausente', disponiveis: vizinhos(todos, '', 20) };
   }
 
-  const m = casarMuitos(registro, conceito);
+  const m = casarMuitos(registro, conceito, coletivo);
 
   if (m.status === 'ambigua') {
     const candidatos = m.candidatos.map((e) => e.conceito);
@@ -354,9 +367,12 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, colet
   const entradasLocais = lerTabela(cfg.subVaults || {});
   const local = casarPonteiro(entradasLocais, {
     termo: entry.conceito,
-    coletivo,
+    coletivo: coletivo || entry.escopo,
     escopo,
-    bidirecional: true,
+    // ESTRITO: `entry.conceito` ja e a chave canonica, casada no registro de
+    // manifestos. Adivinhar aqui so pode errar — e errou, na primeira resolucao real
+    // de um Delivery Hub (08/09).
+    estrito: true,
   });
 
   if (local.status === 'ambigua') {

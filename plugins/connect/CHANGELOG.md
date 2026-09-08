@@ -1,5 +1,27 @@
 # Changelog — connect
 
+## 0.29.1 — 2026-09-08
+
+**O primeiro uso real do Delivery Hub achou dois defeitos que 52 checagens sintéticas não acharam.**
+Resolvendo o Hub de um coletivo de verdade, pela primeira vez:
+
+- **O mecanismo devolveu `resolvido` apontando para o VAULT do coletivo, não para o Hub — em
+  silêncio.** Causa: na etapa de caminho local, o termo já é o conceito **canônico** casado no
+  registro de manifestos (`{coletivo}-delivery-hub`), e o fuzzy bidirecional casava a entrada do
+  vault porque o nome do coletivo é substring do conceito. O cenário exato importa: o defeito só
+  aparece no **primeiro** uso, com o Hub ainda sem caminho nesta máquina — que é precisamente quando
+  o mecanismo deveria **perguntar**. Correção: `estrito` na resolução de caminho. Fuzzy serve para
+  adivinhar o que o humano quis dizer; quando a chave já é canônica, adivinhar só pode errar, e a
+  resposta certa para "não está na tabela" é `local-nao-configurado`.
+- **Defeito irmão: o desempate por coletivo não existia no registro de manifestos**, só na tabela
+  local. Dois coletivos com Hub declarado devolveriam `ambigua` e o parâmetro `coletivo` da skill não
+  teria como desfazer o empate. Agora `casarMuitos` filtra pelo campo `escopo` do manifesto — campo
+  que o acervo já declarava, sem inventar nada novo.
+- Ambos viraram regressão no spike (52 checagens). Suíte de 15 spikes verde.
+
+> A lição é a mesma da assimetria de repositório, um andar acima — e é a segunda vez no mesmo dia que
+> o casamento frouxo entrega o vizinho errado em vez de admitir que não sabe.
+
 ## 0.29.0 — 2026-09-08
 
 **A classe do artefato passa a ser DECLARADA, não adivinhada — e o Delivery Hub vira conceito do
