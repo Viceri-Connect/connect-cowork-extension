@@ -37,7 +37,7 @@ const norm = (s) => String(s || '').toLowerCase().trim();
 // 'local-nao-configurado'; (b) apos um clone que o proprio agente conduziu.
 //
 // `coletivo` (ADR-22 item 1): quando informado, a chave nasce escopada
-// (`mapfre/br-business-api`). Sem ele a chave e legada (so o conceito) e continua
+// (`cliente-alfa/pagamentos-api`). Sem ele a chave e legada (so o conceito) e continua
 // valendo — nunca se reescreve config do operador sem que ele peca.
 // ---------------------------------------------------------------------------
 export function registrarRepoLocal({ home, conceito, caminho, coletivo = null, escopo = null } = {}) {
@@ -83,7 +83,7 @@ export function resolverRepo({ conceito, coletivo = null, escopo = null, ...over
   //
   // O que a ADR-22 mudou aqui: o EIXO. Antes a tabela era plana, entao dois
   // clientes com repo homonimo colidiam por construcao; agora `coletivo` filtra
-  // duro, e a recusa vem qualificada (`mapfre/br-business-api`), nao com dois
+  // duro, e a recusa vem qualificada (`cliente-alfa/pagamentos-api`), nao com dois
   // nomes iguais que nao ajudam ninguem a escolher.
   const m = casarPonteiro(entradas, { termo: chave, coletivo, escopo, bidirecional: false });
 

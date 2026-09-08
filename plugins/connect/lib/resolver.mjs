@@ -34,28 +34,40 @@ import { lerTabela, casarPonteiro, vizinhos } from './ponteiro.mjs';
 import { lerVinculo } from './vinculo.mjs';
 
 // ---------------------------------------------------------------------------
-// CLASSE DE ARTEFATO (ADR-22 item 2) — o que o `tipo` do manifesto implica.
+// CLASSE DE ARTEFATO (ADR-22 item 2, emendado em 08/09) — declarada, nunca inferida.
 //
 // O produto tinha duas gramaticas para "onde isso mora nesta maquina": sub-vault
-// (aqui) e repo (lib/repos.mjs). O Delivery Hub, que e diretorio de OUTPUT e nao
-// vault de markdown, nao cabia em nenhuma — e cinco skills instaladas mandavam
-// resolve-lo por `resolver_repo`, que devolveria `sem-git`, status que nenhuma
-// delas trata. Instrucao morta em cinco lugares (P149).
+// (aqui) e repo (lib/repos.mjs). Diretorio de OUTPUT do processo — o Delivery Hub —
+// nao cabia em nenhuma, e cinco skills instaladas mandavam resolve-lo por
+// `resolver_repo`, que devolveria `sem-git`, status que nenhuma delas trata:
+// instrucao morta em cinco lugares (P149).
 //
-// A classe decide comportamento, nao o tipo em si — tipo e vocabulario do coletivo
-// e o produto nao o conhece. Tipo declarado como diretorio de entrega resolve para
-// a classe `diretorio`: monta, devolve concessao, e NAO cobra carta de navegacao,
-// nem heranca de processo, nem ponto de pouso. E o que impede o payload de
-// sub-vault (~5.958 tok medidos em 08/09) de contaminar uma pasta de entregaveis.
+// ⚠️ A PRIMEIRA implementacao disto era uma lista de `tipo` conhecidos aqui dentro
+// (`diretorio-entrega`, `delivery-hub`, ...). Estava errada, e o proprio
+// `contrato-manifesto.md` §2 ja dizia por que: sobre `tipo`, *"a empresa declara;
+// o produto NAO prescreve o conjunto"*. Uma lista de tipos aqui e o produto
+// conhecendo vocabulario de coletivo — e teria obrigado cada coletivo novo a
+// batizar o Hub exatamente como o produto adivinhou.
+//
+// A separacao correta tem duas palavras porque sao duas coisas:
+//   `tipo`   — o que a entidade E, no vocabulario do coletivo. Ilimitado, e o
+//              produto so o carrega adiante sem interpretar.
+//   `classe` — o que o MECANISMO precisa fazer com ela. Conjunto fechado do
+//              produto: `vault` (default) ou `diretorio`.
+//
+// `diretorio` monta, devolve concessao, e NAO cobra carta de navegacao, heranca de
+// processo nem ponto de pouso — o que impede o payload de sub-vault (~5.958 tok
+// medidos em 08/09) de contaminar uma pasta de entregaveis, e o que evita anunciar
+// "lacuna de navegacao" para um acervo que por definicao nunca tera carta.
+//
+// Default `vault` e deliberado: manifesto antigo, sem `classe`, continua exatamente
+// como era. Nenhum vault em campo precisa ser tocado para o plugin subir.
 // ---------------------------------------------------------------------------
-const TIPOS_DIRETORIO = new Set([
-  'diretorio-entrega',
-  'delivery-hub',
-  'diretorio',
-]);
+const CLASSES = new Set(['vault', 'diretorio']);
 
-export function classeDoTipo(tipo) {
-  return TIPOS_DIRETORIO.has(String(tipo || '').toLowerCase().trim()) ? 'diretorio' : 'vault';
+export function classeDeclarada(classe) {
+  const c = String(classe || '').toLowerCase().trim();
+  return CLASSES.has(c) ? c : 'vault';
 }
 
 // ---------------------------------------------------------------------------
@@ -102,6 +114,9 @@ export function parseManifesto(fmText) {
   return {
     tipo: top.tipo,
     papel: top.papel || null,
+    // Vocabulario do MECANISMO (conjunto fechado), ao lado do `tipo`, que e do
+    // coletivo (ilimitado). Ausente = `vault`, o comportamento de sempre.
+    classe: top.classe || null,
     externo: ehVerdadeiro(top.externo),
     criadoPor: top['criado-por'] || null,
     criadoEm: top['criado-em'] || null,
@@ -147,6 +162,7 @@ export function lerRegistro(roots = []) {
         gatilhos,
         tipo: man.tipo,
         papel: man.papel,
+        classe: man.classe,
         nota: `${man.tipo}${man.papel ? '/' + man.papel : ''} — manifesto derivado`,
         _fonte: root,
       });
@@ -198,7 +214,7 @@ function walkMd(root, maxDepth = 4) {
 //
 //   (5) por isso a ambiguidade passa a ser RECUSADA aqui tambem. Bidirecional
 //       sozinho pioraria o defeito latente que ja existia: `casar('tribo')` casa
-//       `tribo-grow`, `tribo-mapfre` e `tribo-cds-iu`, e o codigo devolvia o
+//       tres entidades cujo conceito comeca por `tribo-`, e o codigo devolvia o
 //       primeiro da travessia em silencio. Falhar ruidoso e o unico modo aceitavel
 //       — e e a mesma regra que o lado do repo ja aplicava desde a 0.12.0.
 //
@@ -231,7 +247,8 @@ export function casarMuitos(registro, termo) {
   // Fuzzy em DEGRAUS, e o degrau importa mais que o casamento em si.
   //
   // Medido em 08/09, contra o registro real da matriz: `casarMuitos('tribo-impulsa')`
-  // devolveu `ambigua` entre `impulsa`, `tribo-grow` e `tribo-mapfre` — as tres
+  // devolveu `ambigua` entre uma entidade de conceito proprio e duas de conceito
+  // prefixado por `tribo-` — as tres
   // declaram o gatilho generico `tribo`, e o lado novo do bidirecional
   // (`termo.includes(alvo)`) faz "tribo-impulsa".includes("tribo") casar todas.
   // Sem degrau, o bidirecional teria apenas TROCADO a forma do defeito: de resolver
@@ -356,7 +373,7 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, colet
     return {
       status: 'local-nao-configurado',
       conceito: entry.conceito,
-      classe: classeDoTipo(entry.tipo),
+      classe: classeDeclarada(entry.classe),
       avisos: [`esta maquina ainda nao sabe onde "${entry.conceito}" mora localmente — pergunte ao operador o diretorio e grave com registrar_subvault_local({ conceito: "${entry.conceito}", coletivo, caminho })`],
     };
   }
@@ -373,7 +390,7 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, colet
   }
 
   const aliasFinal = alias || entry.alias;
-  const classe = classeDoTipo(entry.tipo);
+  const classe = classeDeclarada(entry.classe);
   let mountReport;
   try {
     mountReport = mount({ workspaceDir, alias: aliasFinal, source: caminhoLocal, replace });

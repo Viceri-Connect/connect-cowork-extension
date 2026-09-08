@@ -5,7 +5,8 @@
 // lido por resolver.mjs) e `repos` (mapa plano conceito->path, lido por repos.mjs).
 // As duas sem eixo de coletivo — logo dois clientes com repo homonimo colidiam por
 // construcao, e o operador compensava a mao (o `⚠️ nao confundir com ...` do
-// `repos.md` legado da MAPFRE e o recibo disso).
+// tabela de repos legada de um operador — com `⚠️ nao confundir com X` escrito
+// a mao na coluna de notas — e o recibo disso).
 //
 // O que este modulo e:
 //   - a CHAVE escopada `{coletivo}[/{escopo}]/{conceito}` e sua normalizacao;
@@ -28,7 +29,7 @@ const norm = (s) => String(s || '').toLowerCase().trim();
 const PISO_FUZZY = 3;
 
 // ---------------------------------------------------------------------------
-// partirChave — `mapfre/novos-negocios/delivery-hub` -> as tres partes.
+// partirChave — `cliente-alfa/squad-um/delivery-hub` -> as tres partes.
 // O ultimo segmento e SEMPRE o conceito; o primeiro, quando ha mais de um, e o
 // coletivo; o que sobra no meio e escopo (squad, area) e pode ser vazio.
 // Chave sem `/` e formato legado: conceito sem coletivo declarado.
@@ -147,8 +148,8 @@ export function casarPonteiro(entradas, { termo, coletivo = null, escopo = null,
 
 // ---------------------------------------------------------------------------
 // resumirCandidatos — o que vai no aviso de `ambigua`.
-// Qualificado por coletivo de proposito: `br-business-api, br-business-api` nao
-// ajuda ninguem a escolher; `mapfre/br-business-api, yamaha/br-business-api` ajuda.
+// Qualificado por coletivo de proposito: `pagamentos-api, pagamentos-api` nao
+// ajuda ninguem a escolher; `cliente-alfa/pagamentos-api, cliente-beta/pagamentos-api` ajuda.
 // ---------------------------------------------------------------------------
 export const resumirCandidatos = (cands = []) => cands.map((c) => c.chave);
 

@@ -117,8 +117,8 @@ const TOOLS = [
         conceito: { type: 'string', description: 'Conceito ou gatilho a resolver (ex.: "gestao-financeira", "delivery-hub").' },
         workspace_dir: { type: 'string', description: 'Diretorio de trabalho da sessao (estado_sessao.workspace).' },
         alias: { type: 'string', description: 'Sobrescreve o alias declarado no registro (opcional).' },
-        coletivo: { type: 'string', description: 'Desempate por coletivo (ex.: "mapfre"). Informe quando o conceito puder existir em mais de um coletivo — o mecanismo nunca adivinha por estado da sessao.' },
-        escopo: { type: 'string', description: 'Estreita mais o desempate (ex.: squad "novos-negocios"). Opcional.' },
+        coletivo: { type: 'string', description: 'Desempate por coletivo (o cliente, tribo ou area dona). Informe quando o conceito puder existir em mais de um coletivo — o mecanismo nunca adivinha por estado da sessao.' },
+        escopo: { type: 'string', description: 'Estreita mais o desempate (a squad ou area dentro do coletivo). Opcional.' },
         replace: { type: 'boolean', description: 'Se true, substitui um alias existente que aponte para outro destino.', default: false },
       },
       required: ['conceito', 'workspace_dir'],
@@ -138,8 +138,8 @@ const TOOLS = [
       properties: {
         conceito: { type: 'string', description: 'Conceito devolvido pelo resolver (ver status local-nao-configurado).' },
         caminho: { type: 'string', description: 'Diretorio absoluto, nesta maquina, onde o acervo mora.' },
-        coletivo: { type: 'string', description: 'Coletivo dono (ex.: "mapfre"). Escopa a chave — informe sempre que souber.' },
-        escopo: { type: 'string', description: 'Escopo dentro do coletivo (ex.: squad "novos-negocios"). Use quando o mesmo conceito varia por squad, como o Delivery Hub.' },
+        coletivo: { type: 'string', description: 'Coletivo dono (o cliente, tribo ou area). Escopa a chave — informe sempre que souber.' },
+        escopo: { type: 'string', description: 'Escopo dentro do coletivo (squad ou area). Use quando o mesmo conceito varia por squad, como o Delivery Hub.' },
         home: { type: 'string', description: 'Pasta fixa do Connect. Opcional; default por SO.' },
       },
       required: ['conceito', 'caminho'],
@@ -186,7 +186,7 @@ const TOOLS = [
       type: 'object',
       properties: {
         conceito: { type: 'string', description: 'Nome/conceito do repo (ex.: "connect-site", "connect").' },
-        coletivo: { type: 'string', description: 'Desempate por coletivo (ex.: "mapfre"). Informe quando dois clientes puderem ter repo de mesmo nome.' },
+        coletivo: { type: 'string', description: 'Desempate por coletivo (o cliente, tribo ou area dona). Informe quando dois coletivos puderem ter repo de mesmo nome.' },
         escopo: { type: 'string', description: 'Estreita mais o desempate (squad, produto). Opcional.' },
       },
       required: ['conceito'],
@@ -204,7 +204,7 @@ const TOOLS = [
       properties: {
         conceito: { type: 'string', description: 'Nome/conceito do repo (chave estavel).' },
         caminho: { type: 'string', description: 'Diretorio absoluto da raiz do repo nesta maquina.' },
-        coletivo: { type: 'string', description: 'Coletivo dono do repo (ex.: "mapfre"). Informe SEMPRE que souber: sem escopo, dois clientes com repo homonimo colidem.' },
+        coletivo: { type: 'string', description: 'Coletivo dono do repo. Informe SEMPRE que souber: sem escopo, dois coletivos com repo homonimo colidem.' },
         escopo: { type: 'string', description: 'Escopo dentro do coletivo (produto, squad). Opcional.' },
         home: { type: 'string', description: 'Pasta fixa do Connect. Opcional; default por SO.' },
       },
@@ -231,7 +231,7 @@ const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        coletivo: { type: 'string', description: 'Coletivo (ex.: "mapfre"). Omita para listar todos os vinculos existentes.' },
+        coletivo: { type: 'string', description: 'Coletivo (cliente, tribo ou area). Omita para listar todos os vinculos existentes.' },
         home: { type: 'string', description: 'Pasta fixa do Connect. Opcional; default por SO.' },
       },
     },

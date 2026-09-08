@@ -53,6 +53,7 @@ relativa (corte de raiz 17/08).
 |---|---|---|
 | `tipo` | **sim** | O que a entidade **é** (`organizacao`, `programa`, `squad`, `cliente`, `produto`, `operador`, …). A empresa declara; o produto não prescreve o conjunto |
 | `papel` | **sim** | Como a entidade **opera** / o que ela hospeda (ex.: `tribo`, `cliente-externo`). Distinto de `tipo`: uma entidade pode ser `tipo: programa` e, ao mesmo tempo, `papel: tribo` |
+| `classe` | não (default `vault`) | O que o **mecanismo** faz com a entidade. Conjunto **fechado, do produto** — ao contrário de `tipo`, que é ilimitado e do coletivo: `vault` (acervo de conhecimento: monta, cobra carta de navegação, herda processo, pousa na `entrada`) ou `diretorio` (diretório de **output** do processo, como um Delivery Hub: monta e entrega a concessão, e **não** cobra carta, herança nem ponto de pouso). São dois campos porque são duas perguntas: *o que isto é* (o coletivo responde) e *o que fazer com isto* (o produto precisa saber). Inferir a classe a partir do nome do `tipo` obrigaria todo coletivo a batizar a entidade como o produto adivinhou — foi a primeira implementação da ADR-22 e foi corrigida no mesmo dia |
 | `governanca` | **sim** | Quem governa a entidade. É o que transforma a falha de mount de beco sem saída em ação; sem ele, o modelo promete transparência e entrega erro |
 | `conceito` / `alias` | não (default: slug do arquivo) | Chave **estável** de casamento — já existia no contrato anterior. Reaproveitada: também indexa a tabela local `subVaults` (por-operador, por-máquina). Declare quando o slug do arquivo não for estável o bastante |
 | `externo` | não (default `false`) | Booleano: esta entidade tem acervo **fora** da matriz? `false`/omitido = conteúdo mora inline na própria matriz, nada a montar |
@@ -167,4 +168,22 @@ depende-de:
   - alvo: tribo/tribo-a
     relacao: atendido-por
   # um cliente atendido por 2 tribos declara 2 arestas → grafo com dois pais
+```
+
+```yaml
+# organizacao/clientes/cliente-c/delivery-hub.md  — diretorio de OUTPUT, nao vault
+---
+tipo: delivery-hub          # vocabulario do COLETIVO — o produto nao interpreta
+classe: diretorio           # vocabulario do MECANISMO — conjunto fechado
+papel: entregaveis
+governanca: cliente-c
+conceito: delivery-hub      # o mesmo conceito em N coletivos: a chave local e escopada
+externo: true               # o acervo vive fora da matriz (pasta sincronizada)
+criado-por: fulano
+criado-em: 2026-09-08
+# SEM `entrada`: diretorio de output nao tem nota-hub nem carta de navegacao, e
+# cobrar isso dele produziria "lacuna de navegacao" a cada resolucao, para sempre.
+# O que HA dentro dele (a convencao de pastas do processo) e delta do coletivo e
+# vive na carta de processo / no vault do cliente — nunca aqui, nunca no produto.
+---
 ```

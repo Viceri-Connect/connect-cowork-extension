@@ -1,5 +1,34 @@
 # Changelog — connect
 
+## 0.29.0 — 2026-09-08
+
+**A classe do artefato passa a ser DECLARADA, não adivinhada — e o Delivery Hub vira conceito do
+processo.** Emendas à `ADR-22`, no mesmo dia, disparadas por duas observações do operador.
+
+- **O produto não pode conhecer vocabulário de coletivo — e o repositório é público.** A 0.28.0
+  decidia a classe do artefato por uma lista de `tipo` dentro do próprio `resolver`
+  (`diretorio-entrega`, `delivery-hub`, …). Duas coisas erradas nisso: o `contrato-manifesto.md` §2
+  já dizia que sobre `tipo` *"a empresa declara; o produto não prescreve o conjunto"*, e a lista
+  obrigaria todo coletivo novo a batizar o Hub exatamente como o produto adivinhou. Agora são **dois
+  campos, porque são duas perguntas**: `tipo` (o que a entidade é — ilimitado, do coletivo) e
+  **`classe`** (o que o mecanismo faz com ela — conjunto fechado: `vault` | `diretorio`). Ausência de
+  `classe` resolve para `vault`: **nenhum manifesto em campo precisa ser tocado**.
+- **Delivery Hub declarado na carta de processo `sdd`.** Ele não é conceito do produto nem de um
+  cliente: é do **processo**. A carta passa a descrever o que é (diretório de saída, não vault, não
+  fonte para nada), que varia por coletivo e pode variar por squad, onde mora cada metade (URL
+  canônica no coletivo, caminho local só na config), e **o que o operador precisa saber no momento em
+  que o mecanismo pergunta o caminho** — a raiz da pasta do projeto, a cópia sincronizada, e o que
+  fazer quando ele não tem acesso a ela. A **convenção de pastas numeradas é delta do coletivo**: o
+  processo garante que existe *um* lugar de saída resolvível; a estrutura interna cada coletivo
+  declara na própria carta. Fecha o sub-item **(b) da P149**, que a 0.28.0 deixara como herdeiro em
+  aberto, e dá à `cnct-fabrica` o que cobrar ao provisionar um contexto SDD novo.
+- **Higiene de repositório público.** Nomes de cliente reais foram removidos do código, das
+  descrições de tool (a superfície mais pública do produto) e do spike, substituídos por placeholders
+  obviamente fictícios (`cliente-alfa`, `pagamentos-api`). Exemplo com nome de cliente não é só
+  vazamento: é uma afirmação errada sobre o que o mecanismo conhece.
+- `tests/spike-ponteiro-escopado.mjs` cobre a regressão: **nome de tipo do coletivo não vira classe
+  por adivinhação**. 45 checagens, suíte de 15 spikes verde.
+
 ## 0.28.0 — 2026-09-08
 
 **Um só conceito de "onde isso mora nesta máquina" — e o leitor que faltava para o vínculo do
@@ -10,16 +39,17 @@ corrigidos na decisão).
   `discovery-intake`, `planning-sdd`, `tasks-sync`, `elicitacao-captura`) mandavam resolver o Hub por
   `resolver_repo` — que só conhece repositório git e devolveria `sem-git`, status que nenhuma delas
   trata. A instrução existia em cinco lugares e não executava em nenhum: o operador informava o path
-  na mão, sessão após sessão (**P149**, aberta em 31/08 no dogfooding MAPFRE). O `resolver` ganhou
+  na mão, sessão após sessão (**P149**, aberta em 31/08 no dogfooding com um coletivo real). O `resolver` ganhou
   **classe de artefato**: `diretorio` monta, devolve a concessão e **sai antes** de `montarL1` — não
   cobra carta de navegação nem herança de processo de uma pasta que, por definição, nunca terá
   nenhuma das duas. Custo medido: **~80 tok contra os ~5.958 do sub-vault**.
 - **Ponteiro local escopado por coletivo.** A tabela era plana (`conceito → path`), logo dois clientes
   com repositório homônimo colidiam por construção. O operador já compensava à mão — o `repos.md`
-  legado da MAPFRE tem `⚠️ não confundir com self-bra-pipeline-mbaas (Portal ASC)` escrito em prosa.
+  legado de um operador trazia `⚠️ não confundir com <o outro de nome parecido>` escrito à mão na
+  coluna de notas.
   A chave passa a ser `{coletivo}[/{escopo}]/{conceito}`, e o desempate é **parâmetro, nunca
   adivinhação de estado da sessão** — com três coletivos montados, "usa o que está montado" não tem
-  critério. Ambiguidade vem **qualificada** (`mapfre/br-business-api`, não dois nomes iguais).
+  critério. Ambiguidade vem **qualificada** (`{coletivo}/{repo}`, não dois nomes iguais).
 - **Retrocompatibilidade sem tocar em config de ninguém.** O shim lê `chave: "caminho"` e
   `chave: {caminho}`. Nenhuma config gravada em campo precisa mudar — e não há validador de schema no
   produto, então mudança de shape só apareceria na sessão do operador. `listar_repos` passa a marcar
