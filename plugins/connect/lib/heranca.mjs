@@ -27,6 +27,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { parseFrontmatter, extrairFrontmatter, estimarTokens } from './frontmatter.mjs';
 import { lerDeclaracoes, corpoSemAlcance } from './alcance.mjs';
+import { assertDestinoDeMountSeguro } from './sincronizado.mjs';
 
 // Casa canonica da carta de processo, relativa a raiz do vault que GOVERNA o
 // processo (a matriz, no caso do dois-cerebros desta instancia). O nome do
@@ -151,6 +152,15 @@ export function lerRegistro(workspaceDir) {
 
 export function marcarInjetado(workspaceDir, processo) {
   if (!workspaceDir || !processo) return false;
+  // TRAVA DE INTEGRIDADE (17/09/2026): registro de sessao NUNCA e gravado em
+  // vault nem em arvore sincronizada. O comentario no topo deste arquivo ja dizia
+  // `nunca em vault` — sem trava, .connect/heranca.json vazou para uma
+  // biblioteca SharePoint compartilhada e ficou publicado por 8 dias.
+  try {
+    assertDestinoDeMountSeguro(workspaceDir, 'gravar o registro de heranca');
+  } catch {
+    return false;
+  }
   try {
     const dir = path.join(workspaceDir, path.dirname(ARQUIVO_REGISTRO));
     fs.mkdirSync(dir, { recursive: true });
@@ -206,6 +216,17 @@ export function resolverHeranca({
     return { status: 'ja-injetada', processo, cartaProcesso: cp, avisos: [] };
   }
 
-  marcarInjetado(workspaceDir, processo);
-  return { status: 'injetada', processo, cartaProcesso: cp, avisos: [] };
+  // A gravacao do registro pode ser RECUSADA pela trava de integridade (workspace
+  // em vault ou em arvore sincronizada). Recusa e ruidosa: sem registro, a carta
+  // seria reinjetada a cada vault, e o operador precisa saber por que.
+  const avisosRegistro = [];
+  if (workspaceDir) {
+    try {
+      assertDestinoDeMountSeguro(workspaceDir, 'gravar o registro de heranca');
+      marcarInjetado(workspaceDir, processo);
+    } catch (e) {
+      avisosRegistro.push(`REGISTRO DE HERANCA NAO GRAVADO — ${e.message}`);
+    }
+  }
+  return { status: 'injetada', processo, cartaProcesso: cp, avisos: avisosRegistro };
 }

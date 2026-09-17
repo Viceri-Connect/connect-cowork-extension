@@ -1,5 +1,44 @@
 # Changelog — connect
 
+## 0.30.0 — 2026-09-17
+
+**O mecanismo publicou um vault inteiro dentro de outro, na nuvem, e ficou 8 dias assim.**
+
+Achado por acaso ao olhar a raiz da matriz: duas junctions (`impulsa`, `marketing`) e um
+`.connect/heranca.json` dentro da biblioteca SharePoint sincronizada da matriz, todos de
+09/09/2026 20:11-20:12. A sessão `014ae10a` daquele horário tem os mesmos aliases montados
+corretamente no próprio scaffold — os artefatos da matriz caem exatamente **entre** os dois
+eventos. Diagnóstico: uma resolução de herança rodou com `workspaceDir` = raiz da matriz.
+
+O que ninguém previu: **o cliente OneDrive seguiu as junctions** e materializou a árvore
+inteira dos vaults de origem dentro da biblioteca da matriz. Não foi sujeira local por
+máquina — foi duplicata publicada na nuvem, indexada pela busca do SharePoint, aberta a
+edição na cópia errada. Que é, nome por nome, o modo de falha que o caso-zero já tinha
+catalogado em `entregas-presas-em-copia-de-conflito` (26/08).
+
+- **`lib/sincronizado.mjs` (novo) — a trava.** `detectarSincronizacao(dir)` sobe a árvore
+  procurando três classes de sinal: o marcador de sync root do OneDrive/SharePoint (arquivo
+  oculto `.{GUID}` na raiz de cada biblioteca — o sinal mais confiável, independe de tenant,
+  de nome de pasta e de variável de ambiente), marcadores de outros provedores, e segmentos
+  de caminho conhecidos. `ehRaizDeVault(dir)` é a segunda rede, para vault fora de nuvem:
+  `_cerebro/` presente. `assertDestinoDeMountSeguro()` lança com mensagem que nomeia a causa
+  e aponta o lugar certo.
+- **`mount()` passa a recusar.** Antes validava só o alias (sem `..`, sem separador, link
+  dentro do workspace) — o `workspaceDir` entrava sem nenhuma checagem. A recusa acontece
+  antes de qualquer escrita: nada é criado no destino.
+- **O registro de herança também.** `heranca.mjs` dizia em comentário "mora no workspace da
+  sessão (nunca em vault)". Intenção escrita, invariante não imposta — e o incidente é a
+  prova de que comentário não é trava. `marcarInjetado()` recusa, e `resolverHeranca()`
+  devolve a recusa como aviso ruidoso em vez de engolir.
+- **`tests/spike-guarda-sync.mjs` — 24 checagens**, incluindo as duas que importam: o caso
+  bom continua montando, e a recusa não deixa rastro no destino. Validado também contra a
+  instância real: montar na raiz da matriz é recusado citando o marcador de sync root.
+
+Higiene do incidente: junctions e `.connect/heranca.json` removidos da matriz (só os links;
+origens íntegras — 180 e 20 arquivos). As cópias na nuvem foram para a lixeira do site pela
+própria sincronização e **não devem ser restauradas**. Evidência datada no caso-zero do
+Connect (acervo da tribo que governa o produto).
+
 ## 0.29.1 — 2026-09-08
 
 **O primeiro uso real do Delivery Hub achou dois defeitos que 52 checagens sintéticas não acharam.**

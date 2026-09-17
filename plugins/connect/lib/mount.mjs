@@ -14,6 +14,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { assertDestinoDeMountSeguro } from './sincronizado.mjs';
 
 export const IS_WINDOWS = process.platform === 'win32';
 export const LINK_KIND = IS_WINDOWS ? 'junction' : 'symlink';
@@ -82,6 +83,11 @@ export function mount({ workspaceDir, alias, source, replace = false }) {
   const { ws, link } = resolveLinkPath(workspaceDir, alias);
 
   if (!fs.existsSync(ws)) throw new Error(`workspace nao existe: ${ws}`);
+
+  // TRAVA DE INTEGRIDADE (17/09/2026). Junction dentro de biblioteca sincronizada
+  // faz o cliente OneDrive seguir o link e duplicar a arvore de origem na nuvem.
+  // Incidente medido em 17/09/2026; evidencia datada no caso-zero do Connect.
+  assertDestinoDeMountSeguro(ws, 'montar atalho');
 
   const src = path.resolve(source);
   if (!fs.existsSync(src)) throw new Error(`origem nao existe: ${src}`);
