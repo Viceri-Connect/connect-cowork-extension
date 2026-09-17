@@ -16,15 +16,15 @@
 ## Convenção de localização (vale para todo vault desta instância)
 
 A taxonomia de conteúdo de qualquer vault (a matriz atuando como vault de conteúdo próprio, ou
-um sub-vault) vive em `_inteligencia/skills/vault-write/vault-write.md`, **relativo à raiz
+um sub-vault) vive em `_inteligencia/skills/cnct-nucleo-escrita/cnct-nucleo-escrita.md`, **relativo à raiz
 daquele vault**. É a única convenção que o executor precisa seguir — ele nunca deduz isso
 sozinho, segue o que está declarado aqui.
 
 ## Índice de vaults desta instância (deriva do grafo em `vault-config.md` § "Grafo de entidades")
 
-| Vault | Alias na sessão | Taxonomia (vault-write.md) |
+| Vault | Alias na sessão | Taxonomia (cnct-nucleo-escrita.md) |
 |---|---|---|
-| Matriz (conteúdo próprio) | `./matriz` | `./matriz/_inteligencia/skills/vault-write/vault-write.md` |
+| Matriz (conteúdo próprio) | `./matriz` | `./matriz/_inteligencia/skills/cnct-nucleo-escrita/cnct-nucleo-escrita.md` |
 | _(cada sub-vault novo entra aqui quando ganhar manifesto no grafo)_ | | |
 
 > Este índice é espelho de leitura do grafo (nunca fonte paralela — `GLOSSARIO.md#indice-e-espelho`): todo vault novo que
@@ -70,7 +70,7 @@ usando uma regra emprestada.
   *substitui* (estado, próximo passo, cabeçalho) × *acumula* (decisões, pendências, capturas,
   histórico); nunca podar sem confirmar duplicação na fonte primeiro.
 
-## O que fica específico de cada vault (vive no `vault-write.md` daquele vault, não aqui)
+## O que fica específico de cada vault (vive no `cnct-nucleo-escrita.md` daquele vault, não aqui)
 
 Panorama de camadas próprio · decisão de pasta (nomes de pasta daquele vault) · testes de
 classificação · checklist adicional (ex.: isolamento de dado confidencial de cliente) · regras que

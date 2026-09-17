@@ -111,7 +111,7 @@ empresa. Colapsa-los num destino so reintroduz no acervo da empresa o que perten
 - Todo arquivo escrito ou atualizado no vault ganha `[[wikilinks]]` para os arquivos mencionados.
 - Nota nova e linkada de pelo menos uma existente — nunca criar nota solta (sinapse morta).
 - Referenciar conhecimento por **caminho relativo ao workspace**, nunca por caminho absoluto de maquina.
-- Antes de escrever no coletivo, carregar o protocolo `vault-write` do coletivo ativo.
+- Antes de escrever no coletivo, carregar o protocolo `cnct-nucleo-escrita` do coletivo ativo.
 - Ponteiro e **tipado**: `[[wikilink]]` so para nota deste vault; artefato externo -> path nomeando a natureza; fato derivavel (path de mount, vault ativo) -> resolver, nao apontar.
 
 ## Calibracao de interacao — identificador nunca vem sozinho

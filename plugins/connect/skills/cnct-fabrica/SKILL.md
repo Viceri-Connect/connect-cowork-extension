@@ -98,7 +98,7 @@ uma com a regra dela:
 | **3 · contexto** | a própria unidade | elicitação com o operador | materializa o que o operador declarar, e **escreve o gatilho de cada item na carta** |
 
 **Camada 1, sempre e literalmente:** `_cerebro/camada-1.md` · `_cerebro/vault-config.md` (com a
-topologia declarada: `matriz` ou `sub-vault`, conjunto fechado) · `_inteligencia/skills/vault-write/vault-write.md`
+topologia declarada: `matriz` ou `sub-vault`, conjunto fechado) · `_inteligencia/skills/cnct-nucleo-escrita/cnct-nucleo-escrita.md`
 · `_inteligencia/skills/vault-audit/vault-audit.md` · `_automacoes/vault-audit/issues.md`. Os
 executores leem esses caminhos literalmente — variar o nome aqui quebra entre vaults.
 
