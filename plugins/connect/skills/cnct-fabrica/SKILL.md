@@ -97,10 +97,16 @@ uma com a regra dela:
 | **2 · processo** | o coletivo | `_cerebro/metodologias/` + § *Estrutura mínima e herança* do `modelo-roteamento` | materializa o que o processo declarado exige. **Não inventa**: processo sem forma declarada é lacuna reportada |
 | **3 · contexto** | a própria unidade | elicitação com o operador | materializa o que o operador declarar, e **escreve o gatilho de cada item na carta** |
 
-**Camada 1, sempre e literalmente:** `_cerebro/camada-1.md` · `_cerebro/vault-config.md` (com a
-topologia declarada: `matriz` ou `sub-vault`, conjunto fechado) · `_inteligencia/skills/cnct-nucleo-escrita/cnct-nucleo-escrita.md`
-· `_inteligencia/skills/vault-audit/vault-audit.md` · `_automacoes/vault-audit/issues.md`. Os
-executores leem esses caminhos literalmente — variar o nome aqui quebra entre vaults.
+**Camada 1, sempre e literalmente — e a lista mora no contrato, não aqui:**
+`config/contrato-tipos.md` §5.1.1. A fábrica materializa **todos** os caminhos declarados lá, com o
+nome exato; os executores os leem literalmente, e variar um nome quebra entre vaults.
+
+> ⚠️ **Esta skill mantinha a própria cópia da lista até 21/09, e faltava nela o
+> `cnct-nucleo-encerramento`** — que é o item cuja ausência **falha calado**: sem ele, o Passo 7 do
+> encerramento reporta *"zero hooks, caso normal"*, indistinguível de hooks desligados por decisão.
+> Duas listas para a mesma estrutura produziram exatamente o que o parágrafo seguinte proíbe: a
+> segunda cópia da mesma forma, e a que apodrece primeiro. Medido no nascimento de um acervo real, e
+> detectado por pergunta do operador, não pelo mecanismo.
 
 **Scaffold aponta, nunca copia.** A forma canônica de cada artefato vive nos templates do coletivo
 (`99 - Templates e Modelos Globais/`, índice no `README.md` da pasta). A fábrica **resolve o template

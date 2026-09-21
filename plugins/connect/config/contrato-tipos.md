@@ -123,7 +123,39 @@ Exemplos vivos desta instância: `processo`, `glossario`, `identificador`, `poli
 |---|---|---|
 | 1 | **Manifesto na matriz** — nota da entidade com `tipo`/`papel`/`externo`, e a aresta declarada **nos dois lados** | `resolver` devolve `origem-ausente`: o acervo existe e o grafo não o declara |
 | 2 | **`registrar_subvault_local(conceito, path)`** — o path mora só em `connect.config.json`, nunca no vault | `resolver` devolve `local-nao-configurado` a cada máquina nova |
-| 3 | **Carta de navegação** (`_cerebro/camada-1.md`, 5 seções do contrato de navegação) + `_cerebro/vault-config.md` com `tipo-vault` | monta e o agente não sabe navegar — a lacuna que a `cnct-fabrica-navegacao` existe para fechar |
+| 3 | **Camada 1 completa** (§5.1.1 abaixo) — carta de navegação, config do vault e os knowledges de mecanismo | monta e o agente não sabe navegar; e os executores que leem knowledge por caminho literal passam a ler **ausência como estado válido** |
+
+#### 5.1.1 A camada 1 — lista canônica, e esta é a única
+
+> **Fonte única.** Toda skill que materializa contexto lê **esta** lista — nenhuma mantém cópia
+> própria. Os executores leem estes caminhos **literalmente**: variar o nome quebra entre vaults.
+
+| Caminho (relativo à raiz do vault) | Quem lê | Sem ele |
+|---|---|---|
+| `_cerebro/camada-1.md` (5 seções do contrato de navegação) | `resolver`, toda sessão | monta e o agente navega por adivinhação |
+| `_cerebro/vault-config.md` (com `tipo-vault`: `matriz` \| `sub-vault`) | `resolver`, `iniciar_sessao` | identidade do vault indefinida |
+| `_inteligencia/skills/cnct-nucleo-escrita/cnct-nucleo-escrita.md` | `cnct-nucleo-escrita`, Passo 3 | a escrita reporta *"taxonomia não existe no vault alvo"* e para |
+| `_inteligencia/skills/cnct-nucleo-encerramento/cnct-nucleo-encerramento.md` **com a seção `## Hooks Registrados`** | `cnct-nucleo-encerramento`, Passo 7 | **falha silenciosa** — o Passo 7 lê *"zero hooks, caso normal"*, que é indistinguível de hooks desligados por decisão |
+| `_inteligencia/skills/cnct-nucleo-audit/cnct-nucleo-audit.md` | `cnct-nucleo-audit`, nível de conhecimento do vault | o audit roda só os checks de mecanismo e o vault fica sem crivo próprio |
+| `_automacoes/vault-audit/issues.md` | `cnct-nucleo-audit`, modos AUDIT e REPAIR | achado não tem onde pousar, e some no fim da sessão |
+
+> ⚠️ **A linha do encerramento entrou em 21/09, e o que ela fecha é uma reincidência.** Ela faltava
+> nas duas declarações que existiam (esta e a do `SKILL.md` da `cnct-fabrica`), então um vault
+> provisionado pela fábrica nascia **sem hooks** — e a ausência é lida como estado válido, nunca
+> como erro. É a mesma classe da falha que desligou a captura passiva entre 24 e 31/08: *hook ausente
+> e hook desligado são indistinguíveis quando nenhum dos dois está escrito*. Medido no nascimento do
+> acervo comercial de Vendas, e detectado por **pergunta do operador**, não pelo mecanismo.
+>
+> **A lista passa a existir só aqui na mesma data.** Havia duas declarações da mesma estrutura — esta
+> e a do `SKILL.md` da `cnct-fabrica` — e as duas estavam incompletas do mesmo jeito. Duplicata não
+> corrige duplicata: a segunda cópia some, e o `SKILL.md` passa a apontar para cá.
+>
+> ⚠️ **A linha do audit passou a declarar `cnct-nucleo-audit/` em 21/09**, fechando o par que ficou
+> para trás quando `vault-write` → `cnct-nucleo-escrita` foi executado em 08/09. A dependência era
+> circular — o executor lia o caminho antigo hardcoded, então renomear quebrava a auditoria em todos
+> os vaults de uma vez — e se desfez com **fallback declarado**: o `cnct-nucleo-audit` lê a casa
+> canônica, cai na legada quando preciso, e **reporta a migração pendente**. Vault novo nasce certo;
+> vault existente segue funcionando e sabe que está atrasado. Era a `P166`.
 
 **Verificação de fechamento, não opcional:** a fábrica chama `resolver(conceito)` ao terminar e
 **exige `status: resolvido` com zero avisos**. Qualquer outro status é nascimento incompleto,

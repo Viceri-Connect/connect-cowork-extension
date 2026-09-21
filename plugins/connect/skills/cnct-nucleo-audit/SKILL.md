@@ -12,7 +12,7 @@ description: >
   checagem por vault: os checks de MECANISMO do produto (contrato de manifesto,
   carta de navegação, notas órfãs achadas só por varredura — config/contrato-manifesto.md
   §5 e config/protocolo-mecanismo.md) e o CONHECIMENTO específico daquele
-  vault/cliente (vault-audit.md, carregado de dentro do próprio vault — nunca
+  vault/cliente (`cnct-nucleo-audit.md`, carregado de dentro do próprio vault — nunca
   hardcoded aqui).
 metadata:
   version: "0.1.0"
@@ -31,12 +31,13 @@ Dois níveis de conhecimento, nunca misturados:
   desta instância Connect — schema de manifesto, carta de navegação, orfandade por
   varredura forçada. Fonte: `config/contrato-manifesto.md` §5 + `config/protocolo-mecanismo.md`.
 - **Conhecimento do vault (por-vault, carregado em runtime):** critérios específicos do
-  cliente — vive em `{vault}/_inteligencia/skills/vault-audit/vault-audit.md`. Este
-  executor nunca hardcoda critério de cliente nenhum; quem sabe é o próprio vault.
+  cliente — vive em `{vault}/_inteligencia/skills/cnct-nucleo-audit/cnct-nucleo-audit.md`
+  (**casa canônica**; ver o fallback legado no Passo 3b). Este executor nunca hardcoda
+  critério de cliente nenhum; quem sabe é o próprio vault.
 
 > Para atualizar critérios de mecanismo (o que vale pra todo vault): editar este `SKILL.md`
 > — reinstalar o `.skill`.
-> Para atualizar critérios específicos de um vault: editar `vault-audit.md` daquele vault —
+> Para atualizar critérios específicos de um vault: editar o `cnct-nucleo-audit.md` daquele vault —
 > sem reinstalar nada.
 > **Agnóstico de cliente:** nenhum vault, cliente ou critério específico é assumido aqui.
 
@@ -87,17 +88,30 @@ Do protocolo do mecanismo (`config/protocolo-mecanismo.md`):
 | **Canal injetado não preparado** | Vault que **recebe escrita** não tem `{vault}/CLAUDE.md` publicado. Severidade baixa: a camada 1 continua chegando pelo mecanismo, só perde o caminho redundante. Correção: `publicar_governanca` via `cnct-fabrica-navegacao`. **Vault somente-leitura não gera issue** — ausência ali é o caso normal, nunca lacuna |
 
 Estes checks rodam em **todo** vault tocado, independente de cliente — não fazem parte do
-`vault-audit.md` de ninguém, porque não são conhecimento de cliente, são garantia de produto.
+`cnct-nucleo-audit.md` de ninguém, porque não são conhecimento de cliente, são garantia de produto.
 
 ### 3b. Conhecimento do vault (por-vault, cliente)
 
-Ler `{vault}/_inteligencia/skills/vault-audit/vault-audit.md` (ex.: `./matriz/_inteligencia/...`,
-ou `./{sub-vault}/_inteligencia/...`).
+Ler, **nesta ordem**:
 
-- **Se não existir:** o vault ainda não tem conhecimento de auditoria provisionado. Materializar
-  o **stub** a partir de `templates/vault-audit.template.md` (desta skill), interpolando
-  `{{DATA_INSTALACAO}}` = hoje. **Nunca sobrescrever** se já existir. Avisar o operador que, até
-  o stub ser personalizado, só os checks de mecanismo (3a) rodam naquele vault.
+1. `{vault}/_inteligencia/skills/cnct-nucleo-audit/cnct-nucleo-audit.md` — **casa canônica**.
+2. `{vault}/_inteligencia/skills/vault-audit/vault-audit.md` — **fallback legado**. Se for por aqui
+   que o knowledge foi encontrado, **usar normalmente e reportar a migração pendente** no relatório:
+   `conhecimento lido da casa legada 'vault-audit' — migrar para 'cnct-nucleo-audit'`.
+
+> ⚠️ **O fallback existe porque o rename chegou depois dos vaults, e nunca é o contrário.** O par
+> `vault-audit` → `cnct-nucleo-audit` ficou pendente quando `vault-write` → `cnct-nucleo-escrita` foi
+> executado em 08/09: este executor lia o caminho antigo hardcoded, e renomear antes teria quebrado a
+> auditoria em todos os vaults de uma vez. Ler os dois caminhos **desfaz a dependência circular** —
+> a partir daqui, vault novo nasce na casa certa e vault existente segue funcionando enquanto não
+> migra. **Não remover o fallback** antes de confirmar que nenhum vault desta instância usa a casa
+> legada; enquanto houver um, removê-lo o deixa sem crivo próprio **em silêncio**.
+
+- **Se não existir em nenhuma das duas:** o vault ainda não tem conhecimento de auditoria
+  provisionado. Materializar o **stub** na **casa canônica**, a partir de
+  `templates/vault-audit.template.md` (desta skill), interpolando `{{DATA_INSTALACAO}}` = hoje.
+  **Nunca sobrescrever** se já existir. Avisar o operador que, até o stub ser personalizado, só os
+  checks de mecanismo (3a) rodam naquele vault.
 - **Se existir:** usar as verificações habilitadas, critérios, formato de issue e política de
   escopo/`criterios-override` que ele declarar — sempre a versão **daquele vault**, nunca
   herdada de outro.
@@ -138,7 +152,7 @@ Repetir para cada vault tocado:
    ⚠️ **M5 classifica em quatro naturezas** (*morto* · *ambíguo* · *fora do vault* ·
    *herdado sem casa*): só *morto* é falha. Abrir issue para ambíguo ou para ponteiro
    herdado é duplicar o que a M7 já reporta, e alarme duplicado treina a ignorar os dois.
-3. Rodar os módulos/critérios do `vault-audit.md` daquele vault (3b), dentro do escopo
+3. Rodar os módulos/critérios do `cnct-nucleo-audit.md` daquele vault (3b), dentro do escopo
    efetivo: `audit-config` do operador (`meu-config.md`) → senão `audit-defaults` do
    `vault-config.md` daquele vault → senão escopo pessoal apenas.
    **Critérios próprios do operador (`criterios-override`) só têm efeito em verificações de
@@ -172,7 +186,7 @@ do escopo (perguntar ao operador se quer revisar todos os vaults tocados ou só 
    a delegação no log, seguir para a próxima issue sem executar a correção agora.
 5. `"sim"`/`"ajusta"` → carregar `cnct-nucleo-escrita` (protocolo de escrita governada) antes
    de qualquer escrita semântica naquele vault; executar conforme a ação sugerida pelo
-   `vault-audit.md` daquele vault (issues de mecanismo têm ação padrão — ex.: manifesto sem
+   `cnct-nucleo-audit.md` daquele vault (issues de mecanismo têm ação padrão — ex.: manifesto sem
    `governanca` → perguntar e preencher; aresta órfã → perguntar se cria a inversa ou remove
    a original).
 6. Issue resolvida → **mover de `issues.md` para `issues-historico.md`** daquele vault,

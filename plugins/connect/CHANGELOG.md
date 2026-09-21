@@ -1,5 +1,44 @@
 # Changelog — connect
 
+## 0.31.0 — 2026-09-21
+
+**Um vault nasceu sem hooks, e o mecanismo chamou isso de normal.**
+
+Ao provisionar o primeiro acervo de uma área comercial, a `cnct-fabrica` materializou a camada 1
+que ela declara — e o vault nasceu sem `_inteligencia/skills/cnct-nucleo-encerramento/`. No
+encerramento, o Passo 7 leu o vault, não achou a seção `## Hooks Registrados` e reportou
+`zero hooks, caso normal`. Que é verdade para um coletivo que não registrou hook, e **falso** para
+um que nunca teve onde registrar.
+
+É a mesma indistinção que desligou a captura passiva entre 24 e 31/08 — *hook ausente e hook
+desligado são indistinguíveis quando nenhum dos dois está escrito* — reproduzida num vault nascido
+sete semanas depois. E quem detectou foi o operador perguntando *"me diz o motivo de não ter
+criado"*, não o mecanismo.
+
+- **A lista da camada 1 passa a existir num lugar só: `config/contrato-tipos.md` §5.1.1.**
+  Existiam duas — esta e uma cópia no `SKILL.md` da `cnct-fabrica` — e as duas estavam incompletas
+  do mesmo jeito. Duplicata não corrige duplicata: a cópia some e o `SKILL.md` aponta para o
+  contrato. Cada linha da lista declara **quem lê** e **o que acontece sem ela**, porque foi
+  justamente a consequência não declarada que deixou a ausência passar por normal.
+- **`cnct-nucleo-encerramento` entra na camada 1.** A fábrica passa a materializá-lo em todo
+  contexto novo, com a seção `## Hooks Registrados` — inclusive os hooks **inativos por decisão**,
+  que é o que torna a ausência distinguível do desligamento.
+- **Par `vault-audit` → `cnct-nucleo-audit` fechado, com fallback.** Ficou pendente em 08/09 quando
+  o rename de `vault-write` foi executado: o executor lia `{vault}/_inteligencia/skills/vault-audit/`
+  hardcoded, então renomear quebrava a auditoria em todos os vaults de uma vez — dependência
+  circular. O `cnct-nucleo-audit` passa a ler a **casa canônica** e a cair na **legada** quando
+  preciso, **reportando a migração pendente** no relatório. Vault novo nasce certo; vault existente
+  segue funcionando e sabe que está atrasado. O stub também passa a nascer na casa canônica.
+  ⚠️ **Não remover o fallback** antes de confirmar que nenhum vault usa a casa legada.
+- **`_automacoes/vault-audit/` fica como está, de propósito.** Não é knowledge de skill — é a casa
+  de automação do vault (issues, log, critérios), referenciada por dezenas de notas de acervo.
+  Renomear por simetria de nome seria confundir duas coisas distintas que compartilham a palavra.
+
+> **Item menor, declarado:** o arquivo de template interno segue `templates/vault-audit.template.md`
+> (o conteúdo que ele gera já nasce com o nome novo). Renomeá-lo não foi possível na sessão — o
+> repositório estava com `index.lock` de outro processo — e é cosmético: nenhum executor o alcança
+> por nome de fora da skill.
+
 ## 0.30.0 — 2026-09-17
 
 **O mecanismo publicou um vault inteiro dentro de outro, na nuvem, e ficou 8 dias assim.**

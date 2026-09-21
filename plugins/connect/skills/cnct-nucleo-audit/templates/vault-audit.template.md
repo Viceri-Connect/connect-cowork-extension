@@ -1,4 +1,4 @@
-# vault-audit — Conhecimento (STUB — personalizar)
+# cnct-nucleo-audit — Conhecimento do vault (STUB — personalizar)
 
 > Stub gerado automaticamente pelo `cnct-nucleo-audit` em {{DATA_INSTALACAO}}, porque este
 > vault ainda não tinha conhecimento de auditoria próprio. Enquanto este arquivo não for
@@ -78,4 +78,4 @@ resolução** — nunca é apenas apagada da capa.
 > ‹PROVISIONAR› Este vault nunca deleta (move para histórico/arquivado), ou pode deletar
 > redundâncias diretamente? Em que condições?
 
-<!-- fim: vault-audit.md · stub gerado por cnct-nucleo-audit -->
+<!-- fim: cnct-nucleo-audit.md · stub gerado por cnct-nucleo-audit -->
