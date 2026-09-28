@@ -1,5 +1,22 @@
 # Changelog — connect
 
+## 0.32.0 — 2026-09-28
+
+**O kanban falava três dialetos, e o vínculo não dizia o que era do operador.**
+
+Ao reconstruir o briefing diário sobre o vault, duas lacunas apareceram juntas. O `TASKS.md` que a
+fábrica materializava (`A fazer / Fazendo / Feito`) não tinha as seções em que as skills escrevem
+(`## Active` / `## Waiting On`, a forma da skill de tarefas do `productivity`, de onde o kanban
+nasceu), e o template da matriz tinha traduzido para uma terceira forma. E o `resolver` entregava o
+hot cache do vínculo, mas não o `config.md` — o papel do operador naquele coletivo nunca chegava.
+
+- **`cnct-fabrica-operador` materializa o `TASKS.md` na forma do `productivity`**, literal e em
+  inglês; a forma do item e os deltas do Connect vivem no `Template-Briefing-Diario` da matriz.
+- **`config.md` do vínculo nasce com `## Alocações`**, vazia e **só com ponteiros** (lotação e frentes
+  → hub). Papel, cargo e peso se resolvem no coletivo, pela herança de equipe da matriz.
+- **`lib/vinculo.mjs` entrega o `config.md` primeiro**, antes do `estado.md`. Teste novo no
+  `spike-ponteiro-escopado`.
+
 ## 0.31.0 — 2026-09-21
 
 **Um vault nasceu sem hooks, e o mecanismo chamou isso de normal.**

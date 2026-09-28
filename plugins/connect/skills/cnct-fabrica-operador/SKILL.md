@@ -87,15 +87,19 @@ reportar e pular.**
 | `_cerebro/vinculos/.gitkeep` | — | pasta vazia; **um registro por coletivo** (cliente, tribo, área) entra depois. Schema vigente: `vinculos-v1`. ⚠️ **Nunca** materializar `_cerebro/clientes/` — schema aposentado |
 | `_cerebro/memory/MEMORY.md` | inline | `# Memória profunda — {{NOME}}\n\n> Índice. Notas de memória entram aqui, cada uma linkada.` |
 | `_cerebro/atualizacoes-aplicadas.md` | inline | cabeçalho do log do check de atualizações + lista vazia |
-| `TASKS.md` | inline | `# TASKS — {{NOME}}` + colunas kanban vazias (A fazer / Fazendo / Feito) |
+| `TASKS.md` | inline | a forma da skill de tarefas do `productivity`, **literal e com os cabeçalhos em inglês**: `# Tasks` + `## Active` · `## Waiting On` · `## Someday` · `## Done`, vazias. Forma e deltas do item (tag de coletivo, lastro) em `99 - Templates e Modelos Globais/Template-Briefing-Diario.md` da matriz — não repetir aqui. ⚠️ Até 28/09 nascia `A fazer / Fazendo / Feito`, e as skills que escrevem em `## Active` / `## Waiting On` não achavam a seção |
 
 Se o Passo 2.4 trouxe um coletivo: semear `_cerebro/vinculos/{coletivo}/` com **dois** arquivos, no
 schema `vinculos-v1`:
 
 - `config.md` — o vínculo em si: papel efetivo do operador naquele coletivo, e-mail de contexto se
-  houver. **Sem path** — o path local vive só em `connect.config.json`, gravado por
-  `registrar_subvault_local`, nunca no vault, nem no perfil
-  (`GLOSSARIO.md#path-por-maquina`).
+  houver, e a seção **`## Alocações`** — **só ponteiros**: uma linha de lotação (a squad-base) e uma
+  por frente em que o operador atua, `| Frente | Hub (ponteiro tipado, no coletivo) |`. Nasce **vazia
+  com o cabeçalho**; a fábrica não infere frente nenhuma. Papel, cargo e peso **não** entram: são fato
+  do coletivo e se resolvem pela herança de equipe (`modelo-de-celula` § *Herança de equipe* e `R8`
+  do `processo-viceri`, na matriz) — copiá-los aqui criaria a segunda fonte que envelhece. É o que o briefing percorre para saber o que é do operador. **Sem path** — o path local
+  vive só em `connect.config.json`, gravado por `registrar_subvault_local`, nunca no vault, nem no
+  perfil (`GLOSSARIO.md#path-por-maquina`).
 - `estado.md` — hot cache do operador naquele coletivo, **com cabeçalho de forma e tabela vazia**:
   uma linha por projeto, uma frase por célula, **substitui e nunca acumula**, fonte de verdade é a nota
   do projeto no coletivo. Quem passa a mantê-lo é o `cnct-nucleo-encerramento` (Passo 4b) — a fábrica

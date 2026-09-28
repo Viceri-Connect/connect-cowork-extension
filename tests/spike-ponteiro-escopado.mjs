@@ -235,6 +235,12 @@ console.log('\n[vinculo do operador — ADR-22 item 8 / P81]');
   });
   t('le tambem os eixos orfaos do repos.md legado (ambientes)', () =>
     lerVinculo(tmp, 'cliente-alfa').blocos.some((b) => b.arquivo === 'ambientes.md'));
+  t('entrega o config.md (papel + alocacoes) antes do estado', () => {
+    fs.writeFileSync(path.join(casa, 'config.md'), '# Vinculo\n## Alocacoes\n| Frente | Papel | Hub |');
+    const v = lerVinculo(tmp, 'cliente-alfa');
+    fs.rmSync(path.join(casa, 'config.md'));
+    return v.blocos[0].arquivo === 'config.md' && v.blocos[0].texto.includes('Alocacoes');
+  });
   t('coletivo sem vinculo e "ausente", nunca erro', () =>
     lerVinculo(tmp, 'cliente-beta').status === 'ausente');
   t('sem perfil de operador reporta sem-perfil', () =>

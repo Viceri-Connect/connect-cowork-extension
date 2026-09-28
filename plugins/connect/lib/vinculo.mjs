@@ -25,10 +25,14 @@ import path from 'node:path';
 // Casa canonica do registro de vinculo, relativa a raiz do perfil do operador.
 const CASA = ['_cerebro', 'vinculos'];
 
-// Ordem de leitura dentro da casa do coletivo. `estado.md` primeiro porque e o que
-// as skills instaladas ja escrevem; os outros nascem da ADR-22 item 7 (os eixos
-// orfaos do `repos.md`: ambientes locais, particularidades por-maquina de repo).
-const ARQUIVOS = ['estado.md', 'ambientes.md', 'repos.md'];
+// Ordem de leitura dentro da casa do coletivo. `config.md` primeiro: e o vinculo em
+// si — papel efetivo e `## Alocacoes` (ponteiros: lotacao e frentes -> hub), que e
+// por onde se chega ao que e do operador naquele coletivo. Ate 28/09 ele nao era entregue: o `resolver`
+// trazia o hot cache e omitia o papel, e quem precisava saber "o que e meu" tinha
+// de abrir o arquivo por fora. Depois `estado.md`, que e o que as skills instaladas
+// ja escrevem; os outros nascem da ADR-22 item 7 (os eixos orfaos do `repos.md`:
+// ambientes locais, particularidades por-maquina de repo).
+const ARQUIVOS = ['config.md', 'estado.md', 'ambientes.md', 'repos.md'];
 
 // Teto por arquivo. O vinculo entra num payload que ja e o mais caro do produto
 // (~6k tok no `resolver` de sub-vault); um estado que apodreceu nao pode arrastar
