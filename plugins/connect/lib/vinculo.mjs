@@ -108,6 +108,36 @@ export function lerVinculo(perfilOperadorRoot, coletivo) {
 }
 
 // ---------------------------------------------------------------------------
+// chaveDoVinculo — QUAL vinculo pertence a uma entidade resolvida.
+//
+// O defeito que isto corrige, medido em 28/09 na primeira execucao do briefing
+// diario: `resolver('vendas')` entregou o `estado.md` do vinculo `interno-viceri`,
+// e nao o de `vendas`. A chave era `local.entrada.coletivo || entry.conceito` — o
+// coletivo que ESCOPA O PONTEIRO LOCAL (a area Vendas mora sob a matriz, entao o
+// ponteiro dela e `interno-viceri/vendas`) vencia o conceito da propria entidade.
+// Escopo de ponteiro responde "onde este path foi registrado"; vinculo responde
+// "qual e a leitura do operador sobre ESTA entidade". Sao perguntas diferentes, e
+// a primeira nao pode responder pela segunda.
+//
+// Ordem: o operador tem vinculo com a propria entidade -> esse. Senao, o do
+// coletivo que a escopa (projeto de um cliente cai no vinculo do cliente). Senao,
+// a propria entidade (e `lerVinculo` devolve `ausente`, que e o estado normal).
+// ---------------------------------------------------------------------------
+export function chaveDoVinculo(perfilOperadorRoot, conceitoEntidade, coletivoDoPonteiro) {
+  const proprio = String(conceitoEntidade || '').toLowerCase().trim();
+  const escopo = String(coletivoDoPonteiro || '').toLowerCase().trim();
+  const existe = (c) => !!c && !!perfilOperadorRoot && fs.existsSync(path.join(perfilOperadorRoot, ...CASA, c));
+  if (existe(proprio)) return proprio;
+  if (existe(escopo)) return escopo;
+  return proprio || escopo || null;
+}
+
+// Atalho usado pelo `resolver`: resolve a chave certa e le.
+export function lerVinculoDaEntidade(perfilOperadorRoot, conceitoEntidade, coletivoDoPonteiro) {
+  return lerVinculo(perfilOperadorRoot, chaveDoVinculo(perfilOperadorRoot, conceitoEntidade, coletivoDoPonteiro));
+}
+
+// ---------------------------------------------------------------------------
 // coletivosComVinculo — o que ja existe, para o operador conferir e para a skill
 // saber o que ha sem abrir nada.
 // ---------------------------------------------------------------------------

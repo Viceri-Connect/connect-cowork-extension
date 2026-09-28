@@ -54,6 +54,18 @@ export function criarEntrega() {
     if (!obj || typeof obj !== 'object') return obj;
     const out = { ...obj };
     if (out.protocoloMecanismo) out.protocoloMecanismo = trate(out.protocoloMecanismo);
+    // Vinculo do operador (ADR-22 item 8). O `resolver` o anexa a TODA resolucao, e o
+    // comentario de la afirmava que ele estava "sujeito a mesma deduplicacao por
+    // sessao dos outros blocos longos" — nao estava. Medido em 28/09 no briefing
+    // diario: quem resolve varias frentes do mesmo coletivo (ou coletivos que caem no
+    // mesmo vinculo) pagava o mesmo `config.md` + `estado.md` a cada chamada, ate
+    // ~6 KB por arquivo. Mesma regra dos demais: 1a entrega inteira, depois marcador.
+    if (out.vinculo && typeof out.vinculo === 'object' && Array.isArray(out.vinculo.blocos)) {
+      out.vinculo = {
+        ...out.vinculo,
+        blocos: out.vinculo.blocos.map((b) => (b && typeof b === 'object' ? { ...b, texto: trate(b.texto) } : b)),
+      };
+    }
     for (const k of ['l1', 'l1Pessoal']) {
       if (out[k] && typeof out[k] === 'object') {
         out[k] = { ...out[k] };

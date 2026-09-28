@@ -16,7 +16,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { lerTabela, casarPonteiro, montarChave, partirChave, vizinhos } from '../plugins/connect/lib/ponteiro.mjs';
 import { casarMuitos, classeDeclarada } from '../plugins/connect/lib/resolver.mjs';
-import { lerVinculo, coletivosComVinculo } from '../plugins/connect/lib/vinculo.mjs';
+import { lerVinculo, coletivosComVinculo, chaveDoVinculo, lerVinculoDaEntidade } from '../plugins/connect/lib/vinculo.mjs';
 import { criarEntrega } from '../plugins/connect/lib/entrega.mjs';
 
 let ok = 0; const falhas = [];
@@ -252,6 +252,51 @@ console.log('\n[vinculo do operador — ADR-22 item 8 / P81]');
     return v.avisos.length > 0 && v.blocos[0].texto.includes('truncado');
   });
   fs.rmSync(tmp, { recursive: true, force: true });
+}
+
+console.log('\n[chave do vinculo — entidade vence o escopo do ponteiro (0.33.0)]');
+{
+  // Situacao medida em 28/09: uma AREA cujo ponteiro local foi registrado sob o
+  // coletivo que governa (matriz). O operador tem vinculo com a area E com a matriz.
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cnct-chave-'));
+  for (const c of ['area-gama', 'matriz-delta', 'cliente-alfa']) {
+    const casa = path.join(tmp, '_cerebro', 'vinculos', c);
+    fs.mkdirSync(casa, { recursive: true });
+    fs.writeFileSync(path.join(casa, 'estado.md'), `# Estado — ${c}`);
+  }
+  t('area com vinculo proprio recebe o SEU vinculo, nao o da matriz que escopa o ponteiro', () =>
+    chaveDoVinculo(tmp, 'area-gama', 'matriz-delta') === 'area-gama');
+  t('o texto entregue e o da entidade', () =>
+    lerVinculoDaEntidade(tmp, 'area-gama', 'matriz-delta').blocos[0].texto.includes('area-gama'));
+  t('entidade sem vinculo proprio (projeto de um cliente) cai no vinculo do coletivo', () =>
+    chaveDoVinculo(tmp, 'projeto-x', 'cliente-alfa') === 'cliente-alfa');
+  t('sem vinculo em lado nenhum: chave e a entidade, status ausente', () =>
+    chaveDoVinculo(tmp, 'projeto-y', 'coletivo-z') === 'projeto-y'
+      && lerVinculoDaEntidade(tmp, 'projeto-y', 'coletivo-z').status === 'ausente');
+  t('ponteiro sem escopo (formato legado) segue funcionando', () =>
+    chaveDoVinculo(tmp, 'cliente-alfa', null) === 'cliente-alfa');
+  fs.rmSync(tmp, { recursive: true, force: true });
+}
+
+console.log('\n[dedup do vinculo na sessao (0.33.0)]');
+{
+  const e = criarEntrega();
+  const payload = (conceito) => ({
+    conceito,
+    vinculo: { status: 'lido', coletivo: 'cliente-alfa', blocos: [{ arquivo: 'config.md', texto: 'CONFIG DO VINCULO' }, { arquivo: 'estado.md', texto: 'ESTADO DO VINCULO' }] },
+  });
+  const p1 = e.dedup(payload('projeto-1'));
+  const p2 = e.dedup(payload('projeto-2'));
+  t('1a resolucao leva o vinculo inteiro', () => p1.vinculo.blocos[0].texto === 'CONFIG DO VINCULO');
+  t('2a resolucao que cai no mesmo vinculo recebe marcador', () =>
+    p2.vinculo.blocos.every((b) => b.texto.startsWith('<ja entregue')));
+  t('o arquivo de cada bloco continua nomeado (o agente sabe o que abrir)', () =>
+    p2.vinculo.blocos.map((b) => b.arquivo).join() === 'config.md,estado.md');
+  const orig = payload('projeto-3');
+  e.dedup(orig);
+  t('objeto do chamador nunca e mutilado', () => orig.vinculo.blocos[0].texto === 'CONFIG DO VINCULO');
+  t('vinculo ausente (sem blocos) passa intacto', () =>
+    e.dedup({ vinculo: { status: 'ausente', coletivo: 'x' } }).vinculo.status === 'ausente');
 }
 
 console.log(`\n${ok} ok, ${falhas.length} falha(s)\n`);

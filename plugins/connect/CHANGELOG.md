@@ -1,5 +1,29 @@
 # Changelog — connect
 
+## 0.33.0 — 2026-09-28
+
+**O resolver entregava o vínculo errado, e repetia o certo a cada chamada.**
+
+Medido na primeira execução do briefing diário sobre o vault, que resolve todos os vínculos do
+operador de uma vez. Dois defeitos no mesmo campo:
+
+- **Chave do vínculo.** O `resolver` escolhia o vínculo pelo coletivo que **escopa o ponteiro
+  local** e só depois pela entidade. Uma área registrada sob a matriz (ponteiro
+  `interno-viceri/vendas`) recebia o `estado.md` do vínculo da **matriz**, com o aviso *"desempatado
+  pelo coletivo interno-viceri"* como única pista. Escopo de ponteiro diz *onde o path foi
+  registrado*; vínculo diz *qual é a leitura do operador sobre esta entidade*. `lib/vinculo.mjs`
+  ganha `chaveDoVinculo`: vínculo próprio da entidade → vínculo do coletivo que a escopa (projeto
+  de um cliente cai no do cliente) → a entidade, com `ausente`.
+- **Dedup de sessão.** O comentário do `resolver` afirmava que o vínculo estava sujeito à mesma
+  deduplicação dos outros blocos longos — não estava. Quem resolvia várias frentes do mesmo
+  coletivo pagava `config.md` + `estado.md` (até 6 KB cada) a cada chamada. `lib/entrega.mjs`
+  passa a tratar `vinculo.blocos[].texto` como os demais: 1ª entrega inteira, depois marcador, com
+  o nome do arquivo preservado.
+- **`estado_operador` fica fora do dedup, de propósito.** É o pedido explícito do vínculo — quem o
+  chama está buscando o texto de novo (sessão longa, contexto compactado), e receber *"já
+  entregue"* ali seria beco sem saída.
+- Testes novos no `spike-ponteiro-escopado` (chave e dedup do vínculo); toda a suíte verde.
+
 ## 0.32.0 — 2026-09-28
 
 **O kanban falava três dialetos, e o vínculo não dizia o que era do operador.**

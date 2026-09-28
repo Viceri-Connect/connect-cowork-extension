@@ -384,7 +384,11 @@ function handleToolCall(id, params) {
             coletivos: coletivosComVinculo(cfg.perfilOperador),
           }));
         }
-        return ok(id, { content: [{ type: 'text', text: 'vinculo do operador — ver structuredContent' }], structuredContent: dedupInline({ vinculo: lerVinculo(cfg.perfilOperador, args.coletivo) }) });
+        // Pedido EXPLICITO do vinculo: vai sempre inteiro, sem dedup. O dedup de sessao
+        // (0.33.0) existe para o vinculo que o `resolver` anexa sem ninguem pedir; quem
+        // chama esta tool esta justamente buscando o texto de novo (contexto compactado,
+        // sessao longa), e receber o marcador "ja entregue" seria um beco sem saida.
+        return ok(id, { content: [{ type: 'text', text: 'vinculo do operador — ver structuredContent' }], structuredContent: { vinculo: lerVinculo(cfg.perfilOperador, args.coletivo) } });
       }
       case 'configurar':
         return ok(id, toolText(gravarConfig({ vaultMatriz: args.vault_matriz, cerebroPessoal: args.cerebro_pessoal, home: args.home })));

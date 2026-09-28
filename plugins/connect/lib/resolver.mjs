@@ -31,7 +31,7 @@ import { resolveConfig } from './session.mjs';
 import { montarL1 } from './matriz.mjs';
 import { resolverEntrada } from './navegacao.mjs';
 import { lerTabela, casarPonteiro, vizinhos } from './ponteiro.mjs';
-import { lerVinculo } from './vinculo.mjs';
+import { lerVinculoDaEntidade } from './vinculo.mjs';
 
 // ---------------------------------------------------------------------------
 // CLASSE DE ARTEFATO (ADR-22 item 2, emendado em 08/09) — declarada, nunca inferida.
@@ -445,7 +445,7 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, colet
       mount: mountReport,
       nota: `${entry.nota} — diretorio de OUTPUT do processo, nao vault: nao tem camada 1, nao herda processo, e nao e fonte para outro artefato de saida`,
       concessao,
-      vinculo: lerVinculo(cfg.perfilOperador || null, local.entrada.coletivo || entry.conceito),
+      vinculo: lerVinculoDaEntidade(cfg.perfilOperador || null, entry.conceito, local.entrada.coletivo),
       avisos: local.desempatadoPor ? [`desempatado pelo coletivo "${local.desempatadoPor}"`] : [],
     };
   }
@@ -483,8 +483,12 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, colet
   // da carta de navegacao do coletivo. A implementacao nunca aconteceu: em 08/09,
   // `vinculos` tinha ZERO ocorrencias em todo o codigo — as skills escreviam e nada
   // lia. Aqui o mecanismo vira o carteiro; a casa continua sendo markdown no perfil
-  // do operador, sujeito a mesma deduplicacao por sessao dos outros blocos longos.
-  const vinculo = lerVinculo(cfg.perfilOperador || null, local.entrada.coletivo || entry.conceito);
+  // do operador, sujeito a mesma deduplicacao por sessao dos outros blocos longos
+  // (`entrega.mjs` — so a partir da 0.33.0; antes o comentario afirmava e o codigo nao fazia).
+  //
+  // A CHAVE do vinculo e a entidade, nao o escopo do ponteiro local (0.33.0, ver
+  // `chaveDoVinculo`): uma area registrada sob a matriz recebia o vinculo da matriz.
+  const vinculo = lerVinculoDaEntidade(cfg.perfilOperador || null, entry.conceito, local.entrada.coletivo);
   if (vinculo.avisos?.length) avisos.push(...vinculo.avisos);
   if (local.desempatadoPor) avisos.push(`desempatado pelo coletivo "${local.desempatadoPor}"`);
 
