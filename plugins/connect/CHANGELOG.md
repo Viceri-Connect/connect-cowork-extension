@@ -1,5 +1,26 @@
 # Changelog — connect
 
+## 0.33.1 — 2026-09-29
+
+**O hub de uma casa abaixo do projeto resolvia `{projeto}` com o nome errado.**
+
+Medido no acervo de um cliente, no dia em que a carta de processo `sdd` ganhou a casa de qualidade
+do projeto (`projetos/{ciclo}/{projeto}/qualidade`, hub `qualidade-{projeto}.md`): o
+`medir_navegacao` procurava `.../4167-Chat-MAIA/qualidade/qualidade-qualidade.md`, reportava
+*hub-ausente*, quebrava a corrente de alcance e acusava o índice real como órfão na M1.
+
+- **Causa.** `expandirHub` (`lib/alcance.mjs`) substituía placeholder só por **posição**, com o
+  último segmento da casa como curinga para o último segmento do hub. Na casa do próprio projeto o
+  último segmento **é** o projeto, e por isso o defeito ficou invisível até existir casa abaixo dele.
+- **Correção.** O placeholder casa primeiro por **nome**, alinhando a casa declarada com a
+  instância real (`{projeto}` → o segmento que a casa declara como `{projeto}`). O posicional fica
+  como fallback para placeholder sem par na casa, e a forma irmã do hub de produto segue igual.
+- **Contorno no vault pode sair.** Enquanto esta versão não estava instalada, a carta `sdd` da
+  matriz passou a declarar a casa de qualidade como `*.md` listável, sem linha de hub. Com a 0.33.1
+  instalada a linha de hub pode voltar (`VIC-040` na capa da matriz).
+- Três testes novos no `spike-heranca`: as duas asserções da casa abaixo do projeto **falham na
+  0.33.0** e passam aqui, e a casa do próprio projeto segue resolvendo. Toda a suíte verde.
+
 ## 0.33.0 — 2026-09-28
 
 **O resolver entregava o vínculo errado, e repetia o certo a cada chamada.**

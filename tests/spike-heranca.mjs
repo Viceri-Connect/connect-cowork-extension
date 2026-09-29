@@ -303,6 +303,27 @@ ok(medirVault({ vaultRoot: vaultA, alias: 'a', governanteRoot: matriz }).metrica
 ok(medirVault({ vaultRoot: vaultSem, alias: 's', governanteRoot: matriz }).metricas.M7.status === 'nao-aplicavel',
   'M7 e nao-aplicavel sem `processo:` — nunca falha por ausencia de heranca');
 
+// VIC-040: placeholder do hub casa por NOME com a casa declarada, nao pelo
+// ultimo segmento. Casa ABAIXO do projeto era o caso que quebrava:
+// `qualidade-{projeto}.md` virava `qualidade-qualidade.md` (hub-ausente).
+const vaultSubcasa = path.join(raiz, 'subcasa');
+escrever(vaultSubcasa, 'projetos/ativos/p9/qualidade/qualidade-p9.md', '# indice de qualidade');
+escrever(vaultSubcasa, 'projetos/ativos/p9/p9.md', '# p9');
+const corrSub = resolverCorrente({
+  vaultRoot: vaultSubcasa,
+  declaracoesIniciais: [
+    { casa: 'projetos/{ciclo}/{projeto}/qualidade', padrao: null, grau: null, filtros: [], hub: 'projetos/{ciclo}/{projeto}/qualidade/qualidade-{projeto}.md' },
+    { casa: 'projetos/{ciclo}/{projeto}', padrao: null, grau: null, filtros: [], hub: 'projetos/{ciclo}/{projeto}/{projeto}.md' },
+  ],
+  instanciasDaCasa: (c) => (c.endsWith('/qualidade') ? ['projetos/ativos/p9/qualidade'] : ['projetos/ativos/p9']),
+});
+ok(corrSub.delegacoes.some((d) => d.hub === 'projetos/ativos/p9/qualidade/qualidade-p9.md' && d.status !== 'hub-ausente'),
+  'hub de casa abaixo do projeto resolve `{projeto}` pelo nome (VIC-040), nao pelo ultimo segmento');
+ok(!corrSub.delegacoes.some((d) => d.status === 'hub-ausente'),
+  'nenhum hub-ausente falso quando o hub existe no lugar declarado');
+ok(corrSub.delegacoes.some((d) => d.hub === 'projetos/ativos/p9/p9.md' && d.status !== 'hub-ausente'),
+  'casa do proprio projeto segue resolvendo (o caso que o posicional ja acertava)');
+
 // nunca lanca
 ok(medirVault({ vaultRoot: path.join(raiz, 'nao-existe'), alias: 'x' }).erro, 'vault inexistente devolve erro, nunca excecao');
 ok(medirVault({}).erro, 'chamada sem argumento devolve erro, nunca excecao');

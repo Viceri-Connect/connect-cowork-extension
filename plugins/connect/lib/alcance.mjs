@@ -190,7 +190,28 @@ export function corpoSemAlcance(md) {
 // Resolve o caminho de um hub declarado, que pode vir com placeholder
 // (`projetos/{projeto}/{projeto}.md` na carta de PROCESSO) ou concreto
 // (`projetos/Connect/adr/adr-connect.md` num hub local).
-function expandirHub(vaultRoot, hubDeclarado, casaResolvida) {
+//
+// Casamento por NOME antes do posicional (VIC-040, 29/09): o placeholder do hub
+// e resolvido pelo segmento de MESMO NOME na casa declarada. Antes era so por
+// posicao, com o ultimo segmento da casa como curinga — certo na casa do
+// proprio projeto (onde o ultimo segmento E o projeto) e errado em qualquer
+// casa abaixo dele: `projetos/{ciclo}/{projeto}/qualidade` com hub
+// `qualidade-{projeto}.md` virava `qualidade-qualidade.md`, hub-ausente e
+// orfa falsa na M1. O posicional fica como fallback para placeholder sem par.
+function vinculosPorNome(casaDeclarada, casaResolvida) {
+  const vinc = {};
+  if (!casaDeclarada || !casaResolvida) return vinc;
+  const decl = String(casaDeclarada).replace(/\\/g, '/').replace(/^\.?\//, '').split('/').filter(Boolean);
+  const real = String(casaResolvida).split('/').filter(Boolean);
+  if (decl.length !== real.length) return vinc;
+  decl.forEach((seg, i) => {
+    const m = /^\{([^}]+)\}$/.exec(seg);
+    if (m && vinc[m[1]] === undefined) vinc[m[1]] = real[i];
+  });
+  return vinc;
+}
+
+function expandirHub(vaultRoot, hubDeclarado, casaResolvida, casaDeclarada) {
   const bruto = String(hubDeclarado).replace(/\\/g, '/').replace(/^\.?\//, '');
   const candidatos = [];
 
@@ -208,10 +229,11 @@ function expandirHub(vaultRoot, hubDeclarado, casaResolvida) {
     const segCasa = (casaResolvida || '').split('/').filter(Boolean);
     const segHub = bruto.split('/');
     const ultimoDaCasa = segCasa[segCasa.length - 1] || '';
+    const porNome = vinculosPorNome(casaDeclarada, casaResolvida);
     const concreto = segHub.map((seg, i) => {
       if (!/\{[^}]*\}/.test(seg)) return seg;
-      const substituto = segCasa[i] !== undefined && i < segHub.length - 1 ? segCasa[i] : ultimoDaCasa;
-      return seg.replace(/\{[^}]*\}/g, substituto);
+      const posicional = segCasa[i] !== undefined && i < segHub.length - 1 ? segCasa[i] : ultimoDaCasa;
+      return seg.replace(/\{([^}]*)\}/g, (_, nome) => (porNome[nome] !== undefined ? porNome[nome] : posicional));
     });
     candidatos.push(concreto.join('/'));
     // Forma IRMA: o hub mora ao lado da pasta, nao dentro dela
@@ -273,7 +295,7 @@ export function resolverCorrente({
       }
 
       for (const casaReal of instancias) {
-        const { rel, abs } = expandirHub(vaultRoot, d.hub, casaReal);
+        const { rel, abs } = expandirHub(vaultRoot, d.hub, casaReal, d.casa);
         // O proprio hub e coberto por construcao: ele e o ponteiro declarado.
         decls.push({ casa: casaReal, padrao: rel.split('/').pop(), grau: 'derivavel', filtros: [], origem: `${origem} (hub)` });
 
