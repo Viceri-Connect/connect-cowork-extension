@@ -1,5 +1,29 @@
 # Changelog — connect
 
+## 0.33.2 — 2026-09-30
+
+**A fábrica do operador mandava procurar uma skill que nunca existiu, e ninguém sabia criar o briefing.**
+
+Medido no onboarding de um operador novo: o Passo 5 da `cnct-fabrica-operador` delegava a
+"moldagem de papel" a uma `cnct-fabrica-papel` inexistente e mandava deixar isso como pendência. O
+operador recebeu o aviso de que a skill deveria existir, o que contradiz a `cnct-fabrica` como
+construtora única. Na mesma sessão ele pediu o briefing diário, e sem nenhuma skill que tratasse o
+pedido o agente improvisou um prompt que mandava a tarefa ler a pasta inteira, no lugar do gatilho
+fino que a forma do briefing declara.
+
+- **`cnct-fabrica-operador` 0.4.0 — Passo 5 reescrito.** A definição de papel é do processo, e a
+  ocupação é do coletivo. O perfil guarda só a sintonia pessoal (`_{papel}/rotina.md` e, com papéis
+  acumulados, `_{papel}/papeis-ativos.md`), ambas **opcionais**. Papel que o processo não define vai
+  para a `cnct-fabrica` genérica, e só se o operador pedir.
+- **Passo 5b novo — briefing diário**, que vale também para operador já provisionado. Confere os
+  pré-requisitos (`TASKS.md` na forma, vínculos com `## Alocações`), usa **verbatim** o prompt que a
+  forma do briefing publica na matriz e cria a tarefa na ferramenta de agendamento da plataforma,
+  dentro do projeto que tem as pastas do Connect. Se não puder criar, diz por quê e entrega o prompt
+  canônico. Nunca redige um prompt alternativo.
+- **Novos gatilhos na description:** "criar minha rotina" e "criar/agendar meu briefing diário".
+- **`tests/spike-release.mjs`:** falha quando a versão do `plugin.json` não é a primeira entrada
+  deste CHANGELOG. As duas já tinham divergido uma vez sem que nada apontasse.
+
 ## 0.33.1 — 2026-09-29
 
 **O hub de uma casa abaixo do projeto resolvia `{projeto}` com o nome errado.**

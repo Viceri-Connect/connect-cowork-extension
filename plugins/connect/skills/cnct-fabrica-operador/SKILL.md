@@ -5,13 +5,14 @@ description: >
   (identidade cross-cliente + delta de comportamento), materializando a forma
   genérica que o produto entrega. Dispara quando: instalação sem cérebro pessoal,
   operador aponta uma pasta em branco, pedidos como "criar meu vault", "configurar
-  meu cérebro pessoal", "provisionar operador", ou quando o cnct-nucleo-sessao
+  meu cérebro pessoal", "provisionar operador", "criar minha rotina", "criar/agendar
+  meu briefing diário" (também para operador já provisionado), ou quando o cnct-nucleo-sessao
   detecta ausência de vault de operador e delega. Convenção cnct-fabrica-<tipo>: esta é
   a fábrica do tipo "operador" (implementação de referência do padrão em FRAMEWORK.md).
   Roda no estado zero — não exige coletivo montado. Estado zero é gatilho de
   nascimento, não erro.
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
   eixo: nucleo
   program: "Impulsa / Viceri"
   camada: "L2 — fábrica por tipo"
@@ -42,8 +43,10 @@ fábrica (`FRAMEWORK.md` §4).
 - `cnct-nucleo-sessao` detecta ausência de vault de operador (`configurar` sem
   `cerebro_pessoal`, ou pasta apontada em branco) → **delega aqui**.
 - Operador pede: "criar meu vault", "configurar meu cérebro pessoal", "provisionar operador".
+- Operador já provisionado pede a rotina ou o briefing → ir **direto ao Passo 5 / 5b**, sem
+  refazer os passos de nascimento.
 - **Uma vez por operador.** Se já existe `_cerebro/meu-config.md` no destino, **não
-  recriar** — oferecer editar a identidade e sair.
+  recriar** — oferecer editar a identidade, a rotina ou o briefing (Passos 5/5b) e sair.
 
 ## Protocolo
 
@@ -121,13 +124,42 @@ Sendo o destino `{CONNECT_HOME}/operador`, o mecanismo **já descobre o perfil s
 cerebro_pessoal = {VAULT_OBSIDIAN}` se o operador tiver um vault pessoal **próprio** a montar
 como enriquecimento (`./pessoal`) — isso é opcional e independente do perfil.
 
-**Passo 5 — Moldagem de papel (delegar).**
-Para cada papel estável coletado, a **moldagem de papel** materializa a estrutura mínima
-daquele papel no vault. Isso é da skill-irmã **`cnct-fabrica-papel`** (framework de papéis) — nome
-corrigido em 24/08: era citado como `fabrica-papel`, que **não existe e viola a convenção de nome**
-(`cnct-` é do produto, e "papel" é conceito do produto).
-Enquanto ela não existe, registrar os papéis em `meu-config.md` (já feito no Passo 3) e
-**deixar a pendência nomeada** ao operador — não embutir a moldagem aqui.
+**Passo 5 — Sintonia pessoal do papel (opcional).**
+A **definição** de um papel nunca mora no perfil do operador: é do **processo** que o coletivo
+declara (no SDD, `_cerebro/metodologias/sdd/papeis/` da matriz), e a ocupação por frente é do
+coletivo. O que o perfil pode ter é só a **sintonia pessoal** do papel primário, na forma do
+*conciliador* (`_papeis.md` § *Conciliador*, na matriz):
+
+- `_{papel}/rotina.md` — horários, limites por balde do briefing, blocos, o que o briefing nunca traz;
+- `_{papel}/papeis-ativos.md` — só se o operador acumula papéis: o primário e o que cada secundário
+  acrescenta à rotina dele.
+
+Os dois são **opcionais** — sem eles, valem os padrões do briefing. Oferecer ao operador; se ele
+não quiser agora, **não é pendência**. Não existe skill separada de "fábrica de papel": papel que o
+processo ainda **não define** é construído pela `cnct-fabrica` genérica, no coletivo, e só se o
+operador pedir — nunca a partir desta fábrica, e nunca como aviso de skill ausente.
+
+**Passo 5b — Briefing diário (opcional, vale também para operador que já existe).**
+Dispara aqui ou quando um operador já provisionado pede *"criar meu briefing"*, *"agendar o
+briefing diário"*, *"quero o review de sexta"*. A **lógica** do briefing é da matriz
+(`99 - Templates e Modelos Globais/Template-Briefing-Diario.md`); a tarefa agendada é **gatilho
+fino** e nunca carrega lógica, para não envelhecer contra a forma.
+
+1. **Pré-requisitos, conferidos antes de criar:** `TASKS.md` na forma da Parte 1 do template;
+   vínculos com `## Alocações` preenchida (sem alocação o briefing não tem o que ler — ajudar o
+   operador a declarar as frentes, **só ponteiros**); rotina do papel primário, se ele quiser
+   sintonia (Passo 5). Falta de rotina **não** bloqueia.
+2. **Ler a Parte 5 do template na matriz** e usar o prompt **dela, verbatim**, trocando só
+   `{papel}` pela pasta do papel primário e a variante (`diária` × `de sexta`). Nunca redigir outro
+   prompt, nunca mandar a tarefa ler pasta ou projeto inteiro, nunca embutir baldes ou limites.
+3. **Criar com a ferramenta de tarefa agendada da plataforma**, carregando-a se estiver diferida.
+   Horário vem da rotina (sem rotina: perguntar). ⚠️ A tarefa tem de nascer **no projeto Cowork que
+   tem as pastas do Connect conectadas** — criada fora dele, roda sem matriz nem operador ao alcance.
+   Se a ferramenta não estiver disponível ou a sessão não estiver nesse projeto, **dizer exatamente
+   isso** ao operador e entregar o prompt da Parte 5 para ele criar pela interface — nunca
+   improvisar um prompt alternativo.
+4. **Rodar uma vez na hora** (ou pedir ao operador que dispare) e conferir que o briefing saiu
+   lendo os vínculos — é o teste de que as alocações estão certas.
 
 **Passo 6 — Operador que já existe: migrar com inventário, nunca sobrescrever.**
 Esta fábrica **nasce** um operador; quando o destino já tem perfil, ela não recria — mas também **não
