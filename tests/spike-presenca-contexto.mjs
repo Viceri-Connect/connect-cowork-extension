@@ -102,7 +102,7 @@ teste('o bloco injetado aponta o arquivo e manda ler antes do trabalho', () => {
 });
 
 teste('regras duras ficam no canal injetado, nunca so no arquivo', () => {
-  assert.ok(/chame `resolver` ANTES/.test(curto), 'regra do resolver ausente do bloco injetado');
+  assert.ok(/`resolver` e para conceito com casa FORA da matriz/.test(curto), 'regra do resolver ausente do bloco injetado');
   assert.ok(/cnct-nucleo-escrita/.test(curto), 'regra do protocolo de escrita ausente do bloco injetado');
   assert.ok(/DEIXA MARCA/.test(curto), 'regra de varredura ausente do bloco injetado');
 });

@@ -130,11 +130,25 @@ export function parseManifesto(fmText) {
 
 // ---------------------------------------------------------------------------
 // lerRegistro — DERIVA as entidades dos manifestos nas raizes informadas.
-// Indexa QUALQUER nota com `tipo` (e manifesto, mesmo sem acervo externo) —
-// `externo` decide depois se ha algo a montar. Ordem de precedencia: a
-// primeira raiz vence em conceito repetido (pessoal antes de matriz — o
-// operador sobrepoe a governanca). Sem arquivo autorado (contrato §3).
+// Indexa SO manifesto com casa fora da matriz (`externo: true`): sub-vault ou
+// diretorio de output (Delivery Hub), as unicas coisas que precisam saber onde
+// moram NESTA maquina. Ordem de precedencia: a primeira raiz vence em conceito
+// repetido (pessoal antes de matriz — o operador sobrepoe a governanca). Sem
+// arquivo autorado (contrato §3).
+//
+// Escopo restringido em 05/10 (0.34.0). Ate a 0.33 o registro indexava QUALQUER
+// nota com `tipo`, para que nomear uma entidade inline devolvesse
+// `sem-acervo-externo`. Medido no AUDIT de 05/10: 100 notas com `tipo` na matriz,
+// ~20 entidades reais — o resto usa `tipo` como tipo de NOTA (peca, template,
+// papel, exigencia). Essa resposta nunca acrescentou caminho nem casa, e convidava
+// a usar o `resolver` para o que se alcanca pela carta e por wikilink. Conteudo
+// da matriz ou de um vault ja montado: carta + wikilink, lazy. `resolver`: o que
+// tem casa fora.
 // ---------------------------------------------------------------------------
+export function temCasaFora(man) {
+  return !!(man && man.externo);
+}
+
 export function lerRegistro(roots = []) {
   const out = [];
   const seen = new Set();
@@ -145,7 +159,7 @@ export function lerRegistro(roots = []) {
     for (const file of walkMd(root)) {
       const fm = extrairFrontmatter(readHead(file));
       const man = parseManifesto(fm);
-      if (!man) continue;
+      if (!temCasaFora(man)) continue;
 
       const slug = path.basename(file, '.md').toLowerCase();
       const conceito = (man.conceito || slug).toLowerCase();
@@ -242,13 +256,14 @@ export function casarMuitos(registro, termo, coletivo = null) {
     if (doColetivo.length) registro = doColetivo;
   }
 
-  // conceito exato: qualquer entidade, mesmo sem acervo (precisa achar pra
-  // devolver 'sem-acervo-externo' quando alguem nomeia ela certinho).
+  // conceito exato vence sozinho.
   const exato = registro.find((e) => nome(e) === t);
   if (exato) return { status: 'unico', entrada: exato };
 
   // gatilho/substring: restrito a quem tem acervo — nunca deixar uma tag
   // topica de doc de conteudo roubar o match de quem de fato monta algo.
+  // (Desde a 0.34.0 o registro so tem quem tem casa fora; o filtro fica como
+  // guarda para registro montado por fora de `lerRegistro`.)
   const candidatas = registro.filter((e) => e.externo);
 
   const porGatilho = candidatas.filter((e) => e.gatilhos.some((g) => String(g).toLowerCase() === t));
@@ -291,9 +306,10 @@ export function casarMuitos(registro, termo, coletivo = null) {
 // ja tiver.
 //
 // Status possiveis:
-//   'nao-encontrado'        — nenhum manifesto casa com o termo
-//   'sem-acervo-externo'    — entidade existe, mas `externo` != true (conteudo
-//                              mora na propria matriz; nada a montar)
+//   'nao-encontrado'        — nenhum conceito com casa fora casa com o termo. Nao
+//                              e erro: conteudo da matriz ou de vault montado se
+//                              alcanca pela carta e por wikilink (0.34.0 — o
+//                              antigo 'sem-acervo-externo' saiu com o escopo novo)
 //   'pendente-criacao'      — `externo:true` mas sem criado-por/criado-em: a
 //                              entidade foi declarada, o acervo ainda nao nasceu
 //                              (aciona `cnct-fabrica-<tipo>`, nunca cria sozinho)
@@ -335,21 +351,14 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, colet
       conceito,
       disponiveis: vizinhos(todos, conceito),
       totalNoRegistro: todos.length,
-      avisos: [`nenhum manifesto casa com "${conceito}" — os ${Math.min(12, todos.length)} conceitos mais proximos de ${todos.length} no registro estao em \`disponiveis\``],
+      avisos: [
+        `nenhum conceito com casa fora da matriz casa com "${conceito}" — os ${Math.min(12, todos.length)} mais proximos de ${todos.length} no registro estao em \`disponiveis\``,
+        'o `resolver` so alcanca sub-vault e diretorio (manifesto com `externo: true`). Projeto, nota ou entidade que mora na matriz ou num vault ja montado: navegue pela carta de navegacao daquele vault e pelos wikilinks — nao insista no `resolver`',
+      ],
     };
   }
 
   const entry = m.entrada;
-
-  if (!entry.externo) {
-    return {
-      status: 'sem-acervo-externo',
-      conceito: entry.conceito,
-      tipo: entry.tipo,
-      papel: entry.papel,
-      avisos: [`"${entry.conceito}" nao declara externo:true — o conteudo mora na propria matriz, nada a montar`],
-    };
-  }
 
   if (!entry.criado) {
     return {

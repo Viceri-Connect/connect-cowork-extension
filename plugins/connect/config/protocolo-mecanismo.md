@@ -21,17 +21,21 @@ Regra permanente da sessao inteira, nao um fluxo de uma execucao so. Aplica-se a
 aberta, esteja ela na matriz ou dentro de um sub-vault ja montado — recursivo, sem limite de
 profundidade (grafo, nao arvore).
 
-1. **Tarefa nomeia um conceito** (projeto, cliente, area, tribo — termo literal do operador).
-   Primeiro passo, sempre: chamar `resolver(conceito)`. **Nunca** grep, varredura de pastas ou
-   adivinhacao como primeira tentativa — so como jamais. `resolver` casa por conceito exato,
-   por gatilho (tag) ou substring; um termo comum (ex.: nome de um projeto que vive dentro de
-   uma tribo) pode casar via tag da entidade-mae, sem precisar nomear a tribo.
+1. **Tarefa nomeia um conceito com casa fora da matriz** (cliente, tribo ou area com acervo
+   proprio; Delivery Hub — termo literal do operador): chamar `resolver(conceito)` antes de
+   seguir. `resolver` casa por conceito exato, por gatilho (tag) ou substring, e so conhece
+   manifesto com `externo: true` (0.34.0). **Projeto, nota ou entidade que mora na matriz ou
+   num vault ja montado nao se resolve:** chega-se pela carta de navegacao daquele vault e
+   pelos wikilinks (projeto: a carta do vault declara a casa e a nota-fonte). Se o vault do
+   projeto ainda nao estiver montado, resolve-se **o vault** (o coletivo), nunca o projeto.
+   **Nunca** grep, varredura de pastas ou adivinhacao como primeira tentativa.
 2. **Toda nota aberta** (matriz ou sub-vault) que tiver `tipo` no frontmatter e um agente for
    seguir referencia dela: checar `externo`. Se `externo:true` e o sub-vault correspondente
    ainda nao estiver montado nesta sessao, `resolver` antes de seguir — nunca ler alem da
    fronteira sem resolver primeiro.
 3. **Status devolvido pelo `resolver` dita a acao — nunca contorno:**
-   - `sem-acervo-externo` — conteudo mora na propria matriz; seguir lendo normal.
+   - `nao-encontrado` — nenhum conceito com casa fora casa com o termo. Nao e erro: o que
+     mora na matriz ou num vault ja montado se alcanca pela carta e por wikilink (0.34.0).
    - `pendente-criacao` — entidade existe, acervo nao. Oferecer a `cnct-fabrica-<tipo>` ao
      operador; nunca criar nada sozinho.
    - `local-nao-configurado` — esta maquina nunca resolveu esse `conceito`. Perguntar ao

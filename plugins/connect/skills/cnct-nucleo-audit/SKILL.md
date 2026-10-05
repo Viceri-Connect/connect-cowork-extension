@@ -70,7 +70,7 @@ Do contrato de manifesto (`config/contrato-manifesto.md` §5):
 
 | Check | Dispara issue quando |
 |-------|----------------------|
-| Schema do manifesto | Manifesto sem `tipo`, `papel` ou `governanca` |
+| Schema do manifesto | Manifesto **consumido pelo mecanismo** — declara `externo: true` ou aresta `depende-de` — sem `tipo`, `papel` ou `governanca`. Nota que só declara `tipo` é tipo de nota do coletivo, não manifesto: não abre issue (0.34.0) |
 | Registro autorado proibido | Existe `_cerebro/sub-vaults.json` (ou índice autorado equivalente) |
 | Path/URL no manifesto | Manifesto declara path ou URL (frontmatter ou corpo) — só `conceito`/`alias` são chave válida |
 | Lar do cliente | Manifesto `tipo: cliente` fora de `clientes/` (mora sob a árvore organizacional) |
@@ -85,6 +85,7 @@ Do protocolo do mecanismo (`config/protocolo-mecanismo.md`):
 | Carta de navegação incompleta/ausente | `_cerebro/camada-1.md` do vault falta, ou a validação (`presentes`/`faltando`, contrato `config/contrato-navegacao.md`) reporta lacuna |
 | `entrada` sem caminho válido | Manifesto declara `entrada` mas a nota-hub correspondente não existe no acervo |
 | **Conteúdo não governado na raiz** | Há `{vault}/CLAUDE.md` **sem** marcador `CNCT-GOV-…`. O harness carrega esse arquivo sozinho e o rotula como *override* — é o slot de maior precedência do contexto, ocupado por autoria não verificada (ver `canal-injetado-governado` no GLOSSARIO.md). ⚠️ **Severidade alta e tratamento especial: o REPAIR nunca apaga nem sobrescreve.** Pode ser Camada 0 legítima de operador, sonda de medição ou conteúdo de terceiro — a correção é *mostrar ao operador e perguntar*, nunca remediar sozinho |
+| **Cópia de conflito de sync** | Arquivo cujo nome casa `*-DESKTOP-*`, `*conflicted*`, `*Conflito*` ou `* (1).*` (ou equivalente do cliente de sync). **Prioridade Alta, sempre** — não é higiene, é perda de entrega: o cliente de sync já resolveu conflito a favor da versão **velha**, e o nome canônico (carta injetada inclusive) passou a servir o conteúdo superado sem sinal nenhum. Nota que só **narra** um incidente e tem a palavra no nome não é cópia — conferir. ⚠️ **O REPAIR nunca apaga por nome:** a cópia é frequentemente a versão nova; comparar conteúdo normalizado e adotar o superset no nome canônico antes de remover qualquer coisa. Mecanismo desde a 0.34.0 — era critério customizado de um vault só e não alcançava os outros (`VIC-009`) |
 | **Canal injetado não preparado** | Vault que **recebe escrita** não tem `{vault}/CLAUDE.md` publicado. Severidade baixa: a camada 1 continua chegando pelo mecanismo, só perde o caminho redundante. Correção: `publicar_governanca` via `cnct-fabrica-navegacao`. **Vault somente-leitura não gera issue** — ausência ali é o caso normal, nunca lacuna |
 
 Estes checks rodam em **todo** vault tocado, independente de cliente — não fazem parte do

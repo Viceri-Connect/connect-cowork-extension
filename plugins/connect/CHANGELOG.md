@@ -1,5 +1,39 @@
 # Changelog — connect
 
+## 0.34.0 — 2026-10-05
+
+**O `resolver` indexava como entidade qualquer nota com `tipo`, e a regra 3 mandava chamá-lo para projeto — que ele nunca acha.**
+
+Medido no AUDIT agendado de 05/10 contra a matriz da Viceri: **100 notas** com `tipo` no frontmatter
+entravam no registro, e só ~20 eram entidade de fato — o resto usa `tipo` como tipo de **nota**
+(peça de conteúdo, template, papel, exigência). Para elas o `resolver` devolvia
+`sem-acervo-externo`, resposta que nunca acrescentou caminho nem casa. Na mesma sessão o operador
+apontou o efeito de uso: a regra 3 (*"ao nomear um conceito — projeto, cliente, área, tribo —
+chame `resolver` antes"*) fazia o agente resolver nome de projeto; projeto mora no sub-vault, fora
+das raízes do registro, então o passo nunca resolvia e o agente caía na carta de qualquer jeito.
+
+- **Registro restrito a casa fora** (`lib/resolver.mjs`, `temCasaFora`): só manifesto com
+  `externo: true` — sub-vault ou diretório de entrega. Contra a matriz real: 100 → **9** conceitos,
+  e `mapfre`, `impulsa`, `vendas` e os dois Delivery Hubs seguem resolvendo único (antes, dois
+  deles só por desempate de coletivo).
+- **`sem-acervo-externo` saiu.** Entidade inline devolve `nao-encontrado`, com aviso que manda
+  navegar pela carta e por wikilink. `pendente-criacao`, `local-nao-configurado`, desempate por
+  coletivo e `classe: diretorio` inalterados.
+- **Regra 3 reescrita** (`lib/regras.mjs`, `lib/render.mjs`, `config/protocolo-mecanismo.md`,
+  `cnct-nucleo-sessao`, `cnct-nucleo-conhecimento`, descrição da tool no MCP): `resolver` é para
+  conceito com casa fora; projeto e conteúdo da matriz ou de vault montado vão pela carta. Vault
+  do projeto não montado → resolve-se o **vault**, nunca o projeto.
+- **Contrato de manifesto e `cnct-nucleo-audit`:** o check de schema vale para manifesto
+  **consumido pelo mecanismo** (`externo: true` ou aresta `depende-de`). `tipo` sozinho é
+  vocabulário do coletivo e não abre issue. Não define o que é entidade para a instância.
+- ⚠️ **`CLAUDE.md` de raiz dos vaults** guarda a regra 3 antiga — é materializado uma vez por
+  `publicar_governanca`. Republicar depois de instalar a 0.34.0.
+- **`cnct-nucleo-audit` — cópia de conflito de sync vira check de mecanismo** (3a): roda em
+  todo vault tocado, prioridade Alta, REPAIR nunca apaga por nome. Era critério customizado só
+  da matriz e não alcançava os sub-vaults, onde metade do incidente de 26/08 aconteceu.
+- Testes: `spike-resolver` (entidade inline fora do registro, aviso de navegação) e
+  `spike-presenca-contexto` (texto novo da regra no bloco injetado).
+
 ## 0.33.2 — 2026-09-30
 
 **A fábrica do operador mandava procurar uma skill que nunca existiu, e ninguém sabia criar o briefing.**

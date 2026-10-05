@@ -101,7 +101,7 @@ const TOOLS = [
       '`criado-por`/`criado-em` (ja foi materializado?); o proprio `conceito` (chave de casamento) ' +
       'tambem indexa o path local. O path fica so em connect.config.json (subVaults). Nunca pergunta ' +
       'nada nem advinha path — devolve `status` pra ' +
-      'skill decidir: sem-acervo-externo, pendente-criacao (aciona fabrica), local-nao-configurado ' +
+      'skill decidir: nao-encontrado (o registro so indexa conceito com casa fora — projeto e conteudo da matriz ou de vault ja montado vao pela carta e por wikilink), pendente-criacao (aciona fabrica), local-nao-configurado ' +
       '(pergunte o diretorio e grave com registrar_subvault_local), origem-ausente, ou resolvido ' +
       '(monta, injeta a CARTA DE NAVEGACAO do sub-vault verbatim e devolve ' +
       '`entradaResolvida.caminhoRelativo` — o ponto de pouso ja resolvido a caminho real, ' +

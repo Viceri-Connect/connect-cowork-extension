@@ -100,13 +100,15 @@ que carregar e quando é o **vault**, não o produto (contrato em
 **Passo 4 — Aprofundar sob demanda (resolve-on-touch, disciplina fixa).**
 Seguir a **tabela de gatilhos da carta** (Passo 3b) conforme a necessidade — nunca uma lista
 de ponteiros presumida pelo agente. Ao nomear ou tocar num **sub-vault
-tipado** (um conceito/entidade com casa própria — um projeto, uma tribo, "minha
+tipado** (um conceito com casa fora da matriz — um cliente, uma tribo, um Delivery Hub, "minha
 gestão"), ou ao abrir qualquer nota que declare `tipo`+`externo:true` no frontmatter:
 
 1. Chamar `resolver(conceito)` **antes** de seguir qualquer referência pra dentro dela.
    Nunca grep, nunca varredura de pastas, nunca adivinhação — nem como contorno.
 2. Tratar o `status` devolvido (nunca contornar):
-   - `sem-acervo-externo` → conteúdo mora na própria matriz, seguir lendo normal.
+   - `nao-encontrado` → nenhum conceito com casa fora casa com o termo. Não é erro: projeto
+     e conteúdo que moram na matriz ou num vault já montado se alcançam pela carta e por
+     wikilink — não insistir no `resolver` (0.34.0).
    - `pendente-criacao` → entidade existe, acervo não. Oferecer a `cnct-fabrica-<tipo>`
      ao operador — nunca criar nada sozinho.
    - `local-nao-configurado` → esta máquina nunca resolveu esse `conceito`. Perguntar o

@@ -10,7 +10,7 @@
 // por um GATILHO (tag "impulsa") contra uma tabela local `subVaults` (override,
 // simulando connect.config.json) e verifica: derivou do manifesto, casou,
 // achou o path local, montou, leu ATRAVES do atalho, origem intacta, L1
-// carregada, `entrada` devolvida. Cobre tambem os estados sem-acervo-externo,
+// carregada, `entrada` devolvida. Cobre tambem entidade inline fora do registro (0.34.0),
 // pendente-criacao, local-nao-configurado e nao-encontrado.
 // Sem `sub-vaults.json` — registro autorado e proibido (contrato-manifesto §3).
 // Sem `onedrive-rel`/`fonte` — path nunca e conteudo coletivo (D35, corte 17/08).
@@ -101,19 +101,21 @@ ok(parseManifesto(`conceito: x\nexterno: true`) === null, 'parseManifesto rejeit
 const manSemExterno = parseManifesto(`tipo: organizacao-area\n`);
 ok(manSemExterno && manSemExterno.externo === false, 'parseManifesto default externo=false quando omitido');
 
-// --- lerRegistro (derivado, indexa QUALQUER tipo, mesmo sem externo) ---
+// --- lerRegistro (derivado, SO manifesto com casa fora — externo:true, 0.34.0) ---
 const reg = lerRegistro([matriz]);
-ok(reg.length === 4, `registro derivou 4 entidades (foi: ${reg.length})`);
+ok(reg.length === 3, `registro derivou 3 entidades com casa fora (foi: ${reg.length})`);
+ok(!reg.some((e) => e.conceito === 'engenharia'), 'entidade inline (sem externo) NAO entra no registro');
 ok(casar(reg, 'tribo-impulsa')?.conceito === 'tribo-impulsa', 'casa por conceito exato (override declarado no frontmatter)');
 ok(casar(reg, 'connect')?.conceito === 'tribo-impulsa', 'casa por gatilho (slug do arquivo vira gatilho quando difere do conceito)');
 ok(casar(reg, 'impulsa')?.conceito === 'tribo-impulsa', 'casa por gatilho (tag)');
 ok(casar(reg, 'tribo-impuls')?.conceito === 'tribo-impulsa', 'casa por substring');
 ok(casar(reg, 'inexistente') === null, 'nao casa termo desconhecido');
-ok(casar(reg, 'engenharia')?.externo === false, 'entidade organizacional sem externo casa, mas externo=false');
+ok(casar(reg, 'engenharia') === null, 'entidade inline nao casa — alcanca-se pela carta e por wikilink');
 
-// --- resolver: sem-acervo-externo ---
+// --- resolver: entidade inline -> nao-encontrado, com a orientacao de navegar pela carta ---
 const semAcervo = resolver({ conceito: 'engenharia', workspaceDir: workspace, vaultMatriz: matriz });
-ok(semAcervo.status === 'sem-acervo-externo', `status sem-acervo-externo (foi: ${semAcervo.status})`);
+ok(semAcervo.status === 'nao-encontrado', `entidade inline devolve nao-encontrado (foi: ${semAcervo.status})`);
+ok((semAcervo.avisos || []).some((a) => /carta de navegacao/.test(a)), 'o aviso manda navegar pela carta e por wikilink');
 
 // --- resolver: pendente-criacao (externo:true, sem criado-por/criado-em) ---
 const pendente = resolver({ conceito: 'cliente-novo', workspaceDir: workspace, vaultMatriz: matriz });

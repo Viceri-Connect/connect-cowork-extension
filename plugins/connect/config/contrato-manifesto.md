@@ -76,6 +76,12 @@ relativa (corte de raiz 17/08).
 - **O índice de entidades é derivado em runtime.** O `resolver` (e o `cnct-nucleo-sessao`)
   **varre os manifestos** — o frontmatter das notas na matriz — e monta o registro na hora.
   Nada persistido, nada autorado.
+- **O registro do `resolver` só indexa manifesto com casa fora (`externo: true`)** — sub-vault
+  ou diretório de entrega, as únicas coisas que precisam saber onde moram na máquina do
+  operador (0.34.0). Entidade inline, projeto e qualquer nota que more na matriz ou num vault
+  já montado se alcançam pela carta de navegação e por wikilink, nunca pelo `resolver`.
+  `tipo` no frontmatter **não** faz de uma nota um manifesto consumido: acervos usam `tipo`
+  como tipo de nota, e isso é vocabulário do coletivo.
 - **Manifesto de cliente tem lar fora da árvore organizacional.** Cliente é a segunda
   dimensão; se morasse sob um nó da árvore, um cliente atendido por duas tribos teria
   dois manifestos divergentes. Lar canônico: `clientes/{slug}.md` na raiz da matriz.
@@ -117,7 +123,9 @@ norma de simulação exige e onde uma árvore estrita quebraria.
 Cada exigência deste contrato tem uma verificação correspondente (par exigência→resposta→
 verificação):
 
-1. Todo manifesto tem `tipo`, `papel`, `governanca`.
+1. Todo manifesto **consumido pelo mecanismo** tem `tipo`, `papel`, `governanca` — o que declara
+   `externo: true` (registro do `resolver`) ou aresta `depende-de` (grafo). Nota com `tipo` que
+   não é nenhum dos dois é vocabulário do coletivo e **não** é cobrada por este check (0.34.0).
 2. Nenhum `_cerebro/sub-vaults.json` (ou índice autorado equivalente) existe no vault.
 3. Nenhum manifesto declara path/URL (frontmatter ou corpo) — `conceito`/`alias` são as
    únicas chaves, e nenhuma delas é path.

@@ -84,7 +84,8 @@ alias é conhecido e estável — não repetir `resolver` pro mesmo `conceito`.
 > só `externo` (bool), `criado-por`/`criado-em` (já materializado?) e `entrada` (nota-hub);
 > o `conceito` já existente (default: slug do arquivo) é reaproveitado como chave local
 > (não inventamos `escopo` — já usado em toda a matriz pra governança/cliente). Status
-> possíveis: `nao-encontrado`, `sem-acervo-externo`,
+> possíveis: `nao-encontrado` (desde a 0.34.0 também para entidade inline, que o registro
+> não indexa mais — só manifesto com `externo: true`),
 > `pendente-criacao`, `local-nao-configurado`, `origem-ausente`, `sem-workspace`,
 > `erro-mount`, `resolvido`. Registro autorado `sub-vaults.json` continua **removido**
 > (contrato-manifesto §3). Contrato: `config/contrato-manifesto.md`.

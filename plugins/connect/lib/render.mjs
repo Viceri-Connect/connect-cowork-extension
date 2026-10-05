@@ -585,7 +585,7 @@ export function renderContexto(report, { acionavel = true } = {}) {
   L.push('### Protocolo desta sessao');
   L.push('1. Referencie conhecimento sempre por caminho relativo ao workspace (ex.: `./matriz/_cerebro/...`).');
   L.push('2. Mount da junction da o caminho estavel; ele NAO concede acesso de leitura — se o Cowork pedir, conceda acesso a origem correspondente.');
-  L.push('3. Ao nomear um conceito (projeto, cliente, area, tribo), acione `resolver` — ele deriva o registro varrendo os manifestos (frontmatter `tipo` + `externo`; nenhum path no vault — contrato em `contrato-manifesto.md`), casa por conceito/gatilho e monta manifesto + acervo so no toque.');
+  L.push('3. `resolver` e para conceito com casa fora da matriz (sub-vault ou Delivery Hub): ele deriva o registro dos manifestos com `externo: true` (nenhum path no vault — contrato em `contrato-manifesto.md`), casa por conceito/gatilho e monta o acervo so no toque. Projeto e conteudo que moram na matriz ou num vault ja montado: carta + wikilink, lazy.');
   L.push('4. Dentro de qualquer vault, navegue pela **ordem de resolucao canonica** (secao no protocolo acima): carta de navegacao -> ponto de pouso -> ponteiro declarado. Varredura e ultimo recurso e deixa marca.');
 
   // Avisos — omite o aviso de matriz-nao-definida quando ja coberto pelo
