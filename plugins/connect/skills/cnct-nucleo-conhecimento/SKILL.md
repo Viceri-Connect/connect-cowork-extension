@@ -19,7 +19,7 @@ metadata:
 
 # Connect — protocolo de contexto por caminho dinâmico
 
-O Connect expõe fontes de conhecimento (a matriz, o cérebro pessoal, sub-vaults,
+O Connect expõe fontes de conhecimento (a matriz, o perfil do operador, o vault pessoal opcional, sub-vaults,
 diretórios sincronizados com SharePoint/OneDrive) como **aliases "flat" dentro do
 workspace da sessão**. Cada alias é uma junction (Windows) ou symlink (POSIX)
 criada pela extensão — no início da sessão (hook → `iniciar_sessao`) ou sob

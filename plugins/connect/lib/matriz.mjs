@@ -57,7 +57,8 @@ function parseKeyValues(md) {
 }
 
 // ---------------------------------------------------------------------------
-// Identidade do operador — lida do cerebro pessoal (_cerebro/meu-config.md).
+// Identidade do operador — lida de `{raiz}/_cerebro/meu-config.md`. A raiz normal e o
+// perfil gerido ({CONNECT_HOME}/operador); o vault pessoal opcional so entra como fallback.
 // Retorna null se o cerebro pessoal nao estiver disponivel (identidade opcional
 // no POC: a sessao sobe mesmo sem ela, so avisa).
 // ---------------------------------------------------------------------------
@@ -223,6 +224,7 @@ export function montarL1Pessoal(cerebroPessoalRoot, aliasPessoal = 'pessoal') {
   addPtr('TASKS.md', 'kanban pessoal');
 
   return {
+    alias: aliasPessoal, // 'operador' (perfil gerido, o normal) ou 'pessoal' (vault opcional, fallback)
     hotCacheInline: hotCache, // delta de comportamento do operador, inline por ser curto
     hotCacheOrigem,
     ponteiros,

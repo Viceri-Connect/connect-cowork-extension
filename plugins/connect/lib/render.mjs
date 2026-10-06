@@ -344,10 +344,12 @@ function blocoAcionavel(report) {
     L.push('');
     L.push('🔧 **Acao obrigatoria antes de qualquer outra coisa nesta sessao:**');
     L.push('Ainda nao ha uma MATRIZ configurada (o vault coletivo — a pasta que contem');
-    L.push('`_cerebro/vault-config.md`). Pergunte ao operador, em linguagem simples, onde');
-    L.push('fica essa pasta nesta maquina (e o cerebro pessoal, se ele tiver um) e chame a');
-    L.push('tool `configurar` com os caminhos. Depois, chame `iniciar_sessao` de novo para');
-    L.push('restaurar o contexto completo. Nao prossiga com outra tarefa antes disso.');
+    L.push('`_cerebro/vault-config.md`). Chame `catalogo_sync` e PROPONHA ao operador a pasta');
+    L.push('`Matriz` que o OneDrive ja sincroniza (ele so confirma); sem ela no catalogo, pergunte');
+    L.push('em linguagem simples onde fica. Chame `configurar` com `vault_matriz` e depois');
+    L.push('`iniciar_sessao` de novo. NAO pergunte por "cerebro pessoal" ou "vault pessoal": e');
+    L.push('opcional, e o perfil do operador nasce pela cnct-fabrica-operador, sem pasta a escolher.');
+    L.push('Siga o onboarding da cnct-nucleo-sessao (Passo 2). Nao prossiga com outra tarefa antes.');
     L.push('');
     L.push('⚠️ **Nunca aceite uma pasta sem confrontar o que ela declara ser.** O diretorio da');
     L.push('matriz declara `tipo-vault: matriz` em `_cerebro/vault-config.md`; acervo de tribo ou');
@@ -364,10 +366,11 @@ function blocoAcionavel(report) {
   if (report.operadorProvisionado === false) {
     L.push('## Connect — perfil do operador nao provisionado');
     L.push('');
-    L.push('👤 **Acao esperada nesta sessao:** o cerebro do operador (identidade cross-cliente +');
-    L.push('delta de comportamento) ainda nao foi materializado. Sem ele, a Camada 0 entra vazia:');
-    L.push('a sessao sobe, mas o agente nao sabe quem e o operador nem como ele trabalha.');
+    L.push('👤 **Acao esperada nesta sessao:** o perfil do operador (identidade cross-cliente +');
+    L.push('delta de comportamento, em {CONNECT_HOME}/operador) ainda nao foi materializado. Sem ele,');
+    L.push('a Camada 0 entra vazia: a sessao sobe, mas o agente nao sabe quem e o operador.');
     L.push('Ofereca rodar a `cnct-fabrica-operador` — estado zero e gatilho de nascimento, nao erro.');
+    L.push('Ela nao pede pasta: nao pergunte por "vault pessoal" ou "cerebro pessoal" (opcionais).');
     L.push('');
   }
 
@@ -568,7 +571,7 @@ export function renderContexto(report, { acionavel = true } = {}) {
   // Cerebro pessoal — Camada 0 (D104): hot cache pessoal (delta) + ponteiros.
   const lp = report.l1Pessoal;
   if (lp && (lp.hotCacheInline || (lp.ponteiros && lp.ponteiros.length))) {
-    L.push('### Cerebro pessoal — camada 0');
+    L.push(lp.alias === 'pessoal' ? '### Vault pessoal (opcional) — camada 0' : '### Perfil do operador — camada 0');
     if (lp.hotCacheInline) {
       L.push('');
       L.push(lp.hotCacheInline.trim());

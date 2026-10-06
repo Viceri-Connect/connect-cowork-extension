@@ -83,13 +83,14 @@ const TOOLS = [
     name: 'configurar',
     description:
       'Grava os caminhos locais do Connect em connect.config.json (configuracao guiada do 1o uso). ' +
+      'No 1o uso so a matriz e necessaria (cerebro_pessoal e opcional). ' +
       'Atualizacao parcial: informe vault_matriz e/ou cerebro_pessoal; so grava os que existirem como ' +
       'diretorio, e reporta os invalidos para re-perguntar. Depois, chame iniciar_sessao.',
     inputSchema: {
       type: 'object',
       properties: {
         vault_matriz: { type: 'string', description: 'Caminho local da matriz (pasta que contem _cerebro/vault-config.md).' },
-        cerebro_pessoal: { type: 'string', description: 'Caminho local do cerebro pessoal (identidade do operador).' },
+        cerebro_pessoal: { type: 'string', description: 'OPCIONAL — so se o operador disser que ja mantem um vault Obsidian proprio (enriquecimento, montado como ./pessoal). NAO e a identidade: o perfil do operador e gerido pelo Connect em {CONNECT_HOME}/operador e nasce pela cnct-fabrica-operador. Nunca pergunte por ele no 1o uso.' },
         home: { type: 'string', description: 'Pasta fixa do Connect (fora do OneDrive). Opcional; default por SO.' },
       },
       required: [],

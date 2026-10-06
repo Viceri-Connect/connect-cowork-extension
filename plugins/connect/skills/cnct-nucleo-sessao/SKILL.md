@@ -11,9 +11,10 @@ description: >
   inclusive ao clicar em "Personalizar"/"Customizar" no Cowork logo após a
   instalação, ou em pedidos como "configurar o Connect", "conectar minha
   matriz", "onde fica meu vault", "sou novo aqui", "primeiro uso", "setup
-  inicial" — mesmo sem menção a projeto/tarefa. Na primeira vez, conduz a
-  configuração guiada dos caminhos (matriz, cérebro pessoal) via a tool
-  configurar. É o FALLBACK do hook de SessionStart quando ele não dispara
+  inicial" — mesmo sem menção a projeto/tarefa. Na primeira vez, conduz o
+  onboarding: configura a matriz (tool configurar), faz nascer o perfil do
+  operador (cnct-fabrica-operador), sincroniza os acervos das frentes dele e
+  oferece o briefing diário. É o FALLBACK do hook de SessionStart quando ele não dispara
   no Cowork (inclusive quando o clique em "Personalizar" abre uma janela sem
   disparar o hook) — o mecanismo é o mesmo, só muda o gatilho.
 metadata:
@@ -50,11 +51,19 @@ Chamar a tool `estado_sessao` (passar o `session_id` da sessão, se conhecido).
 - Se `configurado = true` e ainda não montado → ir ao Passo 3.
 - Se `configurado = false` → ir ao Passo 2 (1º uso).
 
-**Passo 2 — Configuração guiada (só no 1º uso).**
-Perguntar ao operador, em linguagem simples, **onde ficam** (caminhos locais):
+**Passo 2 — Onboarding (só no 1º uso).**
 
-1. a **matriz** (a pasta do vault coletivo que contém `_cerebro/vault-config.md`);
-2. o **cérebro pessoal** (identidade), se houver.
+O que o mecanismo precisa para funcionar são **duas** coisas, e só a primeira é caminho a informar:
+
+1. a **matriz** — a pasta do vault coletivo que contém `_cerebro/vault-config.md`;
+2. o **perfil do operador** — **gerido pelo Connect** em `{CONNECT_HOME}/operador`. Não é pasta a
+   escolher nem caminho a perguntar: nasce pela `cnct-fabrica-operador` (Passo 2a).
+
+> ⚠️ **Não pergunte pelo "cérebro pessoal" nem por "vault pessoal".** Ele é enriquecimento
+> **opcional** (`CONCEITOS.md` §4) — um vault Obsidian próprio que o operador já mantenha. Só
+> entra se o **operador** mencionar que tem um; aí `configurar cerebro_pessoal`. Perguntar por ele
+> no 1º uso fazia o operador novo criar uma pasta que nenhum protocolo usa (medido nos onboardings
+> da squad Novos Negócios, MAPFRE, e no guia do time de Vendas e Marketing).
 
 **Antes de perguntar o caminho da matriz, chame `catalogo_sync`** (0.35.1). Ele lista as pastas
 que o OneDrive desta máquina sincroniza (`naoDeclaradas[].local` — a matriz é raiz, não tem
@@ -65,15 +74,16 @@ sendo do `configurar` (`_cerebro/vault-config.md` presente); nome de pasta é s�
 pasta `Matriz` no catálogo = a matriz ainda não foi sincronizada: peça para sincronizar pelo botão
 *Sincronizar* do SharePoint antes de seguir.
 
-Chamar a tool `configurar` com `vault_matriz` e/ou `cerebro_pessoal`.
+Chamar a tool `configurar` com `vault_matriz`.
 - Se vier `invalidos` (path não existe / placeholder OneDrive não sincronizado),
   explicar e **re-perguntar** só o que faltou — nunca assumir um caminho.
 - `home` (pasta fixa do Connect) usa o default do SO; só perguntar se o operador quiser mudar.
-- **Ausência de vault de operador não é erro — é gatilho de nascimento.** Se não
-  há `cerebro_pessoal`, ou a pasta apontada está **em branco** (sem `_cerebro/meu-config.md`),
-  **delegar à skill `cnct-fabrica-operador`**: ela elicita a identidade e materializa o vault do
-  zero, e ao final chama `configurar` por conta própria. Não tentar montar um vault que ainda
-  não existe.
+
+**Passo 2a — Perfil do operador.** Depois de `configurar`, chamar `iniciar_sessao`. Se a
+identidade não vier (aviso *"perfil do operador ainda não provisionado"*), **delegar à
+`cnct-fabrica-operador`**: ela pergunta nome, e-mail e papel, uma coisa por vez, e materializa o
+perfil em `{CONNECT_HOME}/operador`. Ausência de perfil não é erro — é gatilho de nascimento.
+O perfil **não** depende de `cerebro_pessoal` e não pede pasta nenhuma ao operador.
 
 **Passo 2b — Conectar a matriz como pasta do projeto Cowork.**
 Depois de `configurar`, **peça ao operador para conectar a pasta da matriz ao projeto Cowork** —
@@ -88,6 +98,19 @@ Depois de `configurar`, **peça ao operador para conectar a pasta da matriz ao p
   sugestão no fim da conversa.
 - **Não confunda com concessão de acesso.** Conectar a pasta ao projeto é o que traz o canal
   injetado; a concessão que o bloco de sessão pede (🔑) é outra coisa e continua valendo.
+
+**Passo 2c — Acervos e briefing (fecha o onboarding).** Com o perfil nascido:
+
+1. **Acervos das frentes do operador.** Pergunte em que áreas, tribos ou clientes ele atua (ou use o
+   que ele já disse no pedido) e, para cada conceito, `resolver` → `sincronizar_subvault` quando
+   `sincronizavel: true` (Passo 4). O operador não informa caminho nenhum.
+2. **Vínculos com `## Alocações`.** Ajude a declarar ao menos **uma frente** por coletivo (só
+   ponteiros para o hub — forma na `cnct-fabrica-operador`, Passo 3). Sem alocação o briefing não
+   tem o que ler.
+3. **Briefing diário.** Ofereça a tarefa agendada — `cnct-fabrica-operador` **Passo 5b**, com o
+   prompt verbatim da Parte 5 do `Template-Briefing-Diario` da matriz. Ela tem de nascer **neste
+   projeto Cowork** (o que tem a matriz conectada). Rode uma vez na hora para conferir. Recusa do
+   operador não é pendência.
 
 **Passo 3 — Restaurar o contexto coletivo.**
 Chamar a tool `iniciar_sessao` (com o `session_id`, se conhecido). Ela devolve o

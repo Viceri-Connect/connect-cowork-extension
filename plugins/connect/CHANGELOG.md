@@ -1,5 +1,31 @@
 # Changelog — connect
 
+## 0.35.2 — 2026-10-06
+
+**O 1º uso ainda pedia "cérebro pessoal", e o operador novo criava uma pasta que nenhum protocolo usa.**
+
+O mecanismo já decidia o contrário desde 17/08 (`CONCEITOS.md` §4/§5): a identidade vive no **perfil do
+operador**, gerido pelo Connect em `{CONNECT_HOME}/operador`, e o vault pessoal Obsidian é
+enriquecimento opcional. O código obedecia a decisão. Os textos que orientam o agente, não: a
+`cnct-nucleo-sessao` perguntava *"o cérebro pessoal (identidade), se houver"*, o gatilho da fábrica era
+*"não há `cerebro_pessoal`"* e a mensagem de 1º uso do `render` mandava perguntar por ele. Quem sofreu
+foi o operador da squad Novos Negócios (MAPFRE) no onboarding dele, e o guia do time de Vendas e
+Marketing nasceu com o mesmo erro. A 0.33.2 tinha corrigido a fábrica e o briefing, mas não esses textos.
+
+- **`cnct-nucleo-sessao` — onboarding reescrito.** Passo 2: só a matriz é caminho a informar (proposta
+  pelo `catalogo_sync`). Passo 2a: o perfil nasce pela `cnct-fabrica-operador`, sem pasta a escolher.
+  Passo 2c, novo: acervos das frentes via `sincronizar_subvault`, ao menos uma alocação por coletivo e
+  oferta do **briefing diário** (Passo 5b da fábrica), criado no próprio projeto Cowork. É proibido
+  perguntar por "cérebro pessoal" ou "vault pessoal": só entra se o operador disser que tem um.
+- **`cnct-fabrica-operador`:** a descrição e o gatilho passam a ser **ausência de perfil do operador**,
+  não de `cerebro_pessoal`. A pergunta sobre o coletivo não pede mais o caminho da matriz, que já está
+  configurada no onboarding.
+- **`render`:** a mensagem de 1º uso e o aviso de perfil não provisionado deixam de citar o cérebro
+  pessoal. A seção da camada 0 se chama "Perfil do operador", e "Vault pessoal (opcional)" só quando
+  vem do fallback.
+- **Tool `configurar`:** `cerebro_pessoal` passa a ser descrito como opcional, nunca a identidade.
+- O papel do vault pessoal (uso modelo × legado declarado) segue como **questão aberta** no projeto.
+
 ## 0.35.1 — 2026-10-06
 
 **A 0.35.0 entregou a tool, e a skill de sessão continuava mandando perguntar o caminho.**

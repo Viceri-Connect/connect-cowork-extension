@@ -1,13 +1,14 @@
 ---
 name: cnct-fabrica-operador
 description: >
-  Provisiona do ZERO, por elicitação, um vault de operador do dois-cérebros
-  (identidade cross-cliente + delta de comportamento), materializando a forma
-  genérica que o produto entrega. Dispara quando: instalação sem cérebro pessoal,
-  operador aponta uma pasta em branco, pedidos como "criar meu vault", "configurar
-  meu cérebro pessoal", "provisionar operador", "criar minha rotina", "criar/agendar
-  meu briefing diário" (também para operador já provisionado), ou quando o cnct-nucleo-sessao
-  detecta ausência de vault de operador e delega. Convenção cnct-fabrica-<tipo>: esta é
+  Provisiona do ZERO, por elicitação, o PERFIL DO OPERADOR gerido pelo Connect
+  ({CONNECT_HOME}/operador — identidade cross-cliente + delta de comportamento),
+  materializando a forma genérica que o produto entrega. Dispara quando: 1º uso sem
+  perfil do operador (iniciar_sessao avisa "perfil do operador ainda nao provisionado"),
+  pedidos como "criar meu perfil", "provisionar operador", "criar minha rotina",
+  "criar/agendar meu briefing diário" (também para operador já provisionado), ou quando
+  o cnct-nucleo-sessao delega no onboarding. Não pede pasta: o vault pessoal Obsidian
+  é opcional e nunca condição. Convenção cnct-fabrica-<tipo>: esta é
   a fábrica do tipo "operador" (implementação de referência do padrão em FRAMEWORK.md).
   Roda no estado zero — não exige coletivo montado. Estado zero é gatilho de
   nascimento, não erro.
@@ -40,9 +41,11 @@ fábrica (`FRAMEWORK.md` §4).
 
 ## Quando disparar
 
-- `cnct-nucleo-sessao` detecta ausência de vault de operador (`configurar` sem
-  `cerebro_pessoal`, ou pasta apontada em branco) → **delega aqui**.
-- Operador pede: "criar meu vault", "configurar meu cérebro pessoal", "provisionar operador".
+- `cnct-nucleo-sessao` detecta ausência de **perfil do operador** (sem
+  `_cerebro/meu-config.md` em `{CONNECT_HOME}/operador`) → **delega aqui**. ⚠️ Ausência de
+  `cerebro_pessoal` **não** é gatilho: o vault pessoal é opcional (`CONCEITOS.md` §4), e tratá-lo
+  como gatilho fazia o operador novo criar uma pasta que nenhum protocolo usa (0.35.2).
+- Operador pede: "criar meu perfil", "provisionar operador".
 - Operador já provisionado pede a rotina ou o briefing → ir **direto ao Passo 5 / 5b**, sem
   refazer os passos de nascimento.
 - **Uma vez por operador.** Se já existe `_cerebro/meu-config.md` no destino, **não
@@ -73,8 +76,10 @@ linha *por que importa*:
 3. **Papéis estáveis** (cross-cliente) — ex.: Dev, Tech Lead, Arquiteto. → o papel
    *efetivo* por cliente é resolvido depois, no registro do cliente; aqui é o que você é
    independente de onde.
-4. **Já existe um coletivo/matriz?** (a pasta com `_cerebro/vault-config.md`). → se sim,
-   pedir caminho + `slug` do cliente para semear o primeiro registro; se não, **seguir** —
+4. **Em que coletivo(s) você atua?** (área, tribo, cliente). → a matriz normalmente **já está
+   configurada** quando esta fábrica roda no onboarding — não pergunte o caminho dela de novo
+   (`estado_sessao`). Use o conceito de cada coletivo para semear o registro; se não houver
+   matriz nenhuma, **seguir** —
    o vault de operador nasce sem coletivo, e o registro de cliente entra depois (via a
    fábrica de cliente / `discovery-intake`).
 
