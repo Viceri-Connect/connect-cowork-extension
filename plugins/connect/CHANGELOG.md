@@ -1,5 +1,30 @@
 # Changelog — connect
 
+## 0.36.0 — 2026-10-06
+
+**Entidade sem `origem` dependia de um curador lembrar de rodar o `catalogo_sync` na máquina certa.**
+
+O acervo do Instituto Unibanco está num site que o curador não alcança: só quem o usa tem a pasta
+sincronizada. Esperar que essa pessoa rode uma tool de curadoria é a classe de passo que se pula. Agora
+a captura acontece **no uso**: ao resolver a entidade, o mecanismo já sabe o caminho local e lê no
+catálogo do OneDrive de onde ele vem. Emenda à `ADR-23` (acervo da tribo).
+
+- **`resolver` devolve `origemCapturavel`** quando a entidade resolvida não declara `origem`: o bloco
+  pronto (`yaml`), o manifesto a editar e se a captura é `exata` (o caminho é a própria pasta
+  sincronizada) ou não (o acervo fica **dentro** de uma pasta sincronizada maior, como `mapfre-connect`
+  dentro de `Obsidian`). O mecanismo **só propõe**: a `cnct-nucleo-sessao` oferece gravar uma vez, pelo
+  `cnct-nucleo-escrita`, e sem permissão ou com recusa vira issue no audit da matriz.
+- **`pasta` virou informativo — medido.** Uma pasta **não sincronizada** foi sincronizada com
+  `folderUrl` propositalmente errado, e o OneDrive a achou pelo `pasta-id`. O catálogo só guarda o nome
+  da pasta, e isso basta: a captura sai completa, sem API do SharePoint nem navegador.
+- **`site-titulo` (opcional) nomeia a pasta local.** O mesmo teste mostrou que o cliente cria
+  `{webTitle} - {pasta}`; derivado do slug, o Marketing nasceria `impulsa.connect - Marketing`, o que
+  contradiz o guia de instalação. O link usa o título quando declarado, e a captura sempre o traz.
+- **`catalogo_sync`:** a `origemSugerida` sai completa, com `site-titulo` e o `yaml` pronto.
+- Contrato de manifesto §2.1, `cnct-nucleo-sessao`, `cnct-nucleo-audit` e descrições das tools
+  atualizados. Testes: `spike-onedrive` com 59 checagens (captura exata, aninhada e fora do OneDrive;
+  o `resolver` propondo e não propondo), e a captura conferida contra o catálogo real.
+
 ## 0.35.2 — 2026-10-06
 
 **O 1º uso ainda pedia "cérebro pessoal", e o operador novo criava uma pasta que nenhum protocolo usa.**

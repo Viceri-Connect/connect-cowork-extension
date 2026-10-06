@@ -154,6 +154,13 @@ gestão"), ou ao abrir qualquer nota que declare `tipo`+`externo:true` no frontm
      `registrar_subvault_local`, repetir.
    - `origem-ausente` → path conhecido mas não existe/não sincronizado. Com `sincronizavel: true`,
      mesmo tratamento acima (`sincronizar_subvault`); sem, avisar.
+   - `resolvido` **com `origemCapturavel`** (0.36.0, ADR-23) → o manifesto não declara de onde o
+     acervo vem, e o OneDrive desta máquina sabe. **Uma vez por entidade**, ofereça ao operador
+     gravar `origemCapturavel.yaml` no manifesto indicado em `origemCapturavel.manifesto` (antes de
+     `tags:`), pelo `cnct-nucleo-escrita`. Com `exata: false`, a origem é de uma pasta **maior** que
+     o acervo: explique e só grave se ele aceitar que quem chegar depois sincronize a pasta inteira.
+     Sem permissão de escrita na matriz, ou recusa: registre como issue na capa do audit da matriz.
+     Nunca grave em silêncio, nunca descarte. Depois, siga o `resolvido` normal abaixo.
    - `resolvido` → pedir acesso ao Cowork; ler a **carta de navegação do sub-vault** (vem
      injetada no bloco de resolução) e pousar em `entradaResolvida.caminhoRelativo` — o
      caminho real, já resolvido. Se a carta vier ausente, ou a `entrada` tiver sido

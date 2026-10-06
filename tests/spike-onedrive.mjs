@@ -248,6 +248,44 @@ ok(r8.status === 'local-nao-configurado' && r8.sincronizavel === true && /sincro
 const r8b = resolver({ conceito: 'legado', workspaceDir: path.join(base, 'ws'), ...cfg });
 ok(r8b.sincronizavel === false && /registrar_subvault_local/.test(r8b.avisos.join(' ')), 'resolver: sem origem segue mandando perguntar');
 
+// --- 9. captura passiva (emenda de 06/10) -----------------------------------
+import { capturarOrigem, origemEmYaml } from '../plugins/connect/lib/onedrive.mjs';
+import { parseFrontmatter } from '../plugins/connect/lib/frontmatter.mjs';
+
+// site-titulo nomeia a pasta local: o link usa o titulo declarado, nao o slug
+const comTitulo = lerOrigem([{ ...boa, 'site-titulo': 'Acervo Contoso' }]).itens[0];
+ok(montarLinkSync(comTitulo).includes('webTitle=Acervo%20Contoso'), 'link usa site-titulo quando declarado');
+ok(montarLinkSync(r1.itens[0]).includes('webTitle=acervo'), 'sem site-titulo: cai no slug do site');
+ok(lerOrigem([{ ...boa, pasta: 'Marketing' }]).itens.length === 1, 'pasta so com o nome e valida (quem localiza e o pasta-id)');
+
+const catTit = cat.map((e) => (e.tipo === 'pasta' ? { ...e, webTitle: 'Acervo' } : e));
+const capEx = capturarOrigem(catTit, local('Acervo - Marketing'));
+ok(capEx && capEx.exata === true && capEx.origem['pasta-id'] === G.mkt && capEx.origem['site-titulo'] === 'Acervo' && capEx.origem.pasta === 'Marketing', 'captura exata: origem completa a partir do caminho local');
+const rt = lerOrigem(parseFrontmatter(`---\ntipo: x\n${capEx.yaml}\n---\n`).origem);
+ok(rt.itens.length === 1 && rt.erros.length === 0 && rt.itens[0].siteTitulo === 'Acervo', 'yaml capturado volta pelo parser e passa na validacao');
+const capAc = capturarOrigem(catTit, path.join(local('Acervo - Marketing'), 'sub', 'vault'));
+ok(capAc && capAc.exata === false && capAc.subcaminho === path.join('sub', 'vault') && capAc.origem['pasta-id'] === G.mkt, 'caminho dentro de pasta sincronizada: exata=false, com subcaminho');
+ok(capturarOrigem(catTit, path.join(base, 'fora-do-onedrive')) === null, 'caminho fora do OneDrive: nada a capturar');
+
+// resolver propoe a captura quando o manifesto nao tem origem
+fs.mkdirSync(local('Acervo - Legado'), { recursive: true });
+const catLegado = [...catTit, { tipo: 'pasta', webTitle: 'Acervo', webUrl: SITE, siteId: G.site, webId: G.web, listaId: G.lista, pastaId: G.hubB, nome: 'Legado', mountPoint: local('Acervo - Legado') }];
+const hostCat = { plataforma: 'win32', lerCatalogo: () => ({ status: 'ok', entradas: catLegado }) };
+for (const w of ['ws9', 'ws9b', 'ws9c']) fs.mkdirSync(path.join(base, w), { recursive: true });
+const r9 = resolver({ conceito: 'legado', workspaceDir: path.join(base, 'ws9'), subVaults: { legado: local('Acervo - Legado') }, hostOneDrive: hostCat, ...cfg });
+ok(r9.status === 'resolvido' && r9.origemCapturavel?.exata === true, 'resolver: entidade sem origem resolvida -> origemCapturavel');
+ok(r9.origemCapturavel?.manifesto === './matriz/organizacao/legado.md', 'origemCapturavel aponta o manifesto a editar');
+ok(/cnct-nucleo-escrita/.test(r9.origemCapturavel?.aviso || ''), 'aviso manda gravar pelo protocolo de escrita, nunca em silencio');
+const r9b = resolver({ conceito: 'marketing', workspaceDir: path.join(base, 'ws9b'), subVaults: { marketing: local('Acervo - Marketing') }, hostOneDrive: hostCat, ...cfg });
+ok(r9b.status === 'resolvido' && r9b.origemCapturavel === undefined, 'entidade que ja declara origem: nada a capturar');
+const r9c = resolver({ conceito: 'legado', workspaceDir: path.join(base, 'ws9c'), subVaults: { legado: local('Acervo - Legado') }, hostOneDrive: { ...hostCat, plataforma: 'linux' }, ...cfg });
+ok(r9c.status === 'resolvido' && r9c.origemCapturavel === undefined, 'fora do Windows: resolver nao tenta capturar');
+
+// catalogo_sync: sugestao completa, com yaml
+const cs2 = catalogoSync({ host: hostFalso({ catalogos: [catTit] }), ...cfg });
+const sug = cs2.naoDeclaradas.find((x) => x.origemSugerida['pasta-id'] === G.hubB);
+ok(sug && sug.origemSugerida.pasta === '_Delivery Hub' && /pasta-id: /.test(sug.origemSugerida.yaml), 'catalogo_sync: sugestao com pasta pelo nome e yaml pronto');
+
 fs.rmSync(base, { recursive: true, force: true });
 console.log(`\nspike-onedrive: ${pass} ok, ${fail} falha(s)`);
 process.exit(fail ? 1 : 0);

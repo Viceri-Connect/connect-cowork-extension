@@ -72,7 +72,8 @@ relativo (corte de raiz 17/08). A única URL admitida é a da origem na nuvem, d
 origem:
   - provedor: sharepoint                                   # obrigatório; conjunto fechado do produto
     site: https://{tenant}.sharepoint.com/teams/{site}     # URL do site (webUrl)
-    pasta: {biblioteca}/{caminho/da/pasta}                 # relativo ao site, como o SharePoint mostra
+    site-titulo: {titulo do site}                         # opcional — NOMEIA a pasta local ("{titulo} - {pasta}")
+    pasta: {biblioteca}/{caminho/da/pasta}                 # informativo; so o nome da pasta basta
     site-id: {guid}
     web-id: {guid}
     lista-id: {guid}
@@ -82,9 +83,10 @@ origem:
 | Regra | |
 |---|---|
 | **`provedor` decide a estratégia** | Hoje só `sharepoint` (OneDrive for Business no Windows). Provedor desconhecido devolve status, nunca tentativa |
-| **Sem título, sem nome local** | O nome que o cliente dá à pasta na máquina (ex.: `Impulsa - Connect - Marketing`) é **lido** depois do sync, nunca declarado |
+| **Quem localiza é o `pasta-id`** | Medido em 06/10, sincronizando uma pasta nova com `folderUrl` errado: o cliente achou a pasta pelo id. `pasta` é **informativo** — o caminho dentro da biblioteca quando se sabe, ou **só o nome** da pasta (que é o que o catálogo do OneDrive guarda) |
+| **`site-titulo` nomeia a pasta local** | O cliente cria `{site-titulo} - {nome da pasta}`. Sem ele, o título cai no slug do site (`impulsa.connect - Marketing`). Opcional, mas a captura o traz sempre. O caminho local continua **lido** depois do sync, nunca declarado |
 | **Reter no dispositivo vem da `classe`** | `vault` é fixado (*Manter sempre neste dispositivo*); `diretorio` fica sob demanda. Sem campo próprio |
-| **Escrito uma vez** | Por quem já tem a pasta sincronizada — o catálogo inverso de `sincronizar_subvault` gera o bloco a partir da própria máquina |
+| **Escrito uma vez, capturado passivamente** | Por quem já tem a pasta sincronizada. Duas vias, as duas por **id**: o `resolver`, ao resolver uma entidade sem `origem`, devolve `origemCapturavel` (bloco pronto, com o manifesto a editar) — o agente oferece gravar, pelo protocolo de escrita; e o `catalogo_sync`, para o curador, lista as pastas sincronizadas sem manifesto. Ninguém grava em silêncio: é escrita na matriz |
 
 > **Onde foi `fonte`/`url`/`onedrive-rel`:** removidos em 17/08. O defeito deles era tentar
 > **adivinhar o caminho local** a partir de uma âncora por máquina. `origem` não repete o erro: não

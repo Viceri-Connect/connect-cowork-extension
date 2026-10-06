@@ -30,7 +30,7 @@ import { mount } from './mount.mjs';
 import { resolveConfig } from './session.mjs';
 import { montarL1 } from './matriz.mjs';
 import { parseFrontmatter } from './frontmatter.mjs';
-import { lerOrigem } from './onedrive.mjs';
+import { lerOrigem, capturarOrigem, host as hostOneDrive } from './onedrive.mjs';
 import { resolverEntrada } from './navegacao.mjs';
 import { lerTabela, casarPonteiro, vizinhos } from './ponteiro.mjs';
 import { lerVinculoDaEntidade } from './vinculo.mjs';
@@ -193,6 +193,9 @@ export function lerRegistro(roots = []) {
         origemErros: origem ? origem.erros : [],
         nota: `${man.tipo}${man.papel ? '/' + man.papel : ''} — manifesto derivado`,
         _fonte: root,
+        // Onde o manifesto mora, relativo a raiz que o declarou — e o destino da
+        // escrita quando a `origem` e capturada (ADR-23, emenda de 06/10).
+        manifesto: path.relative(root, file).split(path.sep).join('/'),
       });
     }
   }
@@ -332,7 +335,30 @@ export function casarMuitos(registro, termo, coletivo = null) {
 //   'erro-mount'            — falha ao criar a junction/symlink
 //   'resolvido'             — montado; usar `entrada` (se houver) pra pousar
 // ---------------------------------------------------------------------------
-export function resolver({ conceito, workspaceDir, alias, replace = false, coletivo = null, escopo = null, ...override } = {}) {
+// ---------------------------------------------------------------------------
+// origemCapturavel — ADR-23, emenda de 06/10. Entidade resolvida cujo manifesto
+// NAO declara `origem`: o caminho local acabou de ser usado, entao o catalogo do
+// OneDrive desta maquina diz de onde na nuvem ele vem. O mecanismo so PROPOE —
+// gravar e escrita na matriz, e passa pelo protocolo de escrita com quem pode.
+// Nunca lanca; fora do Windows ou sem catalogo, simplesmente nao aparece.
+// ---------------------------------------------------------------------------
+function origemCapturavel(entry, caminhoLocal, cfg, host) {
+  if ((entry.origem || []).length || (entry.origemErros || []).length) return null;
+  if (host.plataforma !== 'win32') return null;
+  let cap = null;
+  try { cap = capturarOrigem(host.lerCatalogo().entradas || [], caminhoLocal); } catch { return null; }
+  if (!cap) return null;
+  const raiz = entry._fonte === cfg.vaultMatriz ? 'matriz' : (entry._fonte === cfg.cerebroPessoal ? 'pessoal' : null);
+  return {
+    ...cap,
+    manifesto: raiz ? `./${raiz}/${entry.manifesto}` : entry.manifesto,
+    aviso: cap.exata
+      ? `o manifesto de "${entry.conceito}" nao declara \`origem\`, e o OneDrive desta maquina sabe de onde a pasta vem. Ofereca ao operador, uma vez, gravar o bloco \`origemCapturavel.yaml\` no frontmatter de ${raiz ? `./${raiz}/` : ''}${entry.manifesto} (antes de \`tags:\`), pelo protocolo cnct-nucleo-escrita. Com isso, quem chegar depois tem o acervo sincronizado sem informar caminho. Sem permissao de escrita na matriz ou recusa: registrar como issue na capa do audit da matriz, nunca descartar`
+      : `o acervo de "${entry.conceito}" fica DENTRO de uma pasta sincronizada maior (subcaminho "${cap.subcaminho}"). A origem capturada descreve a raiz de sync: gravar so se sincronizar a pasta inteira for aceitavel para quem chegar depois — senao, o curador declara a origem da subpasta (catalogo_sync / API do SharePoint). Pergunte ao operador`,
+  };
+}
+
+export function resolver({ conceito, workspaceDir, alias, replace = false, coletivo = null, escopo = null, hostOneDrive: hostOD = hostOneDrive, ...override } = {}) {
   const cfg = resolveConfig(override);
   const roots = [cfg.cerebroPessoal, cfg.vaultMatriz].filter(Boolean);
   const registro = lerRegistro(roots);
@@ -478,6 +504,7 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, colet
       nota: `${entry.nota} — diretorio de OUTPUT do processo, nao vault: nao tem camada 1, nao herda processo, e nao e fonte para outro artefato de saida`,
       concessao,
       vinculo: lerVinculoDaEntidade(cfg.perfilOperador || null, entry.conceito, local.entrada.coletivo),
+      origemCapturavel: origemCapturavel(entry, caminhoLocal, cfg, hostOD) || undefined,
       avisos: local.desempatadoPor ? [`desempatado pelo coletivo "${local.desempatadoPor}"`] : [],
     };
   }
@@ -548,6 +575,7 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, colet
     // em vez de deixar o agente descobrir por tentativa — e a alternativa a tentativa
     // e o contorno (D148), que e o que estamos tentando extinguir.
     concessao,
+    origemCapturavel: origemCapturavel(entry, caminhoLocal, cfg, hostOD) || undefined,
     avisos,
   };
 }

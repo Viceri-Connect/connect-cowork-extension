@@ -111,6 +111,9 @@ const TOOLS = [
       '(monta, injeta a CARTA DE NAVEGACAO do sub-vault verbatim e devolve ' +
       '`entradaResolvida.caminhoRelativo` — o ponto de pouso ja resolvido a caminho real, ' +
       'nunca nome de nota a caçar). ' +
+      'Entidade resolvida cujo manifesto NAO declara `origem` traz `origemCapturavel` (ADR-23): o bloco ' +
+      'lido do catalogo do OneDrive desta maquina e o manifesto a editar — ofereca gravar, pelo protocolo ' +
+      'de escrita, nunca em silencio. ' +
       'Resolve TAMBEM diretorio de output (Delivery Hub) quando o manifesto declara tipo de ' +
       'diretorio: nesse caso devolve `classe: "diretorio"`, monta e entrega a concessao, e NAO ' +
       'cobra carta de navegacao nem heranca de processo (ADR-22). ' +
@@ -320,8 +323,8 @@ const TOOLS = [
     description:
       'Caminho inverso da ADR-23: le o que o cliente OneDrive desta maquina sincroniza e cruza com ' +
       'as entidades do registro, POR ID. Devolve, por entidade, se tem `origem` e onde mora aqui; e ' +
-      'as pastas sincronizadas que nenhum manifesto declara, com `origemSugerida` para o curador ' +
-      'completar (`pasta` precisa do caminho dentro da biblioteca) e gravar no manifesto. Com ' +
+      'as pastas sincronizadas que nenhum manifesto declara, com `origemSugerida` completa (e `yaml` ' +
+      'pronto) para o curador confirmar a entidade e gravar no manifesto. Com ' +
       '`registrar: true`, grava o caminho local de toda entidade achada (operador que ja sincroniza ' +
       'tudo). Cruzamento por nome nunca registra — so aparece como `candidatoPorNome`.',
     inputSchema: {

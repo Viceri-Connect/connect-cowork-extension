@@ -20,7 +20,7 @@
 import fs from 'node:fs';
 import { resolveConfig, registrarSubVaultLocal } from './session.mjs';
 import { lerRegistro, casarMuitos, classeDeclarada } from './resolver.mjs';
-import { montarLinkSync, localizarNoCatalogo, host as hostPadrao } from './onedrive.mjs';
+import { montarLinkSync, localizarNoCatalogo, origemEmYaml, host as hostPadrao } from './onedrive.mjs';
 
 const ESPERA_PADRAO_S = 90;
 const INTERVALO_MS = 3000;
@@ -187,15 +187,13 @@ export function catalogoSync({ registrar = false, host = hostPadrao, ...override
       pasta: x.nome,
       local: x.mountPoint,
       candidatoPorNome: registro.filter((e) => !(e.origem || []).length && x.nome && x.nome.toLowerCase().replace(/^_/, '').includes(e.conceito.split('-')[0])).map((e) => e.conceito),
-      origemSugerida: {
-        provedor: 'sharepoint',
-        site: x.webUrl,
-        pasta: `{biblioteca}/{caminho-ate}/${x.nome}`,
-        'site-id': x.siteId,
-        'web-id': x.webId,
-        'lista-id': x.listaId,
-        'pasta-id': x.pastaId,
-      },
+      origemSugerida: (() => {
+        // `pasta` so com o nome: o catalogo nao guarda o caminho na biblioteca, e
+        // quem localiza e o `pasta-id` (medido em 06/10). `site-titulo` nomeia a
+        // pasta local de quem sincronizar depois.
+        const o = { provedor: 'sharepoint', site: x.webUrl, 'site-titulo': x.webTitle || undefined, pasta: x.nome, 'site-id': x.siteId, 'web-id': x.webId, 'lista-id': x.listaId, 'pasta-id': x.pastaId };
+        return { ...o, yaml: origemEmYaml(o) };
+      })(),
     }));
 
   return {
@@ -204,7 +202,7 @@ export function catalogoSync({ registrar = false, host = hostPadrao, ...override
     naoDeclaradas,
     avisos: [
       ...(cat.avisos || []),
-      ...(naoDeclaradas.length ? ['`origemSugerida.pasta` precisa do caminho completo dentro da biblioteca (o catalogo so guarda o nome da pasta) — confira no SharePoint antes de gravar no manifesto'] : []),
+      ...(naoDeclaradas.length ? ['`origemSugerida` esta completa para gravar: `pasta` vem so com o nome (o catalogo nao guarda o caminho na biblioteca) e isso basta, porque o OneDrive localiza pelo `pasta-id`. Antes de gravar, confirme com o operador QUAL entidade e — o casamento por nome e so candidato'] : []),
     ],
   };
 }

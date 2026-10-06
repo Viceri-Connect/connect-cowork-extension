@@ -248,6 +248,9 @@ export function renderResolucao(res, { cartaInline = true } = {}) {
   } else if (res.entrada) {
     L.push(`- Ponto de pouso declarado (\`${res.entrada}\`) nao resolvido: ${res.entradaResolvida?.status || 'desconhecido'} — nao tatear o diretorio; avisar o operador.`);
   }
+  if (res.origemCapturavel) {
+    L.push(`- ☁️ Origem capturavel (ADR-23): ${res.origemCapturavel.aviso} — bloco em \`origemCapturavel.yaml\` (structuredContent).`);
+  }
   if (res.concessao?.necessaria) {
     L.push(`- 🔑 Acesso: se \`${res.caminhoRelativo}\` nao abrir, solicite ao operador a pasta \`${res.concessao.caminho}\` — montar nao e alcancar. Nao contorne por varredura.`);
   }

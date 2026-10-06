@@ -55,6 +55,7 @@ export function lerOrigem(bruto) {
       provedor: String(it.provedor).toLowerCase().trim(),
       site: String(it.site).trim().replace(/\/+$/, ''),
       pasta: String(it.pasta).trim().replace(/^\/+|\/+$/g, ''),
+      siteTitulo: it['site-titulo'] ? String(it['site-titulo']).trim() : null,
       siteId: normalizarGuid(it['site-id']),
       webId: normalizarGuid(it['web-id']),
       listaId: normalizarGuid(it['lista-id']),
@@ -81,7 +82,12 @@ export function validarItemOrigem(it) {
 
 // ---------------------------------------------------------------------------
 // montarLinkSync — o `odopen://sync/` que o botao "Sincronizar" abre.
-// Titulos sao so exibicao no dialogo do cliente: derivados, nunca declarados.
+//
+// Medido em 06/10 (sync real de uma pasta nao sincronizada, com `folderUrl`
+// propositalmente errado): quem LOCALIZA a pasta e o `folderId`; a URL e so
+// informativa. E o `webTitle` NOMEIA a pasta local (`{webTitle} - {folderName}`):
+// derivado do slug do site, o Marketing nasceria `impulsa.connect - Marketing`.
+// Por isso `site-titulo` existe — opcional, e capturado do catalogo.
 // ---------------------------------------------------------------------------
 export function montarLinkSync(o, { email = null } = {}) {
   const segs = o.pasta.split('/').filter(Boolean);
@@ -89,7 +95,7 @@ export function montarLinkSync(o, { email = null } = {}) {
     ['siteId', `{${o.siteId}}`],
     ['webId', `{${o.webId}}`],
     ['webUrl', o.site],
-    ['webTitle', decodeURIComponent(o.site.split('/').pop() || '')],
+    ['webTitle', o.siteTitulo || decodeURIComponent(o.site.split('/').pop() || '')],
     ['webTemplate', '64'],
     ['onPrem', '0'],
     ['libraryType', '4'],
@@ -220,6 +226,57 @@ export function localizarNoCatalogo(entradas, o) {
     return { via: 'biblioteca', caminho: path.join(porLista.mountPoint, ...resto), entrada: porLista };
   }
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// capturarOrigem — o caminho inverso, a partir de um caminho LOCAL ja conhecido
+// (ADR-23, emenda de 06/10). Quem chama ja sabe onde o acervo mora nesta maquina;
+// aqui so se le, no catalogo, de onde na nuvem aquela pasta vem.
+//
+//   exata: true  — o caminho E uma pasta sincronizada: a `origem` e completa.
+//   exata: false — o caminho fica DENTRO de uma pasta sincronizada maior; a
+//                  `origem` descreve a raiz de sync, e quem curar decide se serve
+//                  (sincronizaria tambem o que esta ao lado).
+//   null         — o caminho nao esta no catalogo (nao e OneDrive, ou e a
+//                  biblioteca inteira, que o schema de pasta nao descreve).
+//
+// `pasta` sai so com o nome: o catalogo nao guarda o caminho dentro da biblioteca,
+// e o `pasta-id` e quem localiza (medido em 06/10).
+// ---------------------------------------------------------------------------
+const normCaminho = (p) => path.resolve(String(p || '')).replace(/[\\/]+$/, '').toLowerCase();
+
+export function capturarOrigem(entradas, caminhoLocal) {
+  if (!caminhoLocal) return null;
+  const alvo = normCaminho(caminhoLocal);
+  const pastas = (entradas || []).filter((e) => e.tipo === 'pasta' && e.mountPoint && e.pastaId && e.siteId && e.webId && e.listaId);
+  const montar = (e) => ({
+    provedor: 'sharepoint',
+    site: e.webUrl,
+    'site-titulo': e.webTitle || undefined,
+    pasta: e.nome,
+    'site-id': e.siteId,
+    'web-id': e.webId,
+    'lista-id': e.listaId,
+    'pasta-id': e.pastaId,
+  });
+  const exata = pastas.find((e) => normCaminho(e.mountPoint) === alvo);
+  if (exata) return { exata: true, origem: montar(exata), yaml: origemEmYaml(montar(exata)) };
+  const acima = pastas
+    .filter((e) => alvo.startsWith(normCaminho(e.mountPoint) + path.sep))
+    .sort((a, b) => b.mountPoint.length - a.mountPoint.length)[0];
+  if (acima) {
+    const sub = path.relative(acima.mountPoint, caminhoLocal);
+    return { exata: false, subcaminho: sub, origem: montar(acima), yaml: origemEmYaml(montar(acima)) };
+  }
+  return null;
+}
+
+// O bloco pronto para colar no frontmatter (lista de objetos, como o parser le).
+export function origemEmYaml(o) {
+  const linhas = ['origem:'];
+  const chaves = ['provedor', 'site', 'site-titulo', 'pasta', 'site-id', 'web-id', 'lista-id', 'pasta-id'];
+  chaves.filter((k) => o[k]).forEach((k, i) => linhas.push(`${i === 0 ? '  - ' : '    '}${k}: ${o[k]}`));
+  return linhas.join('\n');
 }
 
 // ---------------------------------------------------------------------------
