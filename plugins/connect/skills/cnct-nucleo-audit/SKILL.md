@@ -72,7 +72,9 @@ Do contrato de manifesto (`config/contrato-manifesto.md` §5):
 |-------|----------------------|
 | Schema do manifesto | Manifesto **consumido pelo mecanismo** — declara `externo: true` ou aresta `depende-de` — sem `tipo`, `papel` ou `governanca`. Nota que só declara `tipo` é tipo de nota do coletivo, não manifesto: não abre issue (0.34.0) |
 | Registro autorado proibido | Existe `_cerebro/sub-vaults.json` (ou índice autorado equivalente) |
-| Path/URL no manifesto | Manifesto declara path ou URL (frontmatter ou corpo) — só `conceito`/`alias` são chave válida |
+| Caminho local no manifesto | Manifesto declara caminho local, absoluto ou relativo (frontmatter ou corpo) — só `conceito`/`alias` são chave válida. URL só é admitida dentro do bloco `origem` (ADR-23, 0.35.0) |
+| `origem` malformada | Item de `origem` com `provedor` desconhecido, id (`site-id`, `web-id`, `lista-id`, `pasta-id`) fora do formato GUID, `site` sem `https://` ou `pasta` com cara de caminho de disco. Mesma validação que `sincronizar_subvault` aplica (`lib/onedrive.mjs`) |
+| `externo: true` sem `origem` | **Aviso, não issue** (prioridade Baixa): a entidade funciona, só o operador novo não ganha o sync automático. Correção sugerida: `catalogo_sync` na máquina de quem já sincroniza gera a `origemSugerida` |
 | Lar do cliente | Manifesto `tipo: cliente` fora de `clientes/` (mora sob a árvore organizacional) |
 | Grafo bidirecional | Aresta `depende-de: {alvo: B}` declarada em A sem a inversa correspondente em B |
 | Acervo pendente há muito tempo | `externo:true` sem `criado-por`/`criado-em` (`pendente-criacao`) persistindo além de `status-desatualizado-dias` do vault — sinalizar, nunca criar sozinho |

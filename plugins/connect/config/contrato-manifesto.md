@@ -6,7 +6,7 @@
 > (quais entidades existem e o que preenchem). O produto não prescreve os eixos de conteúdo
 > nem a unidade do vault-filho.
 >
-> Versão 0.2.0 · 2026-08-17 · Impulsa / Viceri
+> Versão 0.3.0 · 2026-10-06 (bloco `origem`, ADR-23) · Impulsa / Viceri
 
 ---
 
@@ -25,7 +25,10 @@ segundo lugar onde a entidade existe — a duplicação que o [[modelo-roteament
 primeira linha e que é, no fim, cache que apodrece.
 
 **Path é sempre por-operador, por-máquina — nunca conteúdo coletivo (corte de raiz
-17/08).** O manifesto **não declara URL nem path, nem relativo.** Ele só declara o *fato* de
+17/08, reescrito pela ADR-23 em 06/10).** O manifesto **não declara caminho local, nem
+relativo.** O que ele pode declarar é a **origem na nuvem** (bloco `origem`, §2): ela é igual
+para todo operador, e é dela que o mecanismo parte para sincronizar e depois **lê** o caminho
+no próprio cliente de sincronização — nunca deduz. Fora isso, ele só declara o *fato* de
 que existe acervo fora da matriz (`externo`) — a chave pra achá-lo nesta máquina é o próprio
 `conceito` (campo que já existia, usado pra casar; não inventamos um `escopo` novo porque esse
 nome já é usado em toda a matriz pra governança/cliente, achado no dogfooding 17/08). O *onde*
@@ -46,8 +49,9 @@ que estruturou a organização. O agente nunca cria um manifesto por inferência
 
 ## 2. Schema do manifesto (frontmatter)
 
-Campos que todo manifesto declara. Frontmatter **puro** — nenhum path, nenhuma URL, nem
-relativa (corte de raiz 17/08).
+Campos que todo manifesto declara. Frontmatter **puro** — nenhum caminho local, nem
+relativo (corte de raiz 17/08). A única URL admitida é a da origem na nuvem, dentro de
+`origem` (ADR-23).
 
 | Campo | Obrigatório | Semântica |
 |---|---|---|
@@ -60,11 +64,32 @@ relativa (corte de raiz 17/08).
 | `criado-por` / `criado-em` | não | Quem e quando **declarou que o acervo já foi materializado**. Ausência dos dois = a entidade foi concebida mas o acervo ainda não nasceu (`pendente-criacao`) — nunca inferido, sempre um operador que preenche |
 | `entrada` | não | **Caminho relativo à raiz do acervo** da nota-hub onde o mecanismo pousa assim que monta, sem tatear diretório — só faz sentido com `externo:true`. Ex.: `_cerebro/camada-1.md`. ⚠️ **Nome puro de nota** (sem caminho) é aceito como **legado** e resolvido por busca limitada que **deixa marca** (aviso + issue): a busca é o sintoma de um manifesto incompleto, nunca o caminho normal. Fonte da regra: `contrato-navegacao.md` §4 — esta linha dizia *nome da nota* e contradizia aquele contrato desde a v0.5.0 dele |
 | `depende-de` | quando houver relação | Arestas do **grafo**: relação declarada para outros vaults. Cada item: `{ alvo, relacao }`. **Bidirecional explícito** — os dois lados declaram a aresta (ver §4) |
+| `origem` | não (só faz sentido com `externo:true`) | **Onde o acervo mora na nuvem** — identidade coletiva, igual para todo operador (ADR-23). Lista de objetos (o parser não lê mapa aninhado); um item por provedor. Usado por `sincronizar_subvault` para disparar o sync e, depois, achar a pasta no catálogo do cliente **por id**, nunca por nome. Ausente = o mecanismo segue perguntando o caminho ao operador. Ver §2.1 |
 
-> **Onde foi `fonte`/`url`:** removido inteiro. Path é sempre por-operador, por-máquina —
-> nunca frontmatter de entidade (§1). `conceito` é a única chave que o coletivo declara; o
-> `resolver` casa essa chave contra `connect.config.json.subVaults` **nesta máquina**, nunca
-> contra nada escrito no vault.
+### 2.1 O bloco `origem`
+
+```yaml
+origem:
+  - provedor: sharepoint                                   # obrigatório; conjunto fechado do produto
+    site: https://{tenant}.sharepoint.com/teams/{site}     # URL do site (webUrl)
+    pasta: {biblioteca}/{caminho/da/pasta}                 # relativo ao site, como o SharePoint mostra
+    site-id: {guid}
+    web-id: {guid}
+    lista-id: {guid}
+    pasta-id: {guid}                                       # UniqueId da pasta — a chave de casamento
+```
+
+| Regra | |
+|---|---|
+| **`provedor` decide a estratégia** | Hoje só `sharepoint` (OneDrive for Business no Windows). Provedor desconhecido devolve status, nunca tentativa |
+| **Sem título, sem nome local** | O nome que o cliente dá à pasta na máquina (ex.: `Impulsa - Connect - Marketing`) é **lido** depois do sync, nunca declarado |
+| **Reter no dispositivo vem da `classe`** | `vault` é fixado (*Manter sempre neste dispositivo*); `diretorio` fica sob demanda. Sem campo próprio |
+| **Escrito uma vez** | Por quem já tem a pasta sincronizada — o catálogo inverso de `sincronizar_subvault` gera o bloco a partir da própria máquina |
+
+> **Onde foi `fonte`/`url`/`onedrive-rel`:** removidos em 17/08. O defeito deles era tentar
+> **adivinhar o caminho local** a partir de uma âncora por máquina. `origem` não repete o erro: não
+> carrega nada que varie por máquina, e o caminho é **lido** no cliente de sincronização. `conceito`
+> segue sendo a chave contra `connect.config.json.subVaults` **nesta máquina**.
 
 ---
 
@@ -94,8 +119,8 @@ relativa (corte de raiz 17/08).
   wikilink** — é o próprio manifesto: qualquer nota com `tipo`+`externo:true` é fronteira,
   independente de onde no organograma ela morar (área, tribo, cliente, squad — o produto não
   restringe a árvore).
-- **Path nunca é conteúdo coletivo:** nenhum manifesto guarda diretório nem URL, relativa
-  ou absoluta. O `resolver` nunca advinha nem pergunta por si só — devolve `status` pra a skill
+- **Path nunca é conteúdo coletivo:** nenhum manifesto guarda diretório local, relativo
+  ou absoluto. A URL admitida é só a da origem na nuvem, no bloco `origem` (ADR-23). O `resolver` nunca advinha nem pergunta por si só — devolve `status` pra a skill
   decidir (perguntar ao operador, acionar fábrica, avisar ausência). Ver `lib/resolver.mjs`.
 
 ---
@@ -127,8 +152,13 @@ verificação):
    `externo: true` (registro do `resolver`) ou aresta `depende-de` (grafo). Nota com `tipo` que
    não é nenhum dos dois é vocabulário do coletivo e **não** é cobrada por este check (0.34.0).
 2. Nenhum `_cerebro/sub-vaults.json` (ou índice autorado equivalente) existe no vault.
-3. Nenhum manifesto declara path/URL (frontmatter ou corpo) — `conceito`/`alias` são as
-   únicas chaves, e nenhuma delas é path.
+3. Nenhum manifesto declara caminho local (frontmatter ou corpo) — `conceito`/`alias` são as
+   únicas chaves, e nenhuma delas é path. URL só dentro de `origem`.
+3a. **`origem` bem formada:** `provedor` conhecido; `site-id`, `web-id`, `lista-id`, `pasta-id`
+   em formato GUID; `site` começa com `https://`; `pasta` não é caminho de disco (sem `C:\`,
+   sem `\`). Item malformado é issue.
+3b. **`externo: true` sem `origem`** é **aviso**, não issue: a entidade funciona, e o operador
+   novo só não ganha o sync automático.
 4. Manifesto com `tipo: cliente` mora em `clientes/`, fora da árvore organizacional.
 5. **Consistência bidirecional do grafo:** para cada aresta `A → B`, existe a inversa
    `B → A` com relação coerente. Aresta órfã (declarada de um lado só) é issue.

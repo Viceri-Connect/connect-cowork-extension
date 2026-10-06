@@ -1,5 +1,36 @@
 # Changelog — connect
 
+## 0.35.0 — 2026-10-06
+
+**O operador novo tinha de sincronizar cada biblioteca do SharePoint à mão e depois dizer ao Connect onde o OneDrive a pôs.**
+
+Medido no preparo do onboarding do time de Vendas e Marketing (Motor de Vendas): N passos manuais por
+sub-vault, para quem não é técnico. Na mesma sessão, duas medições na máquina do operador abriram o
+caminho: o botão *Sincronizar* é só um link `odopen://sync/`, que dispara por comando; e o cliente
+OneDrive grava num `.ini` local tudo o que sincroniza, com o UniqueId de cada pasta e onde a montou
+(conferido contra a API do SharePoint). Decisão na `ADR-23` (acervo da tribo, `proposta`).
+
+- **Bloco `origem` no manifesto** (`config/contrato-manifesto.md` 0.3.0, §2.1): `provedor`, `site`,
+  `pasta` e quatro ids. O corte de 17/08 foi **reescrito, não revogado**: caminho local segue
+  proibido, e a origem na nuvem entra porque é igual para todo operador.
+- **`sincronizar_subvault`** (`lib/sincronizar.mjs`): catálogo primeiro (se a pasta já sincroniza, só
+  registra) → e-mail da conta OneDrive logada → link → espera a pasta aparecer **no catálogo** → fixa
+  no dispositivo se `classe: vault` (`attrib +P -U`) → grava o caminho. Nunca registra caminho que o
+  cliente não listou: prazo esgotado devolve `aguardando` com a `governanca`, porque sync lento e
+  falta de permissão não se distinguem daqui. Status próprios para OneDrive sem conta, mais de uma
+  conta (pergunta, nunca escolhe), origem malformada e fora do Windows (devolve o link).
+- **`catalogo_sync`**: o caminho inverso. Cruza o que o OneDrive sincroniza com o registro **por id**;
+  com `registrar: true` grava o caminho de tudo que achou; pasta sem manifesto vira `origemSugerida`
+  para o curador. Nome de pasta nunca registra nada.
+- **`resolver`**: `local-nao-configurado` e `origem-ausente` ganham `sincronizavel` e, quando há
+  `origem`, mandam chamar a tool em vez de perguntar o caminho.
+- ⚠️ **`userEmail` é obrigatório no link.** Sem ele o OneDrive **ignora o link em silêncio**: nem
+  janela, nem erro (três disparos medidos). Os títulos não importam.
+- **`cnct-nucleo-audit`**: checks de `origem` malformada (issue) e de `externo: true` sem `origem`
+  (aviso). O check de "path/URL no manifesto" passa a ser de caminho local.
+- Testes: `spike-onedrive` (46 checagens, IDs fictícios: o repositório é público) e ponta a ponta
+  contra o OneDrive real (Marketing como `diretorio`, sem fixar).
+
 ## 0.34.0 — 2026-10-05
 
 **O `resolver` indexava como entidade qualquer nota com `tipo`, e a regra 3 mandava chamá-lo para projeto — que ele nunca acha.**

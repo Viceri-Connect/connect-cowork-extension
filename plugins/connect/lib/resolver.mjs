@@ -29,6 +29,8 @@ import path from 'node:path';
 import { mount } from './mount.mjs';
 import { resolveConfig } from './session.mjs';
 import { montarL1 } from './matriz.mjs';
+import { parseFrontmatter } from './frontmatter.mjs';
+import { lerOrigem } from './onedrive.mjs';
 import { resolverEntrada } from './navegacao.mjs';
 import { lerTabela, casarPonteiro, vizinhos } from './ponteiro.mjs';
 import { lerVinculoDaEntidade } from './vinculo.mjs';
@@ -121,6 +123,7 @@ export function parseManifesto(fmText) {
     criadoPor: top['criado-por'] || null,
     criadoEm: top['criado-em'] || null,
     entrada: top.entrada || null,
+    governanca: top.governanca || null,
     escopo: top.escopo || null, // coletivo dono, no vocabulario que o acervo ja usa
     conceito: top.conceito || top.alias || null, // default (slug) resolvido no walk
     alias: top.alias || null,
@@ -157,9 +160,15 @@ export function lerRegistro(roots = []) {
     if (!root || !fs.existsSync(root)) continue;
 
     for (const file of walkMd(root)) {
-      const fm = extrairFrontmatter(readHead(file));
+      const head = readHead(file);
+      const fm = extrairFrontmatter(head);
       const man = parseManifesto(fm);
       if (!temCasaFora(man)) continue;
+
+      // `origem` (ADR-23) e lista de objetos — o parser de topo acima nao a le.
+      // So entra quando declarada: ausente nao e erro (contrato §5, check 3b).
+      const origemBruta = parseFrontmatter(head || '').origem;
+      const origem = origemBruta ? lerOrigem(origemBruta) : null;
 
       const slug = path.basename(file, '.md').toLowerCase();
       const conceito = (man.conceito || slug).toLowerCase();
@@ -179,6 +188,9 @@ export function lerRegistro(roots = []) {
         papel: man.papel,
         classe: man.classe,
         escopo: man.escopo,
+        governanca: man.governanca,
+        origem: origem ? origem.itens : [],
+        origemErros: origem ? origem.erros : [],
         nota: `${man.tipo}${man.papel ? '/' + man.papel : ''} — manifesto derivado`,
         _fonte: root,
       });
@@ -393,13 +405,21 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, colet
     };
   }
 
+  // Com `origem` declarada (ADR-23), o proximo passo deixa de ser perguntar o
+  // caminho: o mecanismo sincroniza e LE onde o cliente montou a pasta.
+  const temOrigem = (entry.origem || []).length > 0;
+  const dicaSync = `chame sincronizar_subvault({ conceito: "${entry.conceito}"${entry.escopo ? `, coletivo: "${entry.escopo}"` : ''} }) — a entidade declara origem na nuvem: o mecanismo sincroniza, acha a pasta no catalogo do OneDrive e registra o caminho, sem perguntar nada ao operador`;
+
   const caminhoLocal = local.status === 'unico' ? local.entrada.caminho : null;
   if (!caminhoLocal) {
     return {
       status: 'local-nao-configurado',
       conceito: entry.conceito,
       classe: classeDeclarada(entry.classe),
-      avisos: [`esta maquina ainda nao sabe onde "${entry.conceito}" mora localmente — pergunte ao operador o diretorio e grave com registrar_subvault_local({ conceito: "${entry.conceito}", coletivo, caminho })`],
+      sincronizavel: temOrigem,
+      avisos: [temOrigem
+        ? dicaSync
+        : `esta maquina ainda nao sabe onde "${entry.conceito}" mora localmente — pergunte ao operador o diretorio e grave com registrar_subvault_local({ conceito: "${entry.conceito}", coletivo, caminho })`],
     };
   }
   if (!fs.existsSync(caminhoLocal)) {
@@ -407,7 +427,10 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, colet
       status: 'origem-ausente',
       conceito: entry.conceito,
       origem: caminhoLocal,
-      avisos: [`origem nao existe: ${caminhoLocal} (se for OneDrive, sincronize "manter neste dispositivo"; sem acesso a fonte, procure quem governa)`],
+      sincronizavel: temOrigem,
+      avisos: [temOrigem
+        ? `origem nao existe: ${caminhoLocal} — ${dicaSync}`
+        : `origem nao existe: ${caminhoLocal} (se for OneDrive, sincronize "manter neste dispositivo"; sem acesso a fonte, procure quem governa)`],
     };
   }
   if (!workspaceDir) {

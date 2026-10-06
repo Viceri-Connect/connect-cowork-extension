@@ -10,6 +10,8 @@
 //   - resolver_repo            : caminho local de um repo de codigo (nunca monta junction)
 //   - registrar_repo_local     : grava o path LOCAL de um repo (substitui o repos.md do vault)
 //   - listar_repos             : tabela local de repos, para conferencia do operador
+//   - sincronizar_subvault     : sync OneDrive de um conceito com `origem` declarada (ADR-23)
+//   - catalogo_sync            : caminho inverso — o que o OneDrive ja sincroniza, por id
 //   - mount_junction           : primitivo de mount (base do resolver)
 //   - unmount_junction         : remove um atalho
 //   - list_mounts              : auditoria dos atalhos do workspace
@@ -26,6 +28,7 @@ import { renderContexto, renderResolucao, renderMetricas } from '../lib/render.m
 import { medirVault } from '../lib/metricas.mjs';
 import { resolverRepo, registrarRepoLocal, listarRepos } from '../lib/repos.mjs';
 import { publicarGovernanca } from '../lib/governanca.mjs';
+import { sincronizarSubvault, catalogoSync } from '../lib/sincronizar.mjs';
 
 const log = (...a) => process.stderr.write(`[connect-mcp] ${a.join(' ')}\n`);
 
@@ -97,7 +100,8 @@ const TOOLS = [
     description:
       'Resolve um CONCEITO numa entidade do registro derivado (varredura de manifestos — ' +
       'frontmatter `tipo` do cerebro pessoal e da matriz; contrato em config/contrato-manifesto.md). ' +
-      'O manifesto NUNCA guarda path/url — so declara `externo` (tem acervo fora da matriz?) e ' +
+      'O manifesto NUNCA guarda caminho local — declara `externo` (tem acervo fora da matriz?), ' +
+      'opcionalmente `origem` (onde mora na nuvem, ADR-23 — ver sincronizar_subvault) e ' +
       '`criado-por`/`criado-em` (ja foi materializado?); o proprio `conceito` (chave de casamento) ' +
       'tambem indexa o path local. O path fica so em connect.config.json (subVaults). Nunca pergunta ' +
       'nada nem advinha path — devolve `status` pra ' +
@@ -286,6 +290,48 @@ const TOOLS = [
     },
   },
   {
+    name: 'sincronizar_subvault',
+    description:
+      'Sincroniza no OneDrive desta maquina o acervo de um CONCEITO cujo manifesto declara `origem` ' +
+      '(ADR-23) e registra o caminho local — sem perguntar nada ao operador. Use quando o `resolver` ' +
+      'devolver `sincronizavel: true` (local-nao-configurado ou origem-ausente) e no onboarding. ' +
+      'Ordem: se a pasta ja esta sincronizada (catalogo do cliente OneDrive, casado por id), so ' +
+      'registra; senao dispara o link de sync e espera a pasta aparecer no catalogo. `classe: vault` ' +
+      'e fixado no dispositivo ("Manter sempre neste dispositivo"); `diretorio` (Delivery Hub) fica ' +
+      'sob demanda. Status: sincronizado (chame `resolver` em seguida) · aguardando (sync lento OU ' +
+      'sem permissao — devolve `governanca` a quem pedir acesso; nunca registra caminho que nao ' +
+      'apareceu) · sem-origem (fluxo antigo: perguntar o caminho) · origem-invalida · ' +
+      'plataforma-nao-suportada (devolve `link` para o operador abrir) · ambigua · nao-encontrado.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        conceito: { type: 'string', description: 'Conceito da entidade (ex.: "marketing", "vendas").' },
+        coletivo: { type: 'string', description: 'Desempate e escopo da chave local. Informe quando souber.' },
+        escopo: { type: 'string', description: 'Escopo dentro do coletivo (squad ou area). Opcional.' },
+        email: { type: 'string', description: 'E-mail da conta OneDrive do operador (ajuda quando ha mais de uma conta). Opcional.' },
+        aguardar_segundos: { type: 'number', description: 'Quanto esperar a pasta aparecer no catalogo (default 90).' },
+      },
+      required: ['conceito'],
+    },
+  },
+  {
+    name: 'catalogo_sync',
+    description:
+      'Caminho inverso da ADR-23: le o que o cliente OneDrive desta maquina sincroniza e cruza com ' +
+      'as entidades do registro, POR ID. Devolve, por entidade, se tem `origem` e onde mora aqui; e ' +
+      'as pastas sincronizadas que nenhum manifesto declara, com `origemSugerida` para o curador ' +
+      'completar (`pasta` precisa do caminho dentro da biblioteca) e gravar no manifesto. Com ' +
+      '`registrar: true`, grava o caminho local de toda entidade achada (operador que ja sincroniza ' +
+      'tudo). Cruzamento por nome nunca registra — so aparece como `candidatoPorNome`.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        registrar: { type: 'boolean', description: 'Grava em connect.config.json o caminho de toda entidade achada por id.', default: false },
+      },
+      required: [],
+    },
+  },
+  {
     name: 'list_mounts',
     description: 'Lista os aliases (junctions/symlinks) atualmente montados no workspace.',
     inputSchema: {
@@ -412,6 +458,23 @@ function handleToolCall(id, params) {
         return ok(id, toolText(unmount({ workspaceDir: args.workspace_dir, alias: args.alias })));
       case 'list_mounts':
         return ok(id, toolText(listMounts(args.workspace_dir)));
+      case 'sincronizar_subvault': {
+        // Unica tool assincrona: espera o cliente OneDrive listar a pasta.
+        sincronizarSubvault({
+          conceito: args.conceito,
+          coletivo: args.coletivo || null,
+          escopo: args.escopo || null,
+          email: args.email || null,
+          aguardarSegundos: typeof args.aguardar_segundos === 'number' ? args.aguardar_segundos : undefined,
+        })
+          .then((r) => ok(id, { ...toolText(r), structuredContent: r }))
+          .catch((e) => send({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: `ERRO: ${e.message || e}` }], isError: true } }));
+        return;
+      }
+      case 'catalogo_sync': {
+        const r = catalogoSync({ registrar: !!args.registrar });
+        return ok(id, { ...toolText(r), structuredContent: r });
+      }
       default:
         return fail(id, -32602, `tool desconhecida: ${name}`);
     }
