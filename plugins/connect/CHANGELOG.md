@@ -1,5 +1,22 @@
 # Changelog — connect
 
+## 0.35.1 — 2026-10-06
+
+**A 0.35.0 entregou a tool, e a skill de sessão continuava mandando perguntar o caminho.**
+
+Achado ao escrever o guia de instalação do time de Vendas e Marketing: no `local-nao-configurado`
+a `cnct-nucleo-sessao` ainda instruía *"perguntar o diretório ao operador"*. Com isso, o agente
+nunca chamaria `sincronizar_subvault`, e o onboarding seguiria pedindo caminho a quem não é técnico.
+
+- **`cnct-nucleo-sessao`:** com `sincronizavel: true`, `local-nao-configurado` e `origem-ausente`
+  chamam `sincronizar_subvault`, sem perguntar nada. Cada status tem o tratamento em linguagem
+  simples (`aguardando` nomeia a `governanca` como quem concede o acesso).
+- **1º uso:** antes de perguntar o caminho da matriz, o agente chama `catalogo_sync` e **propõe** a
+  pasta `Matriz` que o OneDrive já sincroniza, para o operador só confirmar. A validação segue no
+  `configurar`.
+- Manifestos da matriz desta instância receberam `origem` (7 entidades). O Instituto Unibanco segue
+  sem `origem`, porque o acervo está num site que o curador não alcança.
+
 ## 0.35.0 — 2026-10-06
 
 **O operador novo tinha de sincronizar cada biblioteca do SharePoint à mão e depois dizer ao Connect onde o OneDrive a pôs.**

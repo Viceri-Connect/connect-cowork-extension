@@ -56,6 +56,15 @@ Perguntar ao operador, em linguagem simples, **onde ficam** (caminhos locais):
 1. a **matriz** (a pasta do vault coletivo que contém `_cerebro/vault-config.md`);
 2. o **cérebro pessoal** (identidade), se houver.
 
+**Antes de perguntar o caminho da matriz, chame `catalogo_sync`** (0.35.1). Ele lista as pastas
+que o OneDrive desta máquina sincroniza (`naoDeclaradas[].local` — a matriz é raiz, não tem
+manifesto, e por isso aparece ali). Proponha ao operador a que se chama `Matriz` (ex.:
+`…\Viceri Seidor\Impulsa - Connect - Matriz`) e confirme em uma pergunta de sim/não — operador
+leigo não sabe onde o OneDrive põe as pastas, e não deveria precisar saber. A validação continua
+sendo do `configurar` (`_cerebro/vault-config.md` presente); nome de pasta é só proposta. Nenhuma
+pasta `Matriz` no catálogo = a matriz ainda não foi sincronizada: peça para sincronizar pelo botão
+*Sincronizar* do SharePoint antes de seguir.
+
 Chamar a tool `configurar` com `vault_matriz` e/ou `cerebro_pessoal`.
 - Se vier `invalidos` (path não existe / placeholder OneDrive não sincronizado),
   explicar e **re-perguntar** só o que faltou — nunca assumir um caminho.
@@ -111,9 +120,17 @@ gestão"), ou ao abrir qualquer nota que declare `tipo`+`externo:true` no frontm
      wikilink — não insistir no `resolver` (0.34.0).
    - `pendente-criacao` → entidade existe, acervo não. Oferecer a `cnct-fabrica-<tipo>`
      ao operador — nunca criar nada sozinho.
-   - `local-nao-configurado` → esta máquina nunca resolveu esse `conceito`. Perguntar o
-     diretório ao operador, gravar com `registrar_subvault_local`, repetir.
-   - `origem-ausente` → path conhecido mas não existe/não sincronizado. Avisar.
+   - `local-nao-configurado` → esta máquina nunca resolveu esse `conceito`.
+     **Com `sincronizavel: true`** (o manifesto declara `origem`, ADR-23): chamar
+     `sincronizar_subvault(conceito)` — **não perguntar caminho nenhum**. `sincronizado` →
+     repetir o `resolver`. `aguardando` → dizer ao operador, em linguagem simples, que o OneDrive
+     ainda está baixando **ou** que falta permissão, e nomear a `governanca` devolvida como quem
+     concede o acesso; repetir depois. `onedrive-sem-conta` → pedir que entre no OneDrive com a
+     conta da empresa. `ambigua-conta` → perguntar qual e-mail.
+     **Sem `sincronizavel`**: perguntar o diretório ao operador, gravar com
+     `registrar_subvault_local`, repetir.
+   - `origem-ausente` → path conhecido mas não existe/não sincronizado. Com `sincronizavel: true`,
+     mesmo tratamento acima (`sincronizar_subvault`); sem, avisar.
    - `resolvido` → pedir acesso ao Cowork; ler a **carta de navegação do sub-vault** (vem
      injetada no bloco de resolução) e pousar em `entradaResolvida.caminhoRelativo` — o
      caminho real, já resolvido. Se a carta vier ausente, ou a `entrada` tiver sido
@@ -123,8 +140,8 @@ gestão"), ou ao abrir qualquer nota que declare `tipo`+`externo:true` no frontm
    mesmo `conceito`; navegação dentro dele é path relativo normal.
 
 O modelo canônico é **grafo de manifestos**: cada entidade é **manifesto**
-(frontmatter puro — nunca path/url) + **acervo** (no diretório que cada operador
-informa). O casamento conceito→entrada acontece **no `resolver`**, e o índice é
+(frontmatter puro — nunca caminho local; a origem na nuvem pode vir no bloco `origem`, ADR-23)
++ **acervo** (no diretório que o mecanismo lê no OneDrive, ou que o operador informa). O casamento conceito→entrada acontece **no `resolver`**, e o índice é
 **derivado** dos manifestos, nunca autorado; o path local vive só em
 `connect.config.json` (`subVaults`), nunca no vault.
 
