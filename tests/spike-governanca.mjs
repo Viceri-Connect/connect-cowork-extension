@@ -63,6 +63,14 @@ console.log('\n2) marcador e identidade, nao versao');
 const marca = lerMarcador(texto);
 ok(marca && marca.vault === 'tribo-impulsa', 'marcador legivel com slug do vault');
 ok(marca && /^\d{4}-\d{2}-\d{2}T/.test(marca.geradoEm), 'marcador traz gerado-em ISO');
+// 0.38.0: o harness descarta comentario HTML do CLAUDE.md — marcador dentro de um
+// nunca chega ao contexto, e a auto-checagem do canal injetado falhava sempre.
+const semComentarios = texto.replace(/<!--[\s\S]*?-->/g, '');
+ok(/CNCT-GOV-tribo-impulsa/.test(semComentarios), 'marcador VISIVEL: sobrevive ao descarte de comentario HTML pelo harness');
+const legado = lerMarcador('<!-- CNCT-GOV-matriz · gerado-em: 2026-10-05T15:28:11.128Z · mecanismo Connect -->\n# x');
+ok(legado && legado.vault === 'matriz', 'marcador legado (em comentario) segue reconhecido como procedencia');
+const antigo = texto.replace(/^> `CNCT-GOV-tribo-impulsa`.*$/m, '<!-- CNCT-GOV-tribo-impulsa · gerado-em: 2026-10-05T15:28:11.128Z · mecanismo Connect -->\n<!-- Arquivo de governanca gerado pelo Connect. Nao e a carta de navegacao:\n     a camada 1 deste vault e declarada em _cerebro/camada-1.md. -->');
+ok(precisaAtualizar(antigo, texto), 'arquivo publicado com marcador em comentario e considerado DESATUALIZADO (republicacao o corrige)');
 ok(!/hash|sha1|CNCT-L1/i.test(texto), 'nenhum hash de fonte no arquivo (nao e a ADR-17)');
 ok(slugVault('Acervo da Tribo Impulsa!!') === 'acervo-da-tribo-impulsa', 'slug normaliza acento e simbolo');
 ok(lerMarcador('# um arquivo qualquer\n') === null, 'arquivo alheio nao produz marcador');

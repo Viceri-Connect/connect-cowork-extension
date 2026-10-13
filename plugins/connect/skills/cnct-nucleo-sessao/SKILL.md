@@ -87,15 +87,17 @@ O perfil **não** depende de `cerebro_pessoal` e não pede pasta nenhuma ao oper
 
 **Passo 2b — Conectar a matriz como pasta do projeto Cowork.**
 Depois de `configurar`, **peça ao operador para conectar a pasta da matriz ao projeto Cowork** —
-é uma pasta só, e é o que faz a camada 1 deixar de depender de um arquivo que pode não abrir.
+é uma pasta só, e é o **canal da camada 1**.
 
-- **Por que isso não é detalhe de conforto:** medido em 26/08, duas vezes, o `contexto-sessao.md`
-  não abriu por concessão ausente — e a carta, o protocolo e a camada 0 não chegaram. Com a matriz
-  conectada, `_cerebro/camada-1.md` abre por construção, e o `contexto-sessao.md` sai do caminho
-  crítico. Além disso o harness passa a carregar sozinho o `CLAUDE.md` de governança da raiz.
-- **Passo de setup se pula, e este some em silêncio.** Se o operador não conectar, tudo degrada
-  para o comportamento antigo sem emitir sinal — por isso o pedido é explícito aqui, e não uma
-  sugestão no fim da conversa.
+- **Por que isso não é detalhe de conforto:** desde a 0.38.0 o bloco do hook leva a camada 0 do
+  operador e só **aponta** a carta (`_cerebro/camada-1.md`) — não a copia. Com a matriz conectada,
+  a carta abre por construção e o harness carrega sozinho o `CLAUDE.md` de governança da raiz (é
+  dele o marcador `CNCT-GOV-*` que o bloco do hook manda procurar). Sem a pasta conectada, a carta
+  só chega pela tool `iniciar_sessao`. (O `contexto-sessao.md` saiu na 0.38.0: medido em 26/08 e
+  13/10, ele não abria por concessão ausente.)
+- **Passo de setup se pula, e este some em silêncio.** Se o operador não conectar, a carta depende
+  de o agente chamar a tool — por isso o pedido é explícito aqui, e não uma sugestão no fim da
+  conversa.
 - **Não confunda com concessão de acesso.** Conectar a pasta ao projeto é o que traz o canal
   injetado; a concessão que o bloco de sessão pede (🔑) é outra coisa e continua valendo.
 

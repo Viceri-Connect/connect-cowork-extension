@@ -1,5 +1,42 @@
 # Changelog — connect
 
+## 0.38.0 — 2026-10-13
+
+**A camada 0 do operador quase nunca chegava ao agente, e o motivo era o `contexto-sessao.md`.**
+
+Medido em 13/10 nesta instância: o arquivo tinha 22 KB, com ~9 KB de protocolo, ~6,5 KB da carta da
+matriz, ~5,3 KB de camada 0 e ~1 KB de identidade e atalhos. Só a camada 0 era exclusiva dele. O
+resto já chegava por outro canal: as regras duras vêm no hook e no `CLAUDE.md` da matriz, a carta
+vem pela pasta conectada e o tratamento de cada `status` está nas skills. E o arquivo morava em
+`{CONNECT_HOME}/sessions/`, que pede concessão a cada sessão. Na prática o agente tentava ler, não
+conseguia e seguia sem a camada 0, sem sinal nenhum.
+
+- **Canal único: a camada 0 vai no stdout do hook.** O teto é o que a doc do Claude Code declara:
+  stdout acima de 10.000 caracteres vira arquivo + prévia de 2.000, e foi isso que truncou os 16 KB
+  de 24/08. `TETO_INJETADO` = 9.000. A camada 0 vai **por último**, porque se um dia estourar, a
+  prévia ainda leva o acionável e as regras duras. Comentário HTML sai antes de contar. Se a camada 0
+  passar do orçamento, vira **ponteiro declarado** (`./operador/CLAUDE.md`) com aviso para enxugar,
+  nunca um corte no meio. Medido com o perfil real: 9.084 caracteres no total.
+- **Carta e protocolo saem do canal injetado.** O hook aponta `_cerebro/camada-1.md` e manda chamar
+  a tool `iniciar_sessao` quando o contexto ficar distante. É a tool que entrega o completo. O
+  invariante continua: o bloco do hook não cresce com o tamanho do vault.
+- **`contexto-sessao.md` removido**, junto com `lib/contexto-arquivo.mjs` e o `recapAcionavel`.
+- **Marcador `CNCT-GOV-*` visível.** O `CLAUDE.md` de governança punha o marcador num comentário
+  HTML, e o harness descarta comentários ao carregar o arquivo. A auto-checagem "procure o marcador
+  no seu contexto" falhava **sempre**, inclusive com a pasta conectada (medido em 13/10 em duas
+  sessões). Agora ele vem numa linha de citação. O marcador antigo segue reconhecido como
+  procedência, e o arquivo antigo conta como desatualizado: **republique com `publicar_governanca`**
+  em cada vault.
+- **Migração do home legado só acontece uma vez.** O `MIGRADO.md` era gravado, mas ninguém o lia. Todo
+  home novo sem config (de teste, ou o real apagado para reconfigurar) recebia de volta a config e
+  o perfil de agosto, e o marcador era reescrito apontando para o destino da vez.
+- **`entrada` com caixa divergente devolve a caixa real do disco.** No Windows e no macOS o caminho
+  voltava com a caixa declarada, diferente do que o Linux e o wikilink veem.
+- `cnct-nucleo-sessao` atualizada (Passo 2b). Testes: `spike-presenca-contexto` reescrito para o
+  canal único (teto, camada 0 inteira, degradação declarada, prévia de 2.000), `spike-governanca`
+  com o marcador visível e o legado, `spike-entrega-contexto` com migração única. As três falhas
+  que só apareciam no Windows (efeito do home legado) foram corrigidas na raiz.
+
 ## 0.37.0 — 2026-10-13
 
 **O plugin não subia no macOS (`P175`), e no Windows baixava o Node de novo a cada sessão.**

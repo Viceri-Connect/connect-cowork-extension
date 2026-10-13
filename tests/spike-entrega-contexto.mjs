@@ -61,6 +61,13 @@ ok(fs.existsSync(path.join(legado, 'connect.config.json')), 'nada removido do le
 
 const m2 = migrarHomeLegado(novo, legado);
 ok(m2.status === 'nao-necessario', 'migracao e idempotente (rodar 2x nao duplica nem sobrescreve)');
+// 0.37.0: o marcador vale para QUALQUER destino — um home novo e vazio nao recebe de
+// novo a config antiga (medido em 13/10: cada teste "migrava" agosto para o tmp).
+const outroHome = path.join(path.dirname(novo), 'outro-home-vazio');
+const marcadorAntes = fs.readFileSync(path.join(legado, 'MIGRADO.md'), 'utf8');
+const m3 = migrarHomeLegado(outroHome, legado);
+ok(m3.status === 'ja-migrado' && !fs.existsSync(path.join(outroHome, 'connect.config.json')), 'legado ja migrado nao e migrado de novo para outro home');
+ok(fs.readFileSync(path.join(legado, 'MIGRADO.md'), 'utf8') === marcadorAntes, 'o marcador nao e reescrito');
 
 // a sessao seguinte no home novo enxerga a config migrada — o ponto da migracao:
 // se ela rodasse depois de resolveConfig, quem ja estava configurado seria tratado

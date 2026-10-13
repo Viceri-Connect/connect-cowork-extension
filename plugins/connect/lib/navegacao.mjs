@@ -270,6 +270,28 @@ export function lerCarta(vaultRoot, alias = 'vault') {
 // Status: 'resolvida' | 'ambigua' | 'ausente' | 'recusada' | 'nao-declarada'
 // A forma 4 sempre vem com aviso: manifesto deve declarar caminho (contrato §4).
 // ---------------------------------------------------------------------------
+// casoReal — `rel` (que JA existe) reescrito com a caixa de cada segmento no disco.
+// Igualdade exata vence; senao a unica entrada que casa sem caixa. Qualquer duvida
+// devolve `rel` como veio (nunca lanca, nunca escolhe entre homonimos de caixa).
+function casoReal(raiz, rel) {
+  const segs = rel.split('/').filter(Boolean);
+  const out = [];
+  let dir = raiz;
+  for (const s of segs) {
+    let nomes;
+    try { nomes = fs.readdirSync(dir); } catch { return rel; }
+    let nome = nomes.includes(s) ? s : null;
+    if (!nome) {
+      const iguais = nomes.filter((n) => n.toLowerCase() === s.toLowerCase());
+      if (iguais.length !== 1) return rel;
+      nome = iguais[0];
+    }
+    out.push(nome);
+    dir = path.join(dir, nome);
+  }
+  return out.join('/');
+}
+
 export function resolverEntrada(vaultRoot, entrada, alias = 'vault', maxDepth = 4) {
   if (!entrada) return { status: 'nao-declarada', avisos: [] };
   if (!vaultRoot || !fs.existsSync(vaultRoot)) {
@@ -292,9 +314,13 @@ export function resolverEntrada(vaultRoot, entrada, alias = 'vault', maxDepth = 
     };
   }
 
+  // Em sistema de arquivos que nao diferencia caixa (Windows, macOS padrao) o
+  // `existsSync` acha `Clientes/Acme/Estado.md` e devolveria o caminho na caixa
+  // DECLARADA — ponteiro diferente do que o Linux (e o wikilink) veem. Devolve sempre
+  // a caixa REAL do disco, segmento a segmento.
   const tentar = (rel) => {
     const abs = path.join(vaultRoot, rel);
-    try { return fs.existsSync(abs) && fs.statSync(abs).isFile() ? rel : null; }
+    try { return fs.existsSync(abs) && fs.statSync(abs).isFile() ? casoReal(vaultRoot, rel) : null; }
     catch { return null; }
   };
 

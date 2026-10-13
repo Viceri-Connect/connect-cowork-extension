@@ -44,7 +44,12 @@ export const MARCADOR_PREFIXO = 'CNCT-GOV';
 
 // Aceita o marcador em qualquer lugar do arquivo, mas o gerador sempre o poe na
 // primeira linha: quem inspeciona a olho ve a procedencia sem rolar a tela.
-const RE_MARCADOR = /<!--\s*CNCT-GOV-([a-z0-9._-]+)\s*(?:·|\|)\s*gerado-em:\s*([^\s·|]+)/i;
+// Duas formas: a visivel (0.38.0+, `CNCT-GOV-x` entre crases numa linha de citacao)
+// e a legada em comentario HTML. A legada nunca funcionou para a auto-checagem do
+// agente: o harness DESCARTA comentario HTML ao carregar o CLAUDE.md (medido em
+// 13/10 — o marcador estava no arquivo e em nenhum contexto). Segue aceita so para
+// reconhecer a procedencia de arquivos ainda nao republicados.
+const RE_MARCADOR = /(?:<!--\s*|`)CNCT-GOV-([a-z0-9._-]+)`?\s*(?:·|\|)\s*gerado-em:\s*([^\s·|]+)/i;
 
 // Slug estavel do vault para o marcador. Nao e identificador de negocio — e so o
 // que permite dizer "este arquivo foi gerado para ESTE vault" quando uma copia de
@@ -73,9 +78,9 @@ export function gerarArquivoGovernanca({ vault, nomeExibicao, agora } = {}) {
   const quando = (agora instanceof Date ? agora : new Date()).toISOString();
 
   return [
-    `<!-- ${MARCADOR_PREFIXO}-${slug} · gerado-em: ${quando} · mecanismo Connect -->`,
-    '<!-- Arquivo de governanca gerado pelo Connect. Nao e a carta de navegacao:',
-    `     a camada 1 deste vault e declarada em ${carta}. -->`,
+    // VISIVEL de proposito (0.38.0): a auto-checagem do canal injetado procura este
+    // marcador no contexto do agente, e comentario HTML nao chega la.
+    `> \`${MARCADOR_PREFIXO}-${slug}\` · gerado-em: ${quando} · governanca gerada pelo Connect — nao e a carta de navegacao (camada 1 em \`${carta}\`).`,
     '',
     `# ${titulo} — vault governado`,
     '',
@@ -184,7 +189,7 @@ export function precisaAtualizar(mdAtual, mdNovo) {
 
 // ---------------------------------------------------------------------------
 // publicarGovernanca — materializa o arquivo. Escrita ATOMICA (tmp + rename),
-// mesmo cinto do `contexto-arquivo.mjs`: arquivo truncado no meio da escrita
+// mesmo cinto do antigo `contexto-arquivo.mjs` (saiu na 0.38.0): arquivo truncado no meio da escrita
 // ocuparia o slot de maior precedencia com instrucao pela metade.
 //
 // Recusa-se a sobrescrever arquivo sem marcador nosso — sempre, sem flag de

@@ -7,10 +7,16 @@
 //
 // stdout = contexto para a sessao. Logs de diagnostico vao para stderr.
 // Nunca derruba a sessao: qualquer falha vira aviso, exit 0.
+//
+// 0.38.0 — CANAL UNICO. O stdout leva acionavel + identidade + regras duras +
+// ponteiro da camada 1 + a CAMADA 0 do operador, dentro do teto de 10.000
+// caracteres do cliente (`TETO_INJETADO` em lib/render.mjs). O `contexto-sessao.md`
+// saiu: medido em 13/10, dos 22 KB dele so a camada 0 era exclusiva, e ele morava
+// num caminho que pede concessao a cada sessao — o agente nao abria, e a camada 0
+// sumia sem sinal. Releitura sob demanda = tool `iniciar_sessao`.
 
 import { iniciarSessao } from '../lib/session.mjs';
-import { renderContexto, renderContextoCurto } from '../lib/render.mjs';
-import { materializarContexto } from '../lib/contexto-arquivo.mjs';
+import { renderContextoCurto } from '../lib/render.mjs';
 
 function lerStdin() {
   return new Promise((resolve) => {
@@ -44,35 +50,7 @@ async function main() {
     process.exit(0);
   }
 
-  // M1 — presenca em vez de entrega unica.
-  //
-  // O bloco completo e materializado no workspace (arquivo que o harness rele) e o
-  // stdout carrega so o minimo acionavel + o ponteiro. Motivo medido em 24/08: o
-  // bloco unico chegou a ~16 KB, o cliente Cowork truncou, salvou num log de hook e
-  // entregou 2 KB de preview — camada 0/1 ausente, sem sinal. Ver
-  // `lib/contexto-arquivo.mjs` para a historia completa.
-  //
-  // Degradacao: se a escrita falhar, emite o bloco INTEIRO no stdout (comportamento
-  // <= 0.13.0). Pior, mas nunca contexto ausente — e o bloco curto avisaria o agente
-  // de uma leitura que ele nao tem como fazer.
-  // Duas variantes do MESMO relatorio, porque os dois destinos tem necessidades
-  // opostas (medido em 26/08 — ver `recapAcionavel` em lib/render.mjs):
-  //   `completo`   — com o bloco acionavel inteiro. So para a DEGRADACAO: se o
-  //                  arquivo nao for gravado, o stdout e o unico canal e nao pode
-  //                  sair sem aviso de governanca/concessao.
-  //   `paraArquivo`— sem o bloco acionavel, com recap no lugar. O caminho normal:
-  //                  o `renderContextoCurto` abaixo ja injeta o acionavel inteiro,
-  //                  e repeti-lo no arquivo custava ~750 tokens por sessao.
-  const completo = renderContexto(report);
-  const paraArquivo = renderContexto(report, { acionavel: false });
-  const arquivo = materializarContexto({ workspace: report.workspace, bloco: paraArquivo });
-
-  if (arquivo.status === 'materializado') {
-    process.stdout.write(renderContextoCurto(report, arquivo));
-  } else {
-    process.stderr.write(`[connect] contexto nao materializado (${arquivo.status}: ${arquivo.motivo || '—'}) — emitindo bloco inteiro no stdout\n`);
-    process.stdout.write(completo);
-  }
+  process.stdout.write(renderContextoCurto(report));
   process.exit(0);
 }
 

@@ -68,6 +68,11 @@ export function migrarHomeLegado(home, legadoOverride) {
   const destinoJaTemConfig = fs.existsSync(path.join(base, 'connect.config.json'));
   const legadoTemConfig = fs.existsSync(path.join(legado, 'connect.config.json'));
   if (destinoJaTemConfig) return { status: 'nao-necessario', home: base };
+  // "Uma unica vez" de verdade (0.37.0): o marcador ja existia, mas ninguem o lia.
+  // Medido em 13/10: todo home novo sem config (um CONNECT_HOME de teste, ou o real
+  // apagado para reconfigurar) recebia de novo a config e o perfil de AGOSTO, e o
+  // MIGRADO.md era reescrito apontando para o destino da vez.
+  if (fs.existsSync(path.join(legado, 'MIGRADO.md'))) return { status: 'ja-migrado', home: base, legado };
   if (!legadoTemConfig) return { status: 'sem-legado', home: base };
 
   ensureDir(base);

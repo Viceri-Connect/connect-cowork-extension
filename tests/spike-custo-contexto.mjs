@@ -46,28 +46,16 @@ const home = path.join(base, 'home');
 const report = iniciarSessao({ sessionId: 'custo', home, vaultMatriz: matriz });
 
 // ---------------------------------------------------------------------------
-// 1. Bloco acionavel: inteiro onde o canal e UNICO, recap onde ja foi injetado
+// 1. Bloco acionavel: inteiro nos dois canais (desde a 0.38.0 nao ha arquivo)
 // ---------------------------------------------------------------------------
-const completo = renderContexto(report);                          // tool + degradacao
-const paraArquivo = renderContexto(report, { acionavel: false }); // arquivo do workspace
-const curto = renderContextoCurto(report, { status: 'materializado', caminhoRelativo: './contexto-sessao.md', bytes: 1234 });
+const completo = renderContexto(report);   // tool iniciar_sessao
+const curto = renderContextoCurto(report); // stdout do hook
 
 ok(report.l1?.governanca?.estado === 'nao-governado', 'pre-condicao: a matriz de teste tem CLAUDE.md nao governado na raiz');
-ok(/conteudo nao governado/.test(completo), 'variante padrao (tool/degradacao) leva o bloco de governanca INTEIRO — la o canal e unico');
+ok(/conteudo nao governado/.test(completo), 'a tool leva o bloco de governanca INTEIRO');
 ok(/conteudo nao governado/.test(curto), 'o bloco INJETADO leva a governanca inteira — e ele que precisa interromper');
-ok(!/alguem com escrita neste vault/.test(paraArquivo), 'a variante de ARQUIVO nao repete o texto de governanca ja injetado');
-ok(/Ja entregue no bloco injetado/.test(paraArquivo), 'a variante de arquivo entrega o RECAP no lugar');
-ok(/NAO governado/.test(paraArquivo), 'o recap NOMEIA o achado — arquivo relido meses depois nao pode perder o rastro');
-ok(bytes(paraArquivo) < bytes(completo), 'a variante de arquivo e menor que a completa (se empatar, a duplicacao voltou)');
-
-// A degradacao e o ponto frágil do desenho: quando a escrita do arquivo falha, o
-// stdout volta a ser canal unico e NAO pode sair sem aviso.
-ok(/acesso de pasta|configuracao necessaria|conteudo nao governado/.test(completo),
-  'DEGRADACAO: a variante que vai para o stdout quando o arquivo falha mantem o bloco acionavel');
-
-// Sem nada acionavel, o recap nao inventa secao vazia.
-const limpo = { ...report, concessao: null, matrizConfigurada: true, operadorProvisionado: true, l1: { ...report.l1, governanca: { estado: 'governado', marcador: { vault: 'x' } } } };
-ok(!/Ja entregue no bloco injetado/.test(renderContexto(limpo, { acionavel: false })), 'sem item acionavel, o recap nao emite cabecalho vazio');
+ok(bytes(curto) < bytes(completo), 'o injetado e menor que o completo (protocolo e carta ficam so na tool)');
+ok(!/contexto-sessao\.md/.test(curto) && !/contexto-sessao\.md/.test(completo), '0.38.0: nenhum canal manda ler o contexto-sessao.md, que nao existe mais');
 
 // ---------------------------------------------------------------------------
 // 2. `vaultConfigInline` nunca atravessa — nem na primeira entrega
