@@ -22,6 +22,7 @@
 // Zero dependencias externas.
 
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 
@@ -180,31 +181,69 @@ export function parseCatalogoIni(texto) {
   return entradas;
 }
 
-// lerCatalogoOneDrive — todas as contas Business desta maquina. Nunca lanca.
-export function lerCatalogoOneDrive({ localAppData = process.env.LOCALAPPDATA } = {}) {
-  const base = localAppData ? path.join(localAppData, 'Microsoft', 'OneDrive', 'settings') : null;
-  const out = { status: 'ok', entradas: [], avisos: [] };
-  if (!base || !fs.existsSync(base)) {
-    return { ...out, status: 'indisponivel', avisos: ['catalogo do OneDrive nao encontrado nesta maquina'] };
+// ---------------------------------------------------------------------------
+// raizesCatalogo — onde o cliente OneDrive guarda `settings/`, por sistema.
+//
+// Windows: medido (06/10). macOS: NAO medido — candidatas do cliente fora da App
+// Store (Application Support) e do cliente da App Store (sandbox em Containers),
+// P175, 0.37.0. A leitura testa todas e devolve `diagnostico` dizendo o que achou
+// em cada uma: e esse diagnostico que calibra a lista no primeiro Mac real.
+// ---------------------------------------------------------------------------
+export function raizesCatalogo({ plataforma = process.platform, localAppData = process.env.LOCALAPPDATA, home = os.homedir() } = {}) {
+  if (plataforma === 'win32') {
+    return localAppData ? [path.join(localAppData, 'Microsoft', 'OneDrive', 'settings')] : [];
   }
-  let contas = [];
-  try { contas = fs.readdirSync(base).filter((n) => /^Business\d+$/i.test(n)); } catch { /* segue vazio */ }
-  for (const conta of contas) {
-    const dir = path.join(base, conta);
-    let arquivos = [];
-    try { arquivos = fs.readdirSync(dir).filter((n) => /^[0-9a-f-]{36}\.ini$/i.test(n)); } catch { continue; }
-    for (const a of arquivos) {
-      try {
-        const entradas = parseCatalogoIni(decodificarIni(fs.readFileSync(path.join(dir, a))));
-        out.entradas.push(...entradas.map((e) => ({ ...e, conta })));
-      } catch (e) {
-        out.avisos.push(`catalogo ${conta}/${a} ilegivel: ${e.message}`);
+  if (plataforma === 'darwin') {
+    return [
+      path.join(home, 'Library', 'Application Support', 'OneDrive', 'settings'),
+      path.join(home, 'Library', 'Containers', 'com.microsoft.OneDrive-mac', 'Data', 'Library', 'Application Support', 'OneDrive', 'settings'),
+      path.join(home, 'Library', 'Group Containers', 'UBF8T346G9.OneDriveStandaloneSuite', 'Library', 'Application Support', 'OneDrive', 'settings'),
+    ];
+  }
+  return [];
+}
+
+// lerCatalogoOneDrive — todas as contas Business desta maquina. Nunca lanca.
+// `raizes` explicito vence; sem ele, as do sistema (`raizesCatalogo`). O parametro
+// `localAppData` segue valendo para o Windows (e o que os testes usam).
+export function lerCatalogoOneDrive({ localAppData = null, raizes = null, plataforma = process.platform } = {}) {
+  const candidatas = raizes
+    || (localAppData ? raizesCatalogo({ plataforma: 'win32', localAppData }) : raizesCatalogo({ plataforma }));
+  const out = { status: 'ok', entradas: [], avisos: [], diagnostico: { plataforma, raizes: [] } };
+  const existentes = candidatas.filter((r) => {
+    const existe = fs.existsSync(r);
+    out.diagnostico.raizes.push({ raiz: r, existe });
+    return existe;
+  });
+  if (!existentes.length) {
+    const onde = candidatas.length ? `procurado em: ${candidatas.join(' | ')}` : `sem local conhecido para a plataforma "${plataforma}"`;
+    return { ...out, status: 'indisponivel', avisos: [`catalogo do OneDrive nao encontrado nesta maquina (${onde})`] };
+  }
+  for (const base of existentes) {
+    const diag = out.diagnostico.raizes.find((d) => d.raiz === base);
+    let contas = [];
+    try { contas = fs.readdirSync(base).filter((n) => /^Business\d+$/i.test(n)); } catch { /* segue vazio */ }
+    diag.contas = [];
+    for (const conta of contas) {
+      const dir = path.join(base, conta);
+      let todos = [];
+      try { todos = fs.readdirSync(dir); } catch { continue; }
+      const arquivos = todos.filter((n) => /^[0-9a-f-]{36}\.ini$/i.test(n));
+      // So nomes de .ini (nunca conteudo): e o que diz se o formato do nome mudou.
+      diag.contas.push({ conta, ini: todos.filter((n) => /\.ini$/i.test(n)).length, casados: arquivos.length });
+      for (const a of arquivos) {
+        try {
+          const entradas = parseCatalogoIni(decodificarIni(fs.readFileSync(path.join(dir, a))));
+          out.entradas.push(...entradas.map((e) => ({ ...e, conta })));
+        } catch (e) {
+          out.avisos.push(`catalogo ${conta}/${a} ilegivel: ${e.message}`);
+        }
       }
     }
   }
   if (!out.entradas.length) {
     out.status = 'vazio';
-    out.avisos.push('o catalogo do OneDrive foi lido e nao lista nenhuma biblioteca sincronizada (o formato pode ter mudado)');
+    out.avisos.push('o catalogo do OneDrive foi lido e nao lista nenhuma biblioteca sincronizada (o formato pode ter mudado) — ver `diagnostico`');
   }
   return out;
 }
@@ -280,18 +319,31 @@ export function origemEmYaml(o) {
 }
 
 // ---------------------------------------------------------------------------
-// Efeitos no host (so Windows). Isolados para o teste poder substitui-los.
+// Efeitos no host. Isolados para o teste poder substitui-los.
+// Windows: medido. macOS (P175, 0.37.0): NAO medido — cada efeito degrada
+// declarado (status + motivo), nunca em silencio.
 // ---------------------------------------------------------------------------
+export const PLATAFORMAS_SYNC = ['win32', 'darwin'];
+const IS_MAC = process.platform === 'darwin';
+
 export const host = {
   plataforma: process.platform,
-  // rundll32 + FileProtocolHandler: abre o protocolo sem passar pelo parser do
-  // cmd, que trataria os `&` da query como separador de comando.
+  // Windows: rundll32 + FileProtocolHandler abre o protocolo sem passar pelo parser
+  // do cmd, que trataria os `&` da query como separador de comando.
+  // macOS: `open` recebe a URL como um argumento so (sem shell).
   abrirLink(link) {
-    const p = spawn('rundll32.exe', ['url.dll,FileProtocolHandler', link], { detached: true, stdio: 'ignore', windowsHide: true });
+    const p = IS_MAC
+      ? spawn('/usr/bin/open', [link], { detached: true, stdio: 'ignore' })
+      : spawn('rundll32.exe', ['url.dll,FileProtocolHandler', link], { detached: true, stdio: 'ignore', windowsHide: true });
     p.unref();
   },
   // "Manter sempre neste dispositivo" = atributo Pinned (+P) e nao Unpinned (-U).
+  // No macOS nao ha equivalente de linha de comando conhecido para o File Provider:
+  // devolve `nao-suportado` com a instrucao manual.
   fixar(dir) {
+    if (IS_MAC) {
+      return { status: 'nao-suportado', motivo: 'macOS: fixacao automatica nao implementada — no Finder, clique direito na pasta > "Manter sempre neste dispositivo"' };
+    }
     const raiz = spawnSync('attrib', ['+P', '-U', dir], { windowsHide: true, encoding: 'utf8' });
     const arvore = spawnSync('attrib', ['+P', '-U', '/S', '/D', path.join(dir, '*')], { windowsHide: true, encoding: 'utf8' });
     const erro = [raiz, arvore].find((r) => r.status !== 0 || r.error);
@@ -306,11 +358,51 @@ export const host = {
   // (medido em 06/10: tres disparos sem e-mail, nada; o mesmo link com e-mail
   // abriu a pasta). Lista vazia = OneDrive nao logado.
   emailsDasContas() {
+    if (IS_MAC) return emailsDasContasMac();
     const r = spawnSync('reg', ['query', 'HKCU\\Software\\Microsoft\\OneDrive\\Accounts', '/s', '/v', 'UserEmail'], { windowsHide: true, encoding: 'utf8' });
     if (r.status !== 0 || !r.stdout) return [];
     return parseEmailsReg(r.stdout);
   },
 };
+
+// macOS: as preferencias do cliente (dominio varia entre o cliente da App Store e o
+// avulso) guardam um dicionario por conta (`Business1 = { ... UserEmail = ...; }`).
+// NAO medido — a lista de dominios e o formato sao hipotese ate o primeiro Mac real.
+export const DOMINIOS_PREFS_MAC = ['com.microsoft.OneDrive-mac', 'com.microsoft.OneDrive', 'UBF8T346G9.OneDriveStandaloneSuite'];
+
+function emailsDasContasMac() {
+  for (const dominio of DOMINIOS_PREFS_MAC) {
+    const r = spawnSync('/usr/bin/defaults', ['read', dominio], { encoding: 'utf8' });
+    if (r.status !== 0 || !r.stdout) continue;
+    const achados = parseEmailsDefaults(r.stdout);
+    if (achados.length) return achados;
+  }
+  return [];
+}
+
+// Saida do `defaults read` (formato plist "old-style") -> e-mails das contas
+// Business{N}. Personal fica fora, como no Windows.
+export function parseEmailsDefaults(saida) {
+  const out = [];
+  let conta = null;
+  let nivel = 0;
+  for (const linha of String(saida || '').split(/\r?\n/)) {
+    const k = linha.match(/^\s*"?([A-Za-z]+\d*)"?\s*=\s*\{\s*$/);
+    if (k) {
+      nivel += 1;
+      if (/^Business\d+$/i.test(k[1])) conta = { nome: k[1], nivel };
+      continue;
+    }
+    if (/^\s*\};?\s*$/.test(linha)) {
+      if (conta && conta.nivel === nivel) conta = null;
+      nivel = Math.max(0, nivel - 1);
+      continue;
+    }
+    const v = linha.match(/^\s*"?UserEmail"?\s*=\s*"?([^";\s]+@[^";\s]+)"?\s*;\s*$/i);
+    if (v && conta) out.push({ conta: conta.nome, email: v[1] });
+  }
+  return out;
+}
 
 // Saida do `reg query /s /v UserEmail` -> e-mails das contas Business{N}, na ordem.
 export function parseEmailsReg(saida) {

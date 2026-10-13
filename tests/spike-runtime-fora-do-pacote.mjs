@@ -44,8 +44,13 @@ teste('o .bat usa CRLF (requisito do cmd.exe, nao preferencia)', () => {
   assert.ok(!/[^\r]\n/.test(bat), 'ha linha terminada em LF solto');
 });
 
-teste('@echo off e a PRIMEIRA linha (senao o cmd ecoa os comentarios)', () => {
-  assert.equal(bat.split('\r\n')[0].trim(), '@echo off');
+// 0.37.0 (P175): a linha 1 passou a ser o desvio poliglota para o sh (`:; exec ...`).
+// Para o cmd ela e ROTULO — rotulo nao e ecoado (medido em 13/10: a saida do .bat e
+// so a do script). O que importa continua valendo: nenhum COMANDO antes do @echo off.
+teste('@echo off e o primeiro COMANDO (senao o cmd ecoa os comentarios)', () => {
+  const linhas = bat.split('\r\n');
+  assert.ok(linhas[0].startsWith(':; exec /bin/sh '), 'linha 1 deveria ser o desvio poliglota para o sh');
+  assert.equal(linhas[1].trim(), '@echo off');
 });
 
 teste('o runtime mora no CONNECT_HOME, nunca no diretorio do pacote', () => {

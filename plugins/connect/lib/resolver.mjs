@@ -30,7 +30,7 @@ import { mount } from './mount.mjs';
 import { resolveConfig } from './session.mjs';
 import { montarL1 } from './matriz.mjs';
 import { parseFrontmatter } from './frontmatter.mjs';
-import { lerOrigem, capturarOrigem, host as hostOneDrive } from './onedrive.mjs';
+import { lerOrigem, capturarOrigem, host as hostOneDrive, PLATAFORMAS_SYNC } from './onedrive.mjs';
 import { resolverEntrada } from './navegacao.mjs';
 import { lerTabela, casarPonteiro, vizinhos } from './ponteiro.mjs';
 import { lerVinculoDaEntidade } from './vinculo.mjs';
@@ -340,11 +340,11 @@ export function casarMuitos(registro, termo, coletivo = null) {
 // NAO declara `origem`: o caminho local acabou de ser usado, entao o catalogo do
 // OneDrive desta maquina diz de onde na nuvem ele vem. O mecanismo so PROPOE —
 // gravar e escrita na matriz, e passa pelo protocolo de escrita com quem pode.
-// Nunca lanca; fora do Windows ou sem catalogo, simplesmente nao aparece.
+// Nunca lanca; fora de Windows/macOS ou sem catalogo, simplesmente nao aparece.
 // ---------------------------------------------------------------------------
 function origemCapturavel(entry, caminhoLocal, cfg, host) {
   if ((entry.origem || []).length || (entry.origemErros || []).length) return null;
-  if (host.plataforma !== 'win32') return null;
+  if (!PLATAFORMAS_SYNC.includes(host.plataforma)) return null;
   let cap = null;
   try { cap = capturarOrigem(host.lerCatalogo().entradas || [], caminhoLocal); } catch { return null; }
   if (!cap) return null;

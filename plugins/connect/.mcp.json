@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "connect": {
-      "command": "cmd.exe",
-      "args": ["/c", "${CLAUDE_PLUGIN_ROOT}/mcp/launcher.bat"],
+      "command": "${ComSpec:-/bin/sh}",
+      "args": ["-c", "set -f;IFS=;exec sh $1", "/c", "${CLAUDE_PLUGIN_ROOT}/mcp/launcher.bat"],
       "env": {
         "CONNECT_HOME": "${CONNECT_HOME}",
         "CONNECT_VAULT_MATRIZ": "${CONNECT_VAULT_MATRIZ}",

@@ -4,5 +4,12 @@
   "cerebroPessoal": "C:\\Users\\SEU_USUARIO\\seu-vault-pessoal-opcional",
   "subVaults": {
     "tribo-a": "C:\\Users\\SEU_USUARIO\\Sua Empresa\\sub-vault-tribo-a"
+  },
+  "$exemploMacOS": {
+    "$comment": "macOS (0.37.0, P175): CONNECT_HOME padrao e ~/.connect; o OneDrive monta as bibliotecas do SharePoint em ~/Library/CloudStorage. Use as mesmas chaves acima com caminhos assim.",
+    "vaultMatriz": "/Users/SEU_USUARIO/Library/CloudStorage/OneDrive-SharedLibraries-SuaEmpresa/Sua Empresa - sua-matriz",
+    "subVaults": {
+      "tribo-a": "/Users/SEU_USUARIO/Library/CloudStorage/OneDrive-SharedLibraries-SuaEmpresa/Sua Empresa - sub-vault-tribo-a"
+    }
   }
 }

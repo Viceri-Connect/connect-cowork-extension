@@ -1,5 +1,11 @@
+:; exec /bin/sh "$(dirname "$0")/run-node.sh" "$@" #
 @echo off
 :: run-node.bat - garante o Node portatil e executa o script recebido.
+::
+:: POLIGLOTA (P175, 0.37.0): a linha 1 e para o `sh` do macOS/Linux e delega a
+:: run-node.sh. Para o cmd.exe ela e um ROTULO (comeca com `:`) e nao executa nada;
+:: para o sh, `:` e no-op e o resto e um `exec`. O `#` final engole o CR do CRLF.
+:: Nao mover nem editar a linha 1 sem rodar tests/spike-multiplataforma.mjs.
 ::
 :: Fonte UNICA da resolucao do runtime, usada pelo launcher do MCP e pelo hook de
 :: SessionStart. Ate a 0.12.2 so o MCP tinha node embarcado; o hook chamava `node` do
@@ -26,6 +32,16 @@ set "PLUGIN_DIR=%~dp0.."
 
 :: Mesma resolucao de lib/config-local.mjs (defaultConnectHome): env var, ou o perfil
 :: do usuario. NUNCA pasta de aplicativo (%LOCALAPPDATA%) - ver D149.
+::
+:: Variavel NAO definida no ambiente do Cowork chega como o texto literal
+:: "${CONNECT_HOME}" (o .mcp.json repassa `${CONNECT_HOME}` sem valor). Medido em
+:: 13/10: com isso o Node era baixado em `{cwd}\${CONNECT_HOME}\bin` - uma copia de
+:: ~70 MB por SESSAO, no host-cwd de cada uma. Texto com "${" conta como ausente.
+:: (O teste fica numa linha que so e LIDA com a variavel definida: com ela vazia, o
+:: cmd expande `%CONNECT_HOME:${=%` para texto com `=` e aborta a linha inteira.)
+if not defined CONNECT_HOME goto :home_padrao
+if not "%CONNECT_HOME:${=%"=="%CONNECT_HOME%" set "CONNECT_HOME="
+:home_padrao
 if not defined CONNECT_HOME set "CONNECT_HOME=%USERPROFILE%\Connect"
 set "BIN_DIR=%CONNECT_HOME%\bin"
 set "NODE_EXE=%BIN_DIR%\node.exe"

@@ -326,7 +326,9 @@ const TOOLS = [
       'as pastas sincronizadas que nenhum manifesto declara, com `origemSugerida` completa (e `yaml` ' +
       'pronto) para o curador confirmar a entidade e gravar no manifesto. Com ' +
       '`registrar: true`, grava o caminho local de toda entidade achada (operador que ja sincroniza ' +
-      'tudo). Cruzamento por nome nunca registra — so aparece como `candidatoPorNome`.',
+      'tudo). Cruzamento por nome nunca registra — so aparece como `candidatoPorNome`. Windows e ' +
+      'macOS (macOS em validacao, P175): `diagnostico` diz onde o catalogo foi procurado e o que se ' +
+      'achou em cada raiz — catalogo nao encontrado no Mac = devolver o `diagnostico` ao time do Connect.',
     inputSchema: {
       type: 'object',
       properties: {

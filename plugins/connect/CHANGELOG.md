@@ -1,5 +1,46 @@
 # Changelog — connect
 
+## 0.37.0 — 2026-10-13
+
+**O plugin não subia no macOS (`P175`), e no Windows baixava o Node de novo a cada sessão.**
+
+O arranque inteiro dependia de `cmd.exe`: o MCP subia por `cmd.exe /c launcher.bat` e o hook por
+`run-node.bat`, que só sabe baixar o Node `win-x64`. Sem o MCP não existe tool nenhuma, nem o fallback
+da `cnct-nucleo-sessao`. Bloqueava a instalação do Advisor do Motor de Vendas (`Motor/P15`). Agora
+um pacote só serve aos dois sistemas, sem comando por SO, porque nem `.mcp.json` nem `hooks.json`
+admitem isso.
+
+- **`.mcp.json` escolhe o interpretador pelo ambiente:** `command: "${ComSpec:-/bin/sh}"`, com args
+  `-c "set -f;IFS=;exec sh $1" /c <launcher>`. No Windows vira `cmd.exe`, que ignora o que vem antes do
+  `/c`. Fora dele vira `/bin/sh`, com `$1` = launcher. **Medido no Cowork Windows (13/10):**
+  `${VAR:-default}` é expandido, e variável sem valor chega como texto literal. **E medido no mesmo dia:**
+  o cmd procura `/x` até **dentro de um caminho**. Com o launcher como 1º argumento,
+  `.../Claude_pzs.../` virava `/C` e `/Users` virava `/U` (saída em UTF-16). Por isso nada com barra
+  vem antes do `/c`.
+- **`launcher.bat` e `run-node.bat` viraram poliglotas.** A linha 1 (`:; exec /bin/sh … #`) é rótulo
+  para o cmd e `exec` para o sh, e o `#` engole o CR do CRLF. O bloco batch não muda. O texto do
+  `hooks.json` também não: no macOS o `sh -c` executa o `.bat` direto, por isso os três scripts de
+  arranque estão com **modo 755 no git**.
+- **`scripts/run-node.sh`** (novo): espelho POSIX do `.bat`. Baixa o Node 20.11.1 `darwin`/`linux`
+  `arm64`/`x64` para `$CONNECT_HOME/bin` (padrão `~/.connect`), com download atômico e verificado e o
+  `node` do PATH como último recurso declarado (D153).
+- **Corrigido no Windows: Node baixado por sessão.** O `.mcp.json` repassa `${CONNECT_HOME}`, que sem
+  valor chega literal. O `run-node.bat` o tratava como definido e baixava ~70 MB em
+  `{host-cwd}\${CONNECT_HOME}\bin`, uma cópia em cada sessão (medido no processo em execução). Texto
+  com `${` agora conta como ausente nos dois scripts.
+- **OneDrive no macOS (em validação):** o catálogo é procurado nas raízes candidatas sob `~/Library`, o
+  e-mail da conta vem do `defaults read`, o link abre por `open`, e a fixação no dispositivo devolve
+  `nao-suportado` com a instrução manual. `sincronizar_subvault` e `origemCapturavel` deixam de barrar o
+  darwin. **Nada disso foi medido num Mac:** tudo degrada declarado, e o fluxo manual
+  (`registrar_subvault_local`) segue valendo.
+- **`catalogo_sync` devolve `plataforma` e `diagnostico`:** onde procurou o catálogo e o que achou em
+  cada raiz (nomes e contagens, nunca conteúdo). É o insumo que calibra o macOS no primeiro Mac real.
+- `CONCEITOS.md` §5 corrigido (o padrão era descrito como `%LOCALAPPDATA%`, aposentado desde a 0.15.0)
+  e com o caminho do macOS. O exemplo de config ganhou `$exemploMacOS`.
+- Testes: `spike-multiplataforma`, que sobe o MCP pela linha de comando **exata** que o `.mcp.json`
+  produz nesta máquina (18 checagens no Windows, 17 no Linux), e `spike-onedrive-macos` (19
+  checagens). `spike-onedrive` segue com 59/59.
+
 ## 0.36.0 — 2026-10-06
 
 **Entidade sem `origem` dependia de um curador lembrar de rodar o `catalogo_sync` na máquina certa.**

@@ -72,8 +72,15 @@ podem sincronizar). Guarda três coisas, todas geridas pela extensão:
 - `sessions/{id}/` — os scaffolds efêmeros de sessão (onde moram as junctions `./matriz`,
   sub-vaults resolvidos, e `./pessoal` quando houver).
 
-Default no Windows: `%LOCALAPPDATA%\Connect`, criado automaticamente. O operador **não
-precisa administrá-lo** — a única escolha que lhe importa é qual é a matriz da instância.
+Default, criado automaticamente: no Windows `%USERPROFILE%\Connect`; no macOS `~/.connect`
+(desde a 0.37.0, `P175`). Guarda também `bin/`, o Node portátil que o plugin baixa uma vez por
+máquina. Nunca pasta de aplicativo (`%LOCALAPPDATA%`): medido no Windows, o Cowork recusa ler
+através de atalho cujo destino mora ali (D149). No macOS o equivalente ainda não foi medido. O operador **não precisa administrá-lo** — a única
+escolha que lhe importa é qual é a matriz da instância.
+
+> **macOS:** `~/.connect` é oculto no seletor de pastas do Finder. Quando o Cowork pedir a
+> concessão dele, use **Cmd+Shift+.** para mostrar ocultos, ou **Cmd+Shift+G** e cole o caminho.
+> A matriz sincronizada pelo OneDrive mora em `~/Library/CloudStorage/OneDrive-…/`.
 
 ---
 
@@ -85,7 +92,7 @@ precisa administrá-lo** — a única escolha que lhe importa é qual é a matri
 | **Matriz** | 1 por instância | governa; define o que é filho | matriz da Empresa X |
 | **Sub-vault** | N por instância | contexto-filho definido pela matriz | tribo-a, cliente-a |
 | **Vault pessoal** | 0 ou 1, **opcional** | enriquecimento do operador | vault Obsidian próprio |
-| **CONNECT_HOME** | 1 por máquina | estado do Connect (config + perfil + sessões) | `%LOCALAPPDATA%\Connect` |
+| **CONNECT_HOME** | 1 por máquina | estado do Connect (config + perfil + sessões) | `%USERPROFILE%\Connect` · `~/.connect` |
 
 > Regras de mecanismo que sustentam esta taxonomia (ver `GLOSSARIO.md`):
 > `corte-mecanismo-conteudo`, `manifesto-e-acervo`, `grafo-nao-arvore`, `espinha-e-mecanismo`.

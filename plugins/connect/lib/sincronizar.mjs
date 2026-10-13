@@ -20,7 +20,7 @@
 import fs from 'node:fs';
 import { resolveConfig, registrarSubVaultLocal } from './session.mjs';
 import { lerRegistro, casarMuitos, classeDeclarada } from './resolver.mjs';
-import { montarLinkSync, localizarNoCatalogo, origemEmYaml, host as hostPadrao } from './onedrive.mjs';
+import { montarLinkSync, localizarNoCatalogo, origemEmYaml, host as hostPadrao, PLATAFORMAS_SYNC } from './onedrive.mjs';
 
 const ESPERA_PADRAO_S = 90;
 const INTERVALO_MS = 3000;
@@ -74,9 +74,14 @@ export async function sincronizarSubvault({
 
   const coletivoChave = coletivo || entry.escopo || null;
 
-  if (host.plataforma !== 'win32') {
-    return { ...base, status: 'plataforma-nao-suportada', link: montarLinkSync(origem, { email }), avisos: ['sync automatico so no Windows. O operador pode abrir o `link` (ou sincronizar pelo SharePoint) e informar o caminho'] };
+  if (!PLATAFORMAS_SYNC.includes(host.plataforma)) {
+    return { ...base, status: 'plataforma-nao-suportada', link: montarLinkSync(origem, { email }), avisos: [`sync automatico so no Windows e no macOS (esta maquina: ${host.plataforma}). O operador pode abrir o \`link\` (ou sincronizar pelo SharePoint) e informar o caminho`] };
   }
+  // macOS (P175, 0.37.0): caminho NAO medido. Tudo o que falhar aqui degrada para o
+  // fluxo antigo (perguntar o caminho e registrar_subvault_local), que funciona.
+  const avisosPlataforma = host.plataforma === 'darwin'
+    ? ['macOS: sync automatico em validacao (P175) — se algo falhar, chame catalogo_sync e devolva o `diagnostico` ao time do Connect; o caminho manual (registrar_subvault_local) segue valendo']
+    : [];
 
   let link = null;
   const concluir = (achado, ja) => {
@@ -96,7 +101,9 @@ export async function sincronizarSubvault({
       fixacao,
       registro: reg,
       avisos: [
+        ...avisosPlataforma,
         ...(fixacao.status === 'erro' ? [`a pasta sincroniza, mas fixar no dispositivo falhou (${fixacao.motivo}) — o operador pode marcar "Manter sempre neste dispositivo" pelo Explorer`] : []),
+        ...(fixacao.status === 'nao-suportado' ? [`a pasta sincroniza, mas nao foi fixada no dispositivo (${fixacao.motivo})`] : []),
         `proximo passo: resolver({ conceito: "${entry.conceito}" }) para montar`,
       ],
     };
@@ -113,14 +120,19 @@ export async function sincronizarSubvault({
   let emailFinal = email;
   if (!emailFinal) {
     const contas = host.emailsDasContas();
-    if (!contas.length) {
+    if (!contas.length && host.plataforma === 'darwin') {
+      // No macOS a leitura da conta e hipotese (P175): nao achar nao prova que nao ha
+      // conta. Segue sem `userEmail` e declara — no Windows o mesmo caso e bloqueio.
+      avisosPlataforma.push('macOS: e-mail da conta OneDrive nao localizado nas preferencias — link disparado sem `userEmail`. Se nada abrir, repita informando `email`');
+    } else if (!contas.length) {
       return { ...base, status: 'onedrive-sem-conta', avisos: ['nenhuma conta OneDrive corporativa logada nesta maquina — o operador precisa entrar no OneDrive com a conta da empresa antes de sincronizar'] };
+    } else {
+      const unicos = [...new Set(contas.map((c) => c.email.toLowerCase()))];
+      if (unicos.length > 1) {
+        return { ...base, status: 'ambigua-conta', contas: unicos, avisos: [`ha ${unicos.length} contas OneDrive corporativas (${unicos.join(', ')}) — pergunte ao operador qual e repita com \`email\``] };
+      }
+      emailFinal = contas[0].email;
     }
-    const unicos = [...new Set(contas.map((c) => c.email.toLowerCase()))];
-    if (unicos.length > 1) {
-      return { ...base, status: 'ambigua-conta', contas: unicos, avisos: [`ha ${unicos.length} contas OneDrive corporativas (${unicos.join(', ')}) — pergunte ao operador qual e repita com \`email\``] };
-    }
-    emailFinal = contas[0].email;
   }
   link = montarLinkSync(origem, { email: emailFinal });
 
@@ -198,9 +210,15 @@ export function catalogoSync({ registrar = false, host = hostPadrao, ...override
 
   return {
     status: cat.status,
+    plataforma: host.plataforma,
+    // Onde o leitor procurou o catalogo e o que achou em cada raiz (so nomes e
+    // contagens, nunca conteudo). E o insumo para calibrar o macOS (P175).
+    diagnostico: cat.diagnostico || null,
     entidades,
     naoDeclaradas,
     avisos: [
+      ...(!PLATAFORMAS_SYNC.includes(host.plataforma) ? [`catalogo do OneDrive so e lido no Windows e no macOS (esta maquina: ${host.plataforma})`] : []),
+      ...(host.plataforma === 'darwin' && cat.status !== 'ok' ? ['macOS: leitor do catalogo em validacao (P175) — devolva este `diagnostico` ao time do Connect'] : []),
       ...(cat.avisos || []),
       ...(naoDeclaradas.length ? ['`origemSugerida` esta completa para gravar: `pasta` vem so com o nome (o catalogo nao guarda o caminho na biblioteca) e isso basta, porque o OneDrive localiza pelo `pasta-id`. Antes de gravar, confirme com o operador QUAL entidade e — o casamento por nome e so candidato'] : []),
     ],
