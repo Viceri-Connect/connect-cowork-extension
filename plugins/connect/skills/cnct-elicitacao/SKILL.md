@@ -1,7 +1,7 @@
 ---
 name: cnct-elicitacao
 metadata:
-  version: "0.1.0"
+  version: "0.2.0"
   eixo: nucleo
   program: "Impulsa / Viceri"
 description: >
@@ -108,12 +108,18 @@ coletivo (`_inteligencia/skills/cnct-fabrica/cnct-fabrica.md`), que é exatament
 ## Modos
 
 **Passivo (padrão, sem acionamento).** Durante a sessão, manter os sinais em observação. No
-encerramento — chamada por hook do `cnct-nucleo-encerramento` — escrever a captura da sessão em
-`{projeto}/caso-zero/{AAAA-MM-DD}-{slug}.md` e a linha no índice. Nada durante; tudo no fim.
+encerramento — chamada por hook do `cnct-nucleo-encerramento` — escrever **direto no banco** do
+coletivo tocado (`_inteligencia/skills/cnct-fabrica/` daquele coletivo), pela regra de promoção
+acima: armadilha e correção de enquadramento entram na primeira ocorrência; pergunta e movimento
+ficam observados até a segunda. **Nunca** num arquivo por projeto (`{projeto}/caso-zero/`): o dono
+de uma lição de construção é o coletivo, e o próximo a construir o mesmo tipo quase sempre está em
+outro projeto — staging por projeto esconde a lição do único lugar que a fábrica lê. Mostrar o diff
+ao operador antes de gravar. Nada durante; tudo no fim.
 
 **Destilar (sob demanda).** *"destila o que aprendemos"*, *"atualiza o banco de elicitação"*.
-Ler as capturas, aplicar a regra de promoção, apresentar o diff, e só então escrever no knowledge
-do coletivo.
+Reler o banco, juntar o que apareceu de novo (inclusive capturas legadas em `caso-zero/` de algum
+acervo, que seguem como evidência histórica), aplicar a regra de promoção, apresentar o diff, e só
+então escrever no knowledge do coletivo.
 
 **Consultar (sob demanda, e é o modo que a fábrica usa).** *"o que já sabemos sobre construir X"*.
 Devolve, para um tipo: as perguntas que funcionaram, as anti-perguntas, as armadilhas e as formas

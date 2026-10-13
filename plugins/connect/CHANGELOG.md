@@ -1,5 +1,18 @@
 # Changelog — connect
 
+## 0.38.1 — 2026-10-13
+
+**A `cnct-elicitacao` ainda mandava a captura passiva para `{projeto}/caso-zero/`.**
+
+O destino foi corrigido na matriz em 10/09: a lição de construção é do **coletivo** e vai direto ao
+banco da fábrica (`_inteligencia/skills/cnct-fabrica/`). A skill não acompanhou, e o "Modo passivo"
+contradizia a seção "Como volta para a fábrica" do próprio arquivo. Medido em 13/10: o encerramento
+gravou uma captura em `Connect/caso-zero/` seguindo a skill.
+
+- **`cnct-elicitacao` 0.2.0:** o Modo passivo escreve direto no banco do coletivo tocado, pela regra
+  de promoção, e mostra o diff antes de gravar. Capturas legadas em `caso-zero/` seguem como evidência
+  histórica, lidas pelo modo Destilar.
+
 ## 0.38.0 — 2026-10-13
 
 **A camada 0 do operador quase nunca chegava ao agente, e o motivo era o `contexto-sessao.md`.**
