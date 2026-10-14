@@ -22,6 +22,8 @@ import path from 'node:path';
 import { mount, ensureDir, listMounts } from './mount.mjs';
 import { lerIdentidade, montarL1, montarL1Pessoal, lerProtocoloMecanismo } from './matriz.mjs';
 import { montarChave } from './ponteiro.mjs';
+import { host as hostOneDrive, instrucaoFixarMac } from './onedrive.mjs';
+import { detectarSincronizacao } from './sincronizado.mjs';
 // Fonte unica de CONNECT_HOME e da escrita do config (nao reimplementar aqui:
 // duas resolucoes independentes do mesmo cfgPath divergem com o tempo).
 import { gravarChaveLocal, defaultConnectHome, caminhoConfig, lerConfigBruta, gravarConfigBruta, migrarHomeLegado } from './config-local.mjs';
@@ -89,6 +91,47 @@ export function sanitizeSessionId(sessionId) {
 }
 
 // ---------------------------------------------------------------------------
+// garantirRetencaoMatriz — a matriz e o vault que TODA sessao le; online-only ela
+// abre devagar, ou nem abre offline, e no Mac o catalogo chegou vazio antes de o
+// operador fixar a pasta (P175, 14/10). O Connect nao sincroniza a matriz (o caminho
+// vem do operador no `configurar`), mas pode garantir que ela fique no dispositivo.
+//   - fora de nuvem: nada a fazer.
+//   - Windows: sem o atributo P na raiz, fixa (raiz agora, arvore em segundo plano
+//     para nao segurar o hook). Ja fixada: silencio — custo de um `attrib` por sessao.
+//   - macOS: nao ha fixacao programatica (ver `host.fixar`). Se a amostra mostra
+//     placeholder, devolve a instrucao para o agente REPASSAR. Baixada: silencio
+//     (fixada e em cache sao indistinguiveis de fora do OneDrive).
+// Nunca lanca.
+// ---------------------------------------------------------------------------
+const AMOSTRAS_MATRIZ = ['CLAUDE.md', path.join('_cerebro', 'camada-1.md'), path.join('_cerebro', 'vault-config.md')];
+
+export function garantirRetencaoMatriz(dir, { host = hostOneDrive, detectar = detectarSincronizacao } = {}) {
+  try {
+    const sync = detectar(dir);
+    if (!sync.sincronizado) return { status: 'fora-de-nuvem' };
+    if (host.plataforma === 'win32') {
+      const r = host.retencao(dir);
+      if (r.estado === 'fixado') return { status: 'fixado' };
+      if (r.estado !== 'nao-fixado') return { status: 'desconhecido', motivo: r.motivo };
+      const f = host.fixar(dir, { arvoreEmSegundoPlano: true });
+      return f.status === 'fixado'
+        ? { status: 'fixado-agora', aviso: 'matriz marcada como "Manter sempre neste dispositivo" nesta maquina (estava so sob demanda) — o download completo segue em segundo plano pelo OneDrive' }
+        : { status: 'erro', motivo: f.motivo, aviso: `a matriz esta so sob demanda e o Connect nao conseguiu fixa-la (${f.motivo}). REPASSE ao operador: no Explorer, clique com o botao direito na pasta da matriz > "Manter sempre neste dispositivo"` };
+    }
+    if (host.plataforma === 'darwin') {
+      const r = host.retencao(dir, { amostras: AMOSTRAS_MATRIZ });
+      if (r.estado === 'so-nuvem') {
+        return { status: 'so-nuvem', aviso: `a matriz esta so na nuvem neste Mac (arquivos ainda nao baixados) — o Connect nao consegue fixa-la sozinho. REPASSE ao operador: ${instrucaoFixarMac(dir)}` };
+      }
+      return { status: r.estado, ...(r.motivo ? { motivo: r.motivo } : {}) };
+    }
+    return { status: 'nao-aplicavel' };
+  } catch (e) {
+    return { status: 'erro', motivo: e.message };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // iniciarSessao — orquestra o bootstrap. Nunca lanca por falta de vault:
 // coleta avisos e devolve um relatorio; a sessao do Cowork nunca cai por mount.
 // ---------------------------------------------------------------------------
@@ -134,6 +177,14 @@ export function iniciarSessao({ sessionId, ...override } = {}) {
     }
   } else {
     avisos.push('CONNECT_VAULT_MATRIZ nao definido — matriz nao montada. Configure o caminho da matriz.');
+  }
+
+  // 2b. a matriz fica no dispositivo ("Manter sempre neste dispositivo"). ANTES da
+  // carta: ler arquivo no Mac baixa o placeholder e mascararia o estado.
+  let retencaoMatriz = null;
+  if (matrizConfigurada && override.retencaoMatriz !== false) {
+    retencaoMatriz = garantirRetencaoMatriz(cfg.vaultMatriz, { host: override.hostOneDrive || hostOneDrive });
+    if (retencaoMatriz.aviso) avisos.push(retencaoMatriz.aviso);
   }
 
   // 3. vault pessoal (ENRIQUECIMENTO OPCIONAL) — montado como ./pessoal se o
@@ -237,6 +288,7 @@ export function iniciarSessao({ sessionId, ...override } = {}) {
     l1,
     l1Pessoal,
     matrizConfigurada,
+    retencaoMatriz,
     operadorProvisionado,
     // Concessao de acesso — contrato ESTRUTURAL, nao instrucao em prosa (P90).
     // Ate a 0.12.2 a exigencia vivia so no texto da skill ("resolvido -> pedir acesso

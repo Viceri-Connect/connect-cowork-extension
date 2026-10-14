@@ -19,7 +19,8 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { raizesCatalogo, lerCatalogoOneDrive, parseEmailsDefaults } from '../plugins/connect/lib/onedrive.mjs';
+import { raizesCatalogo, lerCatalogoOneDrive, parseEmailsDefaults, traduzirMountPoint, instrucaoFixarMac, parseAtributoPinned } from '../plugins/connect/lib/onedrive.mjs';
+import { garantirRetencaoMatriz } from '../plugins/connect/lib/session.mjs';
 import { sincronizarSubvault, catalogoSync } from '../plugins/connect/lib/sincronizar.mjs';
 
 let pass = 0, fail = 0;
@@ -147,6 +148,95 @@ const defaultsOut = `{
 const em = parseEmailsDefaults(defaultsOut);
 ok(em.length === 1 && em[0].conta === 'Business1' && em[0].email === 'op@contoso.com', 'defaults read: so contas Business, conta pessoal fora');
 ok(parseEmailsDefaults('').length === 0, 'saida vazia: nenhuma conta');
+
+// --- 6. token `$Group.Container$` (0.38.2, primeiro Mac real) ------------------------
+// O catalogo do Mac grava `$Group.Container$/...`; a pasta que o operador ve mora em
+// ~/Library/CloudStorage/OneDrive-*. Nunca devolver caminho dentro do store privado.
+const hm = path.join(base, 'machome');
+const csDir = path.join(hm, 'Library', 'CloudStorage');
+const montShared = path.join(csDir, 'OneDrive-BibliotecasCompartilhadas-ViceriSeidor');
+const montPessoal = path.join(csDir, 'OneDrive-ViceriSeidor');
+fs.mkdirSync(path.join(montShared, 'Impulsa - Connect - Matriz', '_cerebro'), { recursive: true });
+fs.mkdirSync(path.join(montShared, 'Acervo - Marketing'), { recursive: true });
+fs.mkdirSync(montPessoal, { recursive: true });
+const tok = (...s) => ['$Group.Container$', 'OneDrive.noindex', ...s].join('/');
+
+let t = traduzirMountPoint(tok('Viceri Seidor', 'Impulsa - Connect - Matriz'), { home: hm });
+ok(t.caminho === path.join(montShared, 'Impulsa - Connect - Matriz') && t.via === 'cloudstorage', 'token: traduz para a montagem de CloudStorage que contem o trecho');
+ok(!String(t.caminho).includes('OneDrive.noindex'), 'token: nunca devolve caminho no store privado');
+t = traduzirMountPoint(tok('Viceri Seidor', 'Nao Existe'), { home: hm });
+ok(t.caminho === null && t.via === 'nao-traduzido' && /nao-existe|Nao Existe/i.test(t.motivo), 'token: trecho inexistente -> null com motivo, nunca adivinha');
+t = traduzirMountPoint(tok('OneDrive - Viceri Seidor'), { home: hm });
+ok(t.caminho === montPessoal, 'token na raiz da montagem: desempata pelo nome da raiz do store');
+t = traduzirMountPoint('$Outro.Token$/x', { home: hm });
+ok(t.caminho === null && t.via === 'token-desconhecido', 'token desconhecido: null declarado');
+ok(traduzirMountPoint('C:\\x\\y', { home: hm }).via === 'literal', 'Windows/literal: passa direto');
+// injecao: duas montagens com o mesmo trecho e nenhuma casa pelo nome -> ambiguo
+t = traduzirMountPoint(tok('Outra Coisa', 'Docs'), { home: '/h', listar: () => ['OneDrive-A', 'OneDrive-B'], existe: () => true });
+ok(t.caminho === null && t.via === 'ambiguo', 'duas montagens com o trecho e nome que nao desempata: ambiguo');
+
+// leitura do catalogo com token: mountPoint traduzido, bruto preservado, diagnostico
+const raizTok = path.join(hm, 'Library', 'Containers', 'com.microsoft.OneDrive-mac', 'Data', 'Library', 'Application Support', 'OneDrive', 'settings');
+fs.mkdirSync(path.join(raizTok, 'Business1'), { recursive: true });
+const PASTA_RUIM = '55555555-5555-4555-8555-555555555555';
+fs.writeFileSync(path.join(raizTok, 'Business1', `${G.outra}.ini`), [
+  `libraryScope = 4 ${hex(G.outra)}+4 5 "Acervo" "Documentos" 4 "${SITE}" "tenant" ${hex(G.site)} ${hex(G.web)} ${hex(G.lista)} 0 "" 1 x`,
+  `libraryFolder = 3 4 ${hex(G.mkt)}+4 1786985745 "${tok('Viceri Seidor', 'Acervo - Marketing')}" 1 "Marketing" ${G.outra} 1 2 x`,
+  `libraryFolder = 5 4 ${hex(PASTA_RUIM)}+4 1786985745 "${tok('Viceri Seidor', 'Sumiu')}" 1 "Sumiu" ${G.outra} 1 2 x`,
+].join('\n'), 'utf8');
+const catTok = lerCatalogoOneDrive({ plataforma: 'darwin', home: hm });
+const eMkt = catTok.entradas.find((e) => e.pastaId === G.mkt);
+ok(eMkt?.mountPoint === path.join(montShared, 'Acervo - Marketing') && eMkt.mountPointBruto.startsWith('$Group.Container$'), 'catalogo: mountPoint traduzido, bruto preservado');
+const eRuim = catTok.entradas.find((e) => e.pastaId === PASTA_RUIM);
+ok(eRuim?.mountPoint === null && eRuim.mountPointMotivo, 'catalogo: nao traduzido vira null + motivo');
+ok(catTok.diagnostico.traducoes?.length === 2 && catTok.diagnostico.cloudStorage.includes('OneDrive-ViceriSeidor'), 'diagnostico: traducoes e montagens de CloudStorage (so nomes)');
+ok(catTok.diagnostico.traducoes.every((x) => !String(x.bruto).includes(hm)), 'diagnostico: home abreviado');
+ok(catTok.avisos.some((a) => /nao foram traduzidos/.test(a)), 'aviso de caminho nao traduzido');
+
+// sincronizar: sincronizado mas sem caminho -> caminho-nao-traduzido + arquivo de diagnostico
+const catSemCaminho = [{ tipo: 'pasta', pastaId: G.mkt, siteId: G.site, webId: G.web, listaId: G.lista, nome: 'Marketing', mountPoint: null, mountPointBruto: tok('X', 'Y'), mountPointMotivo: 'teste' }];
+h = hostFalso({ plataforma: 'darwin', contas: [], catalogos: [catSemCaminho] });
+s = await sincronizarSubvault({ conceito: 'marketing', host: h, ...cfg });
+ok(s.status === 'caminho-nao-traduzido' && h.links.length === 0, 'sincronizar: ja sincronizado sem caminho nao re-dispara e declara');
+ok(s.diagnosticoArquivo && fs.existsSync(s.diagnosticoArquivo) && s.avisos.some((a) => /enviar/.test(a)), 'sincronizar: grava diagnostico e pede o envio do arquivo');
+ok(s.avisos.some((a) => /registrar_subvault_local/.test(a)), 'sincronizar: devolve o fluxo manual');
+// fixacao no Mac: instrucao repassavel
+h = hostFalso({ plataforma: 'darwin', contas: [], catalogos: [cat] });
+h.fixar = () => ({ status: 'nao-suportado', motivo: 'm', instrucao: instrucaoFixarMac('/x/Acervo') });
+s = await sincronizarSubvault({ conceito: 'marketing', host: h, ...cfg });
+ok(s.avisos.some((a) => /REPASSE/.test(a) && /Manter sempre neste dispositivo/.test(a)), 'fixacao no Mac: aviso leva a instrucao para repassar');
+
+// catalogo_sync: arquivo de diagnostico no Mac, entidade sincronizada sem caminho marcada
+const cs2 = catalogoSync({ host: { plataforma: 'darwin', lerCatalogo: () => ({ status: 'ok', entradas: catSemCaminho, avisos: [], diagnostico: { plataforma: 'darwin' } }) }, ...cfg });
+ok(cs2.diagnosticoArquivo && fs.existsSync(cs2.diagnosticoArquivo), 'catalogo_sync no Mac: grava o arquivo de diagnostico');
+ok(cs2.entidades.find((e) => e.conceito === 'marketing')?.sincronizadoSemCaminho === true, 'catalogo_sync: entidade sincronizada sem caminho marcada');
+
+// --- 7. retencao da matriz -----------------------------------------------------------
+const naNuvem = () => ({ sincronizado: true });
+const hr = (plataforma, estado, fixar = () => ({ status: 'fixado' })) => {
+  const x = { plataforma, chamadas: [] };
+  x.retencao = () => ({ estado });
+  x.fixar = (d, o) => { x.chamadas.push(o); return fixar(); };
+  return x;
+};
+let hx = hr('win32', 'nao-fixado');
+let rm = garantirRetencaoMatriz('C:\\m', { host: hx, detectar: naNuvem });
+ok(rm.status === 'fixado-agora' && hx.chamadas[0]?.arvoreEmSegundoPlano === true && rm.aviso, 'Windows: matriz nao fixada e fixada, arvore em segundo plano');
+hx = hr('win32', 'fixado');
+rm = garantirRetencaoMatriz('C:\\m', { host: hx, detectar: naNuvem });
+ok(rm.status === 'fixado' && !rm.aviso && hx.chamadas.length === 0, 'Windows: ja fixada, silencio e nenhum attrib de escrita');
+hx = hr('win32', 'nao-fixado', () => ({ status: 'erro', motivo: 'negado' }));
+rm = garantirRetencaoMatriz('C:\\m', { host: hx, detectar: naNuvem });
+ok(rm.status === 'erro' && /REPASSE/.test(rm.aviso), 'Windows: falha de fixar vira instrucao manual');
+rm = garantirRetencaoMatriz('/m', { host: hr('darwin', 'so-nuvem'), detectar: naNuvem });
+ok(rm.status === 'so-nuvem' && /REPASSE/.test(rm.aviso) && /Finder/.test(rm.aviso), 'macOS: so na nuvem pede ao operador, pelo Finder');
+rm = garantirRetencaoMatriz('/m', { host: hr('darwin', 'baixado'), detectar: naNuvem });
+ok(!rm.aviso, 'macOS: baixada, silencio');
+rm = garantirRetencaoMatriz('/m', { host: hr('win32', 'nao-fixado'), detectar: () => ({ sincronizado: false }) });
+ok(rm.status === 'fora-de-nuvem', 'fora de nuvem: nada a fazer');
+ok(parseAtributoPinned('A    P        C:\\Users\\op\\Matriz\r\n', 'C:\\Users\\op\\Matriz') === true, 'attrib: P na raiz detectado');
+ok(parseAtributoPinned('A            C:\\Users\\op\\Matriz\r\n', 'C:\\Users\\op\\Matriz') === false, 'attrib: sem P');
+ok(parseAtributoPinned('     U       C:\\Users\\op\\Pasta\r\n', 'C:\\Users\\op\\Pasta') === false, 'attrib: U (sob demanda) nao e P');
 
 fs.rmSync(base, { recursive: true, force: true });
 console.log(`spike-onedrive-macos: ${pass} ok, ${fail} falha(s)`);

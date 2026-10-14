@@ -1,5 +1,51 @@
 # Changelog — connect
 
+## 0.38.2 — 2026-10-14
+
+**Primeiro retorno do Mac real (`P175`): o catálogo do OneDrive não guarda caminho de disco, e a
+matriz não é fixada no dispositivo em lugar nenhum.**
+
+Medido em 14/10 no Mac do Advisor. O `catalogo_sync` devolveu `local: $Group.Container$/…` em vez
+do caminho que o Finder mostra (`~/Library/CloudStorage/OneDrive-BibliotecasCompartilhadas-…/`).
+Com isso o `sincronizar_subvault` nunca registraria caminho nenhum no Mac: a conferência de
+existência falhava e a resposta ficava em `aguardando` para sempre. E "Manter sempre neste
+dispositivo" não funcionou: o Advisor marcou à mão. O código só fixava sub-vault, e no Mac devolvia
+`nao-suportado` num aviso que o agente resumia.
+
+- **Tradução do `mountPoint` no Mac (`traduzirMountPoint`).** Hipótese, sem documentação da
+  Microsoft: o token aponta o Group Container do OneDrive, e `OneDrive.noindex/` sob ele é o
+  **store privado** do cliente File Provider. A pasta que o operador vê é o espelho em
+  `~/Library/CloudStorage/OneDrive-*`. O trecho depois da raiz do store é lido do catálogo e
+  reaproveitado. Só a raiz é traduzida, para a montagem de `CloudStorage` que **existe** com aquele
+  trecho dentro. O nome só desempata. Nunca devolve caminho dentro do `OneDrive.noindex`, porque
+  escrever ali corrompe o sync. Se não traduzir, devolve `null` com motivo. O bruto fica em
+  `mountPointBruto`.
+- **Novo status `caminho-nao-traduzido`** no `sincronizar_subvault`: a pasta já sincroniza, mas não
+  há caminho de disco. Não fica mais em `aguardando` para sempre: devolve o fluxo manual
+  (`registrar_subvault_local`). O `catalogo_sync` marca `sincronizadoSemCaminho` e
+  `localBruto`/`localMotivo`.
+- **Diagnóstico devolvível sem terminal (`lib/diagnostico.mjs`).** `catalogo_sync` (sempre no Mac)
+  e falhas de sync gravam `{CONNECT_HOME}/diagnostico/onedrive-*.json`, e a resposta traz
+  `diagnosticoArquivo`. O operador leigo só envia o arquivo. O conteúdo é só o que a tool já
+  devolve (nomes de pasta, contagens, status), com o home do usuário trocado por `~`. O
+  `diagnostico` passa a listar também as montagens de `CloudStorage`, os Group Containers do
+  OneDrive e cada tradução (bruto → caminho, ou motivo).
+- **Matriz fixada no dispositivo (`garantirRetencaoMatriz`, no `iniciar_sessao`).** Roda antes de
+  ler a carta e só se a matriz estiver em nuvem. No Windows, sem o atributo `P` na raiz, fixa a raiz
+  na hora e a árvore em segundo plano, para não segurar o hook. Já fixada, fica em silêncio. No
+  macOS **não existe fixação programática**: o OneDrive não usa o pin padrão do File Provider
+  (`contentPolicy` é somente-leitura para terceiros) e ignora o xattr
+  `com.apple.fileprovider.pinned`. Por isso a sessão confere arquivos-amostra (`blocks === 0` =
+  placeholder). Se a matriz estiver só na nuvem, o aviso traz a instrução do Finder para o agente
+  **repassar**.
+- **Fixação de sub-vault no Mac** devolve `instrucao`, e o aviso diz "REPASSE ao operador".
+- `cnct-nucleo-sessao` 0.8.0: tratamento de `caminho-nao-traduzido`, de `diagnosticoArquivo`, do
+  aviso de matriz só na nuvem, e da pasta `Matriz` sem caminho no 1º uso.
+- Testes: `spike-onedrive-macos` +24 (tradução com token, store privado nunca devolvido,
+  desempate, ambíguo, catálogo com token, sync sem caminho, arquivo de diagnóstico, retenção da
+  matriz nos dois sistemas, parse do `attrib`). **Não coberto:** o layout real abaixo do token, que
+  só o próximo `diagnosticoArquivo` do Mac confirma.
+
 ## 0.38.1 — 2026-10-13
 
 **A `cnct-elicitacao` ainda mandava a captura passiva para `{projeto}/caso-zero/`.**

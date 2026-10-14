@@ -21,6 +21,7 @@ import fs from 'node:fs';
 import { resolveConfig, registrarSubVaultLocal } from './session.mjs';
 import { lerRegistro, casarMuitos, classeDeclarada } from './resolver.mjs';
 import { montarLinkSync, localizarNoCatalogo, origemEmYaml, host as hostPadrao, PLATAFORMAS_SYNC } from './onedrive.mjs';
+import { gravarDiagnostico } from './diagnostico.mjs';
 
 const ESPERA_PADRAO_S = 90;
 const INTERVALO_MS = 3000;
@@ -84,8 +85,27 @@ export async function sincronizarSubvault({
     : [];
 
   let link = null;
-  const concluir = (achado, ja) => {
-    if (!achado.caminho || !fs.existsSync(achado.caminho)) {
+  const home = resolveConfig(override).home;
+  const concluir = (achado, ja, cat) => {
+    if (!achado.caminho) {
+      // O cliente sincroniza a pasta, mas o caminho que ele gravou nao virou pasta de
+      // disco (P175: token `$Group.Container$` no Mac). Esperar nao resolve — declara,
+      // grava o diagnostico e devolve o fluxo manual.
+      const diagnosticoArquivo = gravarDiagnostico({ home, nome: 'onedrive-sincronizar', dados: { conceito: entry.conceito, status: 'caminho-nao-traduzido', bruto: achado.entrada?.mountPointBruto || null, motivo: achado.entrada?.mountPointMotivo || null, diagnostico: cat?.diagnostico || null } });
+      return {
+        ...base,
+        status: 'caminho-nao-traduzido',
+        link,
+        motivo: achado.entrada?.mountPointMotivo || null,
+        diagnosticoArquivo,
+        avisos: [
+          'o OneDrive ja sincroniza esta pasta, mas o Connect nao conseguiu traduzir o caminho que o cliente gravou para uma pasta de disco',
+          'siga pelo fluxo manual: pergunte ao operador onde a pasta aparece (no Mac, Finder > Locais > OneDrive) e grave com registrar_subvault_local',
+          ...(diagnosticoArquivo ? [`peca ao operador para enviar ao time do Connect o arquivo ${diagnosticoArquivo}`] : []),
+        ],
+      };
+    }
+    if (!fs.existsSync(achado.caminho)) {
       return { ...base, status: 'aguardando', link, avisos: [`o catalogo lista a pasta em "${achado.caminho}", mas ela ainda nao existe no disco — repita em instantes`] };
     }
     const fixacao = base.classe === 'vault'
@@ -103,7 +123,7 @@ export async function sincronizarSubvault({
       avisos: [
         ...avisosPlataforma,
         ...(fixacao.status === 'erro' ? [`a pasta sincroniza, mas fixar no dispositivo falhou (${fixacao.motivo}) — o operador pode marcar "Manter sempre neste dispositivo" pelo Explorer`] : []),
-        ...(fixacao.status === 'nao-suportado' ? [`a pasta sincroniza, mas nao foi fixada no dispositivo (${fixacao.motivo})`] : []),
+        ...(fixacao.status === 'nao-suportado' ? [`a pasta sincroniza, mas nao foi fixada no dispositivo (${fixacao.motivo}). REPASSE ao operador: ${fixacao.instrucao || 'marque "Manter sempre neste dispositivo" na pasta'}`] : []),
         `proximo passo: resolver({ conceito: "${entry.conceito}" }) para montar`,
       ],
     };
@@ -112,7 +132,7 @@ export async function sincronizarSubvault({
   // 3. catalogo primeiro
   const antes = host.lerCatalogo();
   const ja = localizarNoCatalogo(antes.entradas || [], origem);
-  if (ja) return concluir(ja, true);
+  if (ja) return concluir(ja, true, antes);
 
   // `userEmail` e obrigatorio: sem ele o cliente ignora o link em silencio.
   // Vem do parametro ou da conta Business logada; mais de uma conta sem parametro
@@ -147,14 +167,19 @@ export async function sincronizarSubvault({
     await host.esperar(INTERVALO_MS);
     const cat = host.lerCatalogo();
     const achado = localizarNoCatalogo(cat.entradas || [], origem);
-    if (achado) return concluir(achado, false);
+    if (achado) return concluir(achado, false, cat);
   }
 
+  const diagnosticoArquivo = host.plataforma === 'darwin'
+    ? gravarDiagnostico({ home, nome: 'onedrive-sincronizar', dados: { conceito: entry.conceito, status: 'aguardando', linkDisparado: !!link, comEmail: !!emailFinal, diagnostico: host.lerCatalogo().diagnostico || null } })
+    : null;
   return {
     ...base,
     status: 'aguardando',
     link,
+    ...(diagnosticoArquivo ? { diagnosticoArquivo } : {}),
     avisos: [
+      ...(diagnosticoArquivo ? [`se continuar aguardando, peca ao operador para enviar ao time do Connect o arquivo ${diagnosticoArquivo}`] : []),
       `o OneDrive nao listou a pasta em ${aguardarSegundos}s. Pode ser sync lento (chame de novo em instantes) ou falta de permissao no site — neste caso peca acesso a ${entry.governanca || 'quem governa a entidade'}`,
       'se o OneDrive abriu uma caixa de erro, ela diz qual dos dois e',
     ],
@@ -188,6 +213,8 @@ export function catalogoSync({ registrar = false, host = hostPadrao, ...override
       temOrigem: !!o,
       origemErros: e.origemErros?.length ? e.origemErros : undefined,
       localNestaMaquina: achado ? achado.caminho : null,
+      // Sincronizado, mas o caminho do catalogo nao virou pasta de disco (P175).
+      ...(achado && !achado.caminho ? { sincronizadoSemCaminho: true, motivo: achado.entrada?.mountPointMotivo || null } : {}),
       registrado,
     };
   });
@@ -198,6 +225,8 @@ export function catalogoSync({ registrar = false, host = hostPadrao, ...override
     .map((x) => ({
       pasta: x.nome,
       local: x.mountPoint,
+      ...(x.mountPointBruto ? { localBruto: x.mountPointBruto } : {}),
+      ...(x.mountPointMotivo ? { localMotivo: x.mountPointMotivo } : {}),
       candidatoPorNome: registro.filter((e) => !(e.origem || []).length && x.nome && x.nome.toLowerCase().replace(/^_/, '').includes(e.conceito.split('-')[0])).map((e) => e.conceito),
       origemSugerida: (() => {
         // `pasta` so com o nome: o catalogo nao guarda o caminho na biblioteca, e
@@ -208,15 +237,34 @@ export function catalogoSync({ registrar = false, host = hostPadrao, ...override
       })(),
     }));
 
+  // No Mac (em validacao) grava sempre; no Windows so quando algo nao esta ok.
+  const semCaminho = entidades.filter((e) => e.sincronizadoSemCaminho).length + naoDeclaradas.filter((x) => x.localMotivo).length;
+  const diagnosticoArquivo = (host.plataforma === 'darwin' || cat.status !== 'ok' || semCaminho)
+    ? gravarDiagnostico({
+      home: cfg.home,
+      nome: 'onedrive-catalogo',
+      dados: {
+        status: cat.status,
+        diagnostico: cat.diagnostico || null,
+        avisos: cat.avisos || [],
+        entidades: entidades.map(({ conceito, temOrigem, localNestaMaquina, sincronizadoSemCaminho, motivo }) => ({ conceito, temOrigem, local: localNestaMaquina, sincronizadoSemCaminho, motivo })),
+        naoDeclaradas: naoDeclaradas.map(({ pasta, local, localBruto, localMotivo }) => ({ pasta, local, localBruto, localMotivo })),
+      },
+    })
+    : null;
+
   return {
     status: cat.status,
     plataforma: host.plataforma,
     // Onde o leitor procurou o catalogo e o que achou em cada raiz (so nomes e
     // contagens, nunca conteudo). E o insumo para calibrar o macOS (P175).
     diagnostico: cat.diagnostico || null,
+    ...(diagnosticoArquivo ? { diagnosticoArquivo } : {}),
     entidades,
     naoDeclaradas,
     avisos: [
+      ...(semCaminho ? [`${semCaminho} pasta(s) sincronizada(s) sem caminho de disco traduzido — o fluxo manual (registrar_subvault_local) segue valendo`] : []),
+      ...(diagnosticoArquivo && (host.plataforma === 'darwin' || semCaminho || cat.status !== 'ok') ? [`se algo aqui estiver errado, peca ao operador para enviar ao time do Connect o arquivo ${diagnosticoArquivo} — ele nao precisa rodar nada`] : []),
       ...(!PLATAFORMAS_SYNC.includes(host.plataforma) ? [`catalogo do OneDrive so e lido no Windows e no macOS (esta maquina: ${host.plataforma})`] : []),
       ...(host.plataforma === 'darwin' && cat.status !== 'ok' ? ['macOS: leitor do catalogo em validacao (P175) — devolva este `diagnostico` ao time do Connect'] : []),
       ...(cat.avisos || []),

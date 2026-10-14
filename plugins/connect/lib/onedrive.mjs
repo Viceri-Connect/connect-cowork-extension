@@ -203,13 +203,94 @@ export function raizesCatalogo({ plataforma = process.platform, localAppData = p
   return [];
 }
 
+// ---------------------------------------------------------------------------
+// traduzirMountPoint — o `mountPoint` do catalogo do Mac nao e caminho de disco.
+//
+// Medido em 14/10 no primeiro Mac real (P175, retorno do Advisor): o cliente grava
+// `$Group.Container$/...` — um TOKEN. Hipotese (nao documentada pela Microsoft):
+// e o Group Container do OneDrive
+// (`~/Library/Group Containers/UBF8T346G9.OneDriveSyncClientSuite`). Sob ele fica o
+// `OneDrive.noindex/`, que e o STORE PRIVADO do cliente (File Provider): a arvore
+// que o operador ve e edita e o espelho em `~/Library/CloudStorage/OneDrive-*`.
+// Fonte do layout dos dois lugares: investigacao publica do cliente File Provider
+// (gist lijunle/onedrive-cache-report, macOS 26 / OneDrive 26.x), conferida contra
+// o caminho real que o Advisor viu no Finder.
+//
+// Regras (e o porque):
+//   - NUNCA devolver caminho dentro de `OneDrive.noindex`: e o store do cliente,
+//     ler ali da placeholder e escrever ali corrompe o sync.
+//   - O trecho DEPOIS da raiz do store e lido do catalogo e reaproveitado inteiro;
+//     so a RAIZ e traduzida, para uma montagem de `CloudStorage` que EXISTA com
+//     aquele trecho dentro. Nao e deducao por nome: o nome so desempata quando
+//     duas montagens tem o mesmo trecho.
+//   - Nao traduziu = `caminho: null` + `motivo`. Quem chama declara, nunca adivinha.
+// Injecao (`existe`, `listar`) e para o teste rodar em qualquer SO.
+// ---------------------------------------------------------------------------
+export const GRUPOS_ONEDRIVE_MAC = ['UBF8T346G9.OneDriveSyncClientSuite', 'UBF8T346G9.OneDriveStandaloneSuite'];
+const RE_TOKEN = /^\$([^$]+)\$(?:[\\/]+(.*))?$/;
+const chaveNome = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
+
+function listarSeguro(dir) {
+  try { return fs.readdirSync(dir); } catch { return []; }
+}
+
+export function traduzirMountPoint(bruto, { home = os.homedir(), existe = fs.existsSync, listar = listarSeguro } = {}) {
+  if (!bruto) return { caminho: null, via: 'vazio' };
+  const m = String(bruto).match(RE_TOKEN);
+  if (!m) return { caminho: bruto, via: 'literal' };
+  const token = m[1];
+  if (token.toLowerCase() !== 'group.container') {
+    return { caminho: null, via: 'token-desconhecido', motivo: `token "$${token}$" sem traducao conhecida` };
+  }
+  const segs = String(m[2] || '').split(/[\\/]+/).filter(Boolean);
+  const iStore = segs.findIndex((s) => s.toLowerCase() === 'onedrive.noindex');
+
+  if (iStore >= 0) {
+    if (segs.length <= iStore + 1) return { caminho: null, via: 'nao-traduzido', motivo: 'o catalogo aponta a raiz do store privado, sem montagem' };
+    const raiz = segs[iStore + 1];
+    const rel = segs.slice(iStore + 2);
+    const cs = path.join(home, 'Library', 'CloudStorage');
+    const montagens = listar(cs).filter((n) => /^OneDrive/i.test(n));
+    let cands = montagens.filter((n) => existe(path.join(cs, n, ...rel)));
+    if (cands.length > 1) {
+      // Desempate pelo nome da raiz do store ("OneDrive - Viceri Seidor" ~ "OneDrive-ViceriSeidor").
+      const k = chaveNome(raiz);
+      const kSem = k.replace(/^onedrive/, '');
+      const exatos = cands.filter((n) => chaveNome(n) === k);
+      const contem = kSem ? cands.filter((n) => chaveNome(n).endsWith(kSem)) : [];
+      cands = exatos.length ? exatos : (contem.length ? contem : cands);
+    }
+    if (cands.length === 1) return { caminho: path.join(cs, cands[0], ...rel), via: 'cloudstorage', raizStore: raiz };
+    if (!montagens.length) return { caminho: null, via: 'nao-traduzido', raizStore: raiz, motivo: 'nenhuma montagem OneDrive-* em ~/Library/CloudStorage' };
+    if (!cands.length) return { caminho: null, via: 'nao-traduzido', raizStore: raiz, motivo: `nenhuma montagem de CloudStorage contem "${rel.join('/')}" (montagens: ${montagens.join(', ')})` };
+    return { caminho: null, via: 'ambiguo', raizStore: raiz, motivo: `mais de uma montagem contem o trecho: ${cands.join(', ')}` };
+  }
+
+  // Fora do store: o token e so a raiz do Group Container. Aceita se existir.
+  for (const g of GRUPOS_ONEDRIVE_MAC) {
+    const p = path.join(home, 'Library', 'Group Containers', g, ...segs);
+    if (existe(p)) return { caminho: p, via: 'group-container' };
+  }
+  return { caminho: null, via: 'nao-traduzido', motivo: 'o caminho expandido nao existe em nenhum Group Container conhecido' };
+}
+
+// Para o diagnostico devolvido ao time: o home vira `~` (o operador repassa sem expor usuario).
+const abreviarHome = (p, home) => (p && home ? String(p).split(home).join('~') : p);
+
 // lerCatalogoOneDrive — todas as contas Business desta maquina. Nunca lanca.
 // `raizes` explicito vence; sem ele, as do sistema (`raizesCatalogo`). O parametro
 // `localAppData` segue valendo para o Windows (e o que os testes usam).
-export function lerCatalogoOneDrive({ localAppData = null, raizes = null, plataforma = process.platform } = {}) {
+// `mountPoint` sai sempre TRADUZIDO (caminho de disco ou null); o bruto fica em
+// `mountPointBruto` quando difere, e a traducao vai para o `diagnostico`.
+export function lerCatalogoOneDrive({ localAppData = null, raizes = null, plataforma = process.platform, home = os.homedir(), existe = fs.existsSync, listar = listarSeguro } = {}) {
   const candidatas = raizes
-    || (localAppData ? raizesCatalogo({ plataforma: 'win32', localAppData }) : raizesCatalogo({ plataforma }));
+    || (localAppData ? raizesCatalogo({ plataforma: 'win32', localAppData }) : raizesCatalogo({ plataforma, home }));
   const out = { status: 'ok', entradas: [], avisos: [], diagnostico: { plataforma, raizes: [] } };
+  if (plataforma === 'darwin') {
+    // So nomes de pasta, nunca conteudo: e o que calibra a traducao sem terminal.
+    out.diagnostico.cloudStorage = listar(path.join(home, 'Library', 'CloudStorage')).filter((n) => /^OneDrive/i.test(n));
+    out.diagnostico.groupContainers = listar(path.join(home, 'Library', 'Group Containers')).filter((n) => /onedrive/i.test(n));
+  }
   const existentes = candidatas.filter((r) => {
     const existe = fs.existsSync(r);
     out.diagnostico.raizes.push({ raiz: r, existe });
@@ -241,6 +322,22 @@ export function lerCatalogoOneDrive({ localAppData = null, raizes = null, plataf
       }
     }
   }
+  // Traducao do mountPoint (no-op no Windows: caminho literal passa direto).
+  const traducoes = [];
+  for (const e of out.entradas) {
+    if (!e.mountPoint) continue;
+    const t = traduzirMountPoint(e.mountPoint, { home, existe, listar });
+    if (t.via === 'literal') continue;
+    e.mountPointBruto = e.mountPoint;
+    e.mountPoint = t.caminho;
+    if (!t.caminho) e.mountPointMotivo = t.motivo;
+    traducoes.push({ pasta: e.nome, bruto: abreviarHome(e.mountPointBruto, home), caminho: abreviarHome(t.caminho, home), via: t.via, ...(t.motivo ? { motivo: abreviarHome(t.motivo, home) } : {}) });
+  }
+  if (traducoes.length) {
+    out.diagnostico.traducoes = traducoes.slice(0, 30);
+    const falhas = traducoes.filter((t) => !t.caminho).length;
+    if (falhas) out.avisos.push(`${falhas} de ${traducoes.length} caminho(s) do catalogo nao foram traduzidos para pasta de disco — ver \`diagnostico.traducoes\``);
+  }
   if (!out.entradas.length) {
     out.status = 'vazio';
     out.avisos.push('o catalogo do OneDrive foi lido e nao lista nenhuma biblioteca sincronizada (o formato pode ter mudado) — ver `diagnostico`');
@@ -258,11 +355,13 @@ export function lerCatalogoOneDrive({ localAppData = null, raizes = null, plataf
 // ---------------------------------------------------------------------------
 export function localizarNoCatalogo(entradas, o) {
   const porPasta = entradas.find((e) => e.tipo === 'pasta' && e.pastaId && e.pastaId === o.pastaId);
-  if (porPasta) return { via: 'pasta', caminho: porPasta.mountPoint, entrada: porPasta };
-  const porLista = entradas.find((e) => e.tipo === 'biblioteca' && e.listaId === o.listaId);
+  if (porPasta) return { via: 'pasta', caminho: porPasta.mountPoint || null, entrada: porPasta };
+  // `mountPointBruto` presente = biblioteca sincronizada cujo caminho nao traduziu:
+  // continua sendo "achada" (o operador sincronizou), so sem caminho de disco.
+  const porLista = entradas.find((e) => e.tipo === 'biblioteca' && e.listaId === o.listaId && (e.mountPoint || e.mountPointBruto));
   if (porLista) {
     const resto = o.pasta.split('/').filter(Boolean).slice(1);
-    return { via: 'biblioteca', caminho: path.join(porLista.mountPoint, ...resto), entrada: porLista };
+    return { via: 'biblioteca', caminho: porLista.mountPoint ? path.join(porLista.mountPoint, ...resto) : null, entrada: porLista };
   }
   return null;
 }
@@ -338,18 +437,55 @@ export const host = {
     p.unref();
   },
   // "Manter sempre neste dispositivo" = atributo Pinned (+P) e nao Unpinned (-U).
-  // No macOS nao ha equivalente de linha de comando conhecido para o File Provider:
-  // devolve `nao-suportado` com a instrucao manual.
-  fixar(dir) {
-    if (IS_MAC) {
-      return { status: 'nao-suportado', motivo: 'macOS: fixacao automatica nao implementada — no Finder, clique direito na pasta > "Manter sempre neste dispositivo"' };
-    }
+  // macOS: NAO EXISTE caminho programatico. O OneDrive nao usa o pin padrao do File
+  // Provider (`contentPolicy`, que e somente-leitura para terceiros); implementa o
+  // seu por acao propria de Finder, e ignora o xattr `com.apple.fileprovider.pinned`
+  // (investigacao publica citada em `traduzirMountPoint`). Por isso devolve
+  // `nao-suportado` com a instrucao que o agente REPASSA ao operador.
+  // `arvoreEmSegundoPlano`: a passada recursiva roda destacada (matriz no inicio de
+  // sessao nao pode segurar o hook); o status diz que ela foi disparada, nao concluida.
+  fixar(dir, { arvoreEmSegundoPlano = false } = {}) {
+    if (IS_MAC) return { status: 'nao-suportado', motivo: 'macOS: o OneDrive nao oferece fixacao programatica', instrucao: instrucaoFixarMac(dir) };
     const raiz = spawnSync('attrib', ['+P', '-U', dir], { windowsHide: true, encoding: 'utf8' });
-    const arvore = spawnSync('attrib', ['+P', '-U', '/S', '/D', path.join(dir, '*')], { windowsHide: true, encoding: 'utf8' });
-    const erro = [raiz, arvore].find((r) => r.status !== 0 || r.error);
-    return erro
-      ? { status: 'erro', motivo: String(erro.error?.message || erro.stderr || erro.stdout || 'attrib falhou').trim() }
+    if (raiz.status !== 0 || raiz.error) {
+      return { status: 'erro', motivo: String(raiz.error?.message || raiz.stderr || raiz.stdout || 'attrib falhou').trim() };
+    }
+    const args = ['+P', '-U', '/S', '/D', path.join(dir, '*')];
+    if (arvoreEmSegundoPlano) {
+      try {
+        const p = spawn('attrib', args, { detached: true, stdio: 'ignore', windowsHide: true });
+        p.on('error', () => {});
+        p.unref();
+        return { status: 'fixado', arvore: 'em-segundo-plano' };
+      } catch (e) {
+        return { status: 'erro', motivo: `raiz fixada, arvore nao: ${e.message}` };
+      }
+    }
+    const arvore = spawnSync('attrib', args, { windowsHide: true, encoding: 'utf8' });
+    return arvore.status !== 0 || arvore.error
+      ? { status: 'erro', motivo: String(arvore.error?.message || arvore.stderr || arvore.stdout || 'attrib falhou').trim() }
       : { status: 'fixado' };
+  },
+  // Estado de retencao da pasta, sem efeito colateral. Nunca lanca.
+  //   win32: atributo P na raiz -> `fixado` | `nao-fixado`.
+  //   darwin: so da para saber se esta BAIXADO (o pin do OneDrive nao deixa marca
+  //     consultavel): arquivo-amostra com `blocks === 0` e tamanho > 0 e placeholder
+  //     (SF_DATALESS) -> `so-nuvem`; com blocos -> `baixado` (fixado ou em cache).
+  retencao(dir, { amostras = [] } = {}) {
+    try {
+      if (IS_MAC) {
+        const arqs = amostras.map((a) => path.join(dir, a)).filter((p) => fs.existsSync(p));
+        if (!arqs.length) return { estado: 'desconhecido', motivo: 'nenhum arquivo-amostra encontrado' };
+        const placeholders = arqs.filter((p) => { const s = fs.statSync(p); return s.size > 0 && s.blocks === 0; });
+        return placeholders.length ? { estado: 'so-nuvem', amostras: arqs.length, placeholders: placeholders.length } : { estado: 'baixado', amostras: arqs.length };
+      }
+      if (process.platform !== 'win32') return { estado: 'desconhecido', motivo: `plataforma ${process.platform}` };
+      const r = spawnSync('attrib', [dir], { windowsHide: true, encoding: 'utf8' });
+      if (r.status !== 0 || !r.stdout) return { estado: 'desconhecido', motivo: 'attrib nao respondeu' };
+      return { estado: parseAtributoPinned(r.stdout, dir) ? 'fixado' : 'nao-fixado' };
+    } catch (e) {
+      return { estado: 'desconhecido', motivo: e.message };
+    }
   },
   esperar: (ms) => new Promise((r) => setTimeout(r, ms)),
   lerCatalogo: () => lerCatalogoOneDrive(),
@@ -364,6 +500,23 @@ export const host = {
     return parseEmailsReg(r.stdout);
   },
 };
+
+// Instrucao que o agente repassa ao operador leigo, com o nome da pasta que ele ve.
+export function instrucaoFixarMac(dir) {
+  const nome = dir ? path.basename(dir) : 'a pasta';
+  return `No Finder, abra a barra lateral em "Locais" > OneDrive, clique com o botao direito em "${nome}" e escolha "Manter sempre neste dispositivo" (Always Keep on This Device). O icone de nuvem vira um visto verde quando terminar.`;
+}
+
+// Saida do `attrib <dir>` -> a raiz tem o atributo P (Pinned)?
+// Formato: colunas de letras de atributo, depois o caminho.
+export function parseAtributoPinned(saida, dir) {
+  const linhas = String(saida || '').split(/\r?\n/).filter((l) => l.trim());
+  const alvo = String(dir || '').toLowerCase().replace(/[\\/]+$/, '');
+  const linha = linhas.find((l) => l.toLowerCase().includes(alvo)) || linhas[0] || '';
+  const i = alvo ? linha.toLowerCase().indexOf(alvo) : -1;
+  const prefixo = i > 0 ? linha.slice(0, i) : linha.replace(/[a-z]:\\.*$/i, '');
+  return /(^|\s)P(\s|$)/.test(prefixo);
+}
 
 // macOS: as preferencias do cliente (dominio varia entre o cliente da App Store e o
 // avulso) guardam um dicionario por conta (`Business1 = { ... UserEmail = ...; }`).

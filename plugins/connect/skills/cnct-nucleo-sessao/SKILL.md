@@ -18,7 +18,7 @@ description: >
   no Cowork (inclusive quando o clique em "Personalizar" abre uma janela sem
   disparar o hook) — o mecanismo é o mesmo, só muda o gatilho.
 metadata:
-  version: "0.7.0"
+  version: "0.8.0"
   eixo: nucleo
   program: "Impulsa / Viceri"
 ---
@@ -72,7 +72,9 @@ manifesto, e por isso aparece ali). Proponha ao operador a que se chama `Matriz`
 leigo não sabe onde o OneDrive põe as pastas, e não deveria precisar saber. A validação continua
 sendo do `configurar` (`_cerebro/vault-config.md` presente); nome de pasta é só proposta. Nenhuma
 pasta `Matriz` no catálogo = a matriz ainda não foi sincronizada: peça para sincronizar pelo botão
-*Sincronizar* do SharePoint antes de seguir.
+*Sincronizar* do SharePoint antes de seguir. Pasta `Matriz` com `local: null` e `localMotivo`
+(macOS, caminho não traduzido) → ela está sincronizada, mas o caminho não veio: pergunte onde ela
+aparece no Finder (Locais > OneDrive) e indique o `diagnosticoArquivo` para o operador enviar.
 
 Chamar a tool `configurar` com `vault_matriz`.
 - Se vier `invalidos` (path não existe / placeholder OneDrive não sincronizado),
@@ -119,6 +121,12 @@ Chamar a tool `iniciar_sessao` (com o `session_id`, se conhecido). Ela devolve o
 bloco "Connect — sessão iniciada" (identidade + `./matriz` + camada 1). Usar esse
 bloco como contexto ativo; referenciar tudo por caminho relativo (ex.: `./matriz/_cerebro/...`).
 
+**Matriz no dispositivo (0.38.2).** A sessão confere se a matriz está fixada ("Manter sempre neste
+dispositivo"). No Windows, fixa sozinha quando não está, e o aviso só informa. No macOS não existe
+fixação programática: se o aviso disser que a matriz está **só na nuvem**, repasse ao operador a
+instrução do aviso (Finder, botão direito, "Manter sempre neste dispositivo") — uma vez, sem
+bloquear o trabalho.
+
 **Passo 3b — Ler a carta de navegação (a camada 1 que o vault declara).**
 O bloco de sessão injeta, verbatim, `_cerebro/camada-1.md` do vault montado — quem diz o
 que carregar e quando é o **vault**, não o produto (contrato em
@@ -151,7 +159,14 @@ gestão"), ou ao abrir qualquer nota que declare `tipo`+`externo:true` no frontm
      repetir o `resolver`. `aguardando` → dizer ao operador, em linguagem simples, que o OneDrive
      ainda está baixando **ou** que falta permissão, e nomear a `governanca` devolvida como quem
      concede o acesso; repetir depois. `onedrive-sem-conta` → pedir que entre no OneDrive com a
-     conta da empresa. `ambigua-conta` → perguntar qual e-mail.
+     conta da empresa. `ambigua-conta` → perguntar qual e-mail. `caminho-nao-traduzido` (0.38.2,
+     macOS) → o OneDrive já sincroniza, mas o caminho que ele gravou não virou pasta de disco:
+     **não repetir** (esperar não resolve) — perguntar ao operador onde a pasta aparece no Finder
+     (Locais > OneDrive), gravar com `registrar_subvault_local` e seguir.
+     Em qualquer falha de sync, se a resposta trouxer **`diagnosticoArquivo`**, diga ao operador,
+     em uma linha, para **enviar esse arquivo** ao time do Connect — ele não precisa rodar nada.
+     Aviso com **"REPASSE ao operador"** (fixar no dispositivo) vai ao operador com as palavras do
+     aviso, não resumido em "não foi fixado".
      **Sem `sincronizavel`**: perguntar o diretório ao operador, gravar com
      `registrar_subvault_local`, repetir.
    - `origem-ausente` → path conhecido mas não existe/não sincronizado. Com `sincronizavel: true`,
