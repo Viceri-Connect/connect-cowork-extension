@@ -1,5 +1,20 @@
 # Changelog — connect
 
+## 0.38.3 — 2026-10-14
+
+**Download do Node interrompido deixava sobra no macOS (`P175`).** Medido no Mac do Advisor:
+24 MB em `~/.connect/bin/.node-download.3402/`. O `run-node.sh` só apagava a pasta temporária
+quando chegava ao fim. Se o processo morria no meio (estouro de tempo do hook, SIGKILL), ela ficava.
+E o caminho de fallback (`usar_path`) fazia `exec` com a pasta ainda lá.
+
+- **Varredura de sobras ao começar um download:** apaga `.node-download.{pid}` de processo que já
+  não existe. A de processo vivo fica, porque o hook e o MCP sobem juntos e podem baixar ao mesmo
+  tempo.
+- **`trap` em EXIT/INT/TERM/HUP** limpa a pasta da execução corrente. O `usar_path` limpa antes do
+  `exec`, que não dispara o trap. SIGKILL não é capturável, e para ele existe a varredura.
+- Conferido em `sh` e `dash`: as sobras de processo morto saem, a de processo vivo fica, o fallback
+  não deixa pasta e a interrupção por TERM limpa.
+
 ## 0.38.2 — 2026-10-14
 
 **Primeiro retorno do Mac real (`P175`): o catálogo do OneDrive não guarda caminho de disco, e a
