@@ -1,5 +1,28 @@
 # Changelog — connect
 
+## 0.38.4 — 2026-10-20
+
+Duas correções do `cnct-nucleo-audit` e da `medir_navegacao` vindas do AUDIT de 19/10 e do REPAIR de
+20/10. Nenhuma muda formato de arquivo nem contrato de tool.
+
+**Check de cópia de conflito reconhece o sufixo de máquina corporativa (`IMP-010`).** O AUDIT de
+19/10 achou `xxxx-Plan-Shield-MNE-MFA-WKSJUN000565.md` ao lado da nota-fonte de um projeto, e nenhum
+padrão do `cnct-nucleo-audit` casava: eles vinham do incidente de 26/08, cuja máquina se chamava
+`DESKTOP-…`. O OneDrive anexa o hostname, qualquer que seja.
+
+- O check passa a casar também `{nome}-{HOSTNAME}.{ext}` quando existe o irmão `{nome}.{ext}` na
+  mesma pasta, mantendo os padrões anteriores.
+- `.obsidian/` fica fora: `workspace-{HOSTNAME}.json` é estado de interface por máquina, não conflito.
+
+**M5 deixa de contar menção em prosa como ponteiro (`IMP-007`).** A carta de processo `vendas`
+dizia *"a topologia é `contas/{conta}`, e não `projetos/`"*, e a M5 reportou `projetos/` como
+ponteiro morto (`VND-002`). O contorno foi reescrever a frase para agradar o detector.
+
+- `caminhosCitados` só lê caminho em **posição de destino**: linha de tabela, item de lista
+  (inclusive dentro de citação) ou linha com seta (`→`/`->`). Prosa corrida fica de fora.
+- Quatro testes novos em `spike-heranca` (prosa e citação não contam; tabela e lista seguem
+  detectando morto). Suíte inteira verde; nos quatro vaults da instância, M5 segue com zero morto.
+
 ## 0.38.3 — 2026-10-14
 
 **Download do Node interrompido deixava sobra no macOS (`P175`).** Medido no Mac do Advisor:

@@ -256,7 +256,17 @@ export function caminhosCitados(md) {
   // ponteiro e pior que metrica ausente — ela treina a ignorar o relatorio.
   const { corpo } = extrairFrontmatter(md);
   const out = new Set();
-  for (const m of String(corpo).matchAll(/`([^`\n]+)`/g)) {
+  // So POSICAO DE DESTINO conta como ponteiro: linha de tabela (gatilho, alcance,
+  // estrutura), item de lista (ordem de entrada, fronteiras) ou linha com seta.
+  // Prosa corrida que MENCIONA um caminho para explicar algo (*"a topologia e
+  // `contas/{conta}`, e nao `projetos/`"*) nao e ponteiro: contá-la produziu
+  // morto falso no acervo de Vendas (`VND-002`), e o contorno foi reescrever a
+  // frase para agradar o detector — o defeito pelo avesso (`IMP-007`).
+  const destino = String(corpo).split(/\r?\n/).filter((linha) => {
+    const l = linha.replace(/^\s*(?:>\s*)+/, '');
+    return /^\s*\|/.test(l) || /^\s*(?:[-*+]|\d+[.)])\s/.test(l) || /→|->/.test(l);
+  }).join('\n');
+  for (const m of destino.matchAll(/`([^`\n]+)`/g)) {
     const bruto = m[1].trim();
     if (!bruto || /\s/.test(bruto)) continue;
     if (/^[a-z]+:\/\//i.test(bruto)) continue;        // URL

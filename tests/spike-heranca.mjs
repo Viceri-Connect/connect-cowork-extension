@@ -324,6 +324,37 @@ ok(!corrSub.delegacoes.some((d) => d.status === 'hub-ausente'),
 ok(corrSub.delegacoes.some((d) => d.hub === 'projetos/ativos/p9/p9.md' && d.status !== 'hub-ausente'),
   'casa do proprio projeto segue resolvendo (o caso que o posicional ja acertava)');
 
+// --- M5: mencao em prosa nao e ponteiro (IMP-007) ------------------------
+const vProsa = path.join(raiz, 'vault-prosa');
+escrever(vProsa, '_cerebro/camada-1.md', `---
+tipo-artefato: camada-1
+---
+
+# Camada 1
+
+## O que e este vault
+
+A topologia e \`contas/{conta}\`, e nao \`inexistente-em-prosa/\` — frase que explica, nao aponta.
+
+> Nota em citacao: a casa antiga \`citada-em-prosa/\` saiu em 02/09.
+
+## Quando carregar
+
+| Gatilho | Arquivo |
+|---|---|
+| algo | \`morto-em-tabela/nota.md\` |
+
+## Fronteiras
+
+- Outra coisa → \`morto-em-lista/\`
+`);
+const mProsa = medirVault({ vaultRoot: vProsa, alias: 'prosa' });
+const mortosProsa = (mProsa.metricas?.M5?.mortos ?? []).map((x) => x.caminho);
+ok(!mortosProsa.includes('inexistente-em-prosa/'), 'M5: caminho mencionado em prosa corrida nao e ponteiro morto');
+ok(!mortosProsa.includes('citada-em-prosa/'), 'M5: caminho em citacao de prosa nao e ponteiro morto');
+ok(mortosProsa.includes('morto-em-tabela/nota.md'), 'M5: caminho em linha de tabela segue sendo ponteiro (morto detectado)');
+ok(mortosProsa.includes('morto-em-lista/'), 'M5: caminho em item de lista segue sendo ponteiro (morto detectado)');
+
 // nunca lanca
 ok(medirVault({ vaultRoot: path.join(raiz, 'nao-existe'), alias: 'x' }).erro, 'vault inexistente devolve erro, nunca excecao');
 ok(medirVault({}).erro, 'chamada sem argumento devolve erro, nunca excecao');
