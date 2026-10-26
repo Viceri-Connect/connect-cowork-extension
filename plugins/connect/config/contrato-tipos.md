@@ -80,7 +80,7 @@ campo faltante, nunca supre por conta própria.
 | 2 | **família** | `artefato` ou `contexto` (§4) | é o que **deduz o modo** de construção — nunca se pergunta ao operador |
 | 3 | **topologia** | a **forma** do caminho que os destinos daquele tipo usam | é o que a fábrica **materializa** e o que a M7 **verifica**. ⚠️ **Corrigido em 02/09:** era *estrutura mínima — o que precisa existir*, e verificar existência reprovava todo destino recém-nascido: vault sem projeto não tem casa de ADR, e ela nasce no refinamento, não no provisionamento. Ver `contrato-navegacao.md` §9.3 |
 | 4 | **semântica de descida** | `delta` · `exigência-e-resposta` · `não desce` | confundi-las é erro de modelagem: uma pede raiz única, a outra pede obrigação de resposta por unidade |
-| 5 | **forma canônica** | **ponteiro** para o template do coletivo (`99 - Templates e Modelos Globais/`), nunca molde embutido | scaffold aponta, nunca copia — molde próprio é a terceira cópia da mesma forma |
+| 5 | **forma canônica** | **ponteiro** para o template do coletivo (a casa de formas que a carta da matriz declara), nunca molde embutido | scaffold aponta, nunca copia — molde próprio é a terceira cópia da mesma forma |
 | 6 | **handshake** | o que fecha o nascimento (§5) | é o que distingue *materializado* de *alcançável*; sem ele a fábrica gera órfão |
 
 > **O que o schema deliberadamente NÃO tem: um campo de "modo".** O modo se deduz da família
@@ -96,11 +96,10 @@ campo faltante, nunca supre por conta própria.
 | **Tipo de artefato** | o que o roteamento **roteia** — vive *dentro* de um contexto | *"onde este item vai morar?"* | pasta + hub com nome semântico + forma de capa + `estado:` declarado |
 | **Tipo de contexto** | **onde** o roteamento se aplica — o container | *"que casa precisa existir para itens caírem nela?"* | carta de navegação + `_cerebro/vault-config.md` + a árvore que o roteamento pressupõe |
 
-Exemplos vivos desta instância: `processo`, `glossario`, `identificador`, `politica`, `ADR`,
+Exemplos típicos: `processo`, `glossario`, `identificador`, `politica`, `ADR`,
 `navegacao` são **artefato**; `tribo`, `cliente`, `projeto`, `operador` são **contexto**.
 
-**Relação com os eixos que já existem** (conceituação completa no acervo da tribo Impulsa,
-`projetos/ativos/Connect/formas-e-tipos-de-vault.md` §2.1–2.2 — resolver o conceito `impulsa`):
+**Relação com os eixos que já existem:**
 
 - `tipo`/`papel` descrevem a **entidade** e são declarados pela empresa, no manifesto.
 - **forma** (`matriz` · `sub-vault` · `operador`) é do produto e vive no `vault-config.md` do
@@ -143,8 +142,8 @@ Exemplos vivos desta instância: `processo`, `glossario`, `identificador`, `poli
 > nas duas declarações que existiam (esta e a do `SKILL.md` da `cnct-fabrica`), então um vault
 > provisionado pela fábrica nascia **sem hooks** — e a ausência é lida como estado válido, nunca
 > como erro. É a mesma classe da falha que desligou a captura passiva entre 24 e 31/08: *hook ausente
-> e hook desligado são indistinguíveis quando nenhum dos dois está escrito*. Medido no nascimento do
-> acervo comercial de Vendas, e detectado por **pergunta do operador**, não pelo mecanismo.
+> e hook desligado são indistinguíveis quando nenhum dos dois está escrito*. Medido no nascimento de um
+> acervo real, e detectado por **pergunta do operador**, não pelo mecanismo.
 >
 > **A lista passa a existir só aqui na mesma data.** Havia duas declarações da mesma estrutura — esta
 > e a do `SKILL.md` da `cnct-fabrica` — e as duas estavam incompletas do mesmo jeito. Duplicata não
@@ -155,7 +154,7 @@ Exemplos vivos desta instância: `processo`, `glossario`, `identificador`, `poli
 > circular — o executor lia o caminho antigo hardcoded, então renomear quebrava a auditoria em todos
 > os vaults de uma vez — e se desfez com **fallback declarado**: o `cnct-nucleo-audit` lê a casa
 > canônica, cai na legada quando preciso, e **reporta a migração pendente**. Vault novo nasce certo;
-> vault existente segue funcionando e sabe que está atrasado. Era a `P166`.
+> vault existente segue funcionando e sabe que está atrasado.
 
 **Verificação de fechamento, não opcional:** a fábrica chama `resolver(conceito)` ao terminar e
 **exige `status: resolvido` com zero avisos**. Qualquer outro status é nascimento incompleto,
@@ -239,7 +238,7 @@ Lido pela fábrica como:
 | família | `artefato` (vive dentro de um contexto) |
 | estrutura mínima | raiz com inegociáveis identificados + índice + delta por contexto |
 | semântica de descida | `delta` — **uma** raiz; mais de uma para o mesmo escopo é defeito |
-| forma canônica | `99 - Templates e Modelos Globais/` (resolver o template lá) |
+| forma canônica | a casa de formas declarada na carta da matriz (resolver o template lá) |
 | handshake | §5.2 — materializar + escrever a linha de gatilho na carta do vault |
 
 ---

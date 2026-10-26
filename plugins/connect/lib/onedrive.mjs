@@ -1,5 +1,5 @@
 // connect/lib/onedrive.mjs
-// Origem na nuvem -> pasta local, sem adivinhar (ADR-23).
+// Origem na nuvem -> pasta local, sem adivinhar (`origem` declarada no manifesto).
 //
 // O que este modulo faz:
 //   - valida o bloco `origem` do manifesto (contrato-manifesto §2.1);
@@ -74,7 +74,7 @@ export function validarItemOrigem(it) {
   if (!/^https:\/\//i.test(String(it.site || ''))) p.push('`site` tem de comecar com https://');
   const pasta = String(it.pasta || '');
   if (!pasta.trim()) p.push('`pasta` ausente');
-  else if (/^[a-z]:/i.test(pasta) || pasta.includes('\\')) p.push('`pasta` parece caminho de disco — o manifesto nunca guarda caminho local (ADR-23)');
+  else if (/^[a-z]:/i.test(pasta) || pasta.includes('\\')) p.push('`pasta` parece caminho de disco — o manifesto nunca guarda caminho local (path-por-maquina)');
   for (const c of ['site-id', 'web-id', 'lista-id', 'pasta-id']) {
     if (!normalizarGuid(it[c])) p.push(`\`${c}\` ausente ou fora do formato GUID`);
   }
@@ -87,7 +87,7 @@ export function validarItemOrigem(it) {
 // Medido em 06/10 (sync real de uma pasta nao sincronizada, com `folderUrl`
 // propositalmente errado): quem LOCALIZA a pasta e o `folderId`; a URL e so
 // informativa. E o `webTitle` NOMEIA a pasta local (`{webTitle} - {folderName}`):
-// derivado do slug do site, o Marketing nasceria `impulsa.connect - Marketing`.
+// derivado do slug do site, uma area nasceria `{slug-do-site} - {Area}`.
 // Por isso `site-titulo` existe — opcional, e capturado do catalogo.
 // ---------------------------------------------------------------------------
 export function montarLinkSync(o, { email = null } = {}) {
@@ -186,7 +186,7 @@ export function parseCatalogoIni(texto) {
 //
 // Windows: medido (06/10). macOS: NAO medido — candidatas do cliente fora da App
 // Store (Application Support) e do cliente da App Store (sandbox em Containers),
-// P175, 0.37.0. A leitura testa todas e devolve `diagnostico` dizendo o que achou
+// Validacao no macOS, 0.37.0. A leitura testa todas e devolve `diagnostico` dizendo o que achou
 // em cada uma: e esse diagnostico que calibra a lista no primeiro Mac real.
 // ---------------------------------------------------------------------------
 export function raizesCatalogo({ plataforma = process.platform, localAppData = process.env.LOCALAPPDATA, home = os.homedir() } = {}) {
@@ -206,7 +206,7 @@ export function raizesCatalogo({ plataforma = process.platform, localAppData = p
 // ---------------------------------------------------------------------------
 // traduzirMountPoint — o `mountPoint` do catalogo do Mac nao e caminho de disco.
 //
-// Medido em 14/10 no primeiro Mac real (P175, retorno do Advisor): o cliente grava
+// Medido no primeiro Mac real em uso: o cliente grava
 // `$Group.Container$/...` — um TOKEN. Hipotese (nao documentada pela Microsoft):
 // e o Group Container do OneDrive
 // (`~/Library/Group Containers/UBF8T346G9.OneDriveSyncClientSuite`). Sob ele fica o
@@ -214,7 +214,7 @@ export function raizesCatalogo({ plataforma = process.platform, localAppData = p
 // que o operador ve e edita e o espelho em `~/Library/CloudStorage/OneDrive-*`.
 // Fonte do layout dos dois lugares: investigacao publica do cliente File Provider
 // (gist lijunle/onedrive-cache-report, macOS 26 / OneDrive 26.x), conferida contra
-// o caminho real que o Advisor viu no Finder.
+// o caminho real que o operador viu no Finder.
 //
 // Regras (e o porque):
 //   - NUNCA devolver caminho dentro de `OneDrive.noindex`: e o store do cliente,
@@ -253,7 +253,7 @@ export function traduzirMountPoint(bruto, { home = os.homedir(), existe = fs.exi
     const montagens = listar(cs).filter((n) => /^OneDrive/i.test(n));
     let cands = montagens.filter((n) => existe(path.join(cs, n, ...rel)));
     if (cands.length > 1) {
-      // Desempate pelo nome da raiz do store ("OneDrive - Viceri Seidor" ~ "OneDrive-ViceriSeidor").
+      // Desempate pelo nome da raiz do store ("OneDrive - Empresa X" ~ "OneDrive-EmpresaX").
       const k = chaveNome(raiz);
       const kSem = k.replace(/^onedrive/, '');
       const exatos = cands.filter((n) => chaveNome(n) === k);
@@ -368,7 +368,7 @@ export function localizarNoCatalogo(entradas, o) {
 
 // ---------------------------------------------------------------------------
 // capturarOrigem — o caminho inverso, a partir de um caminho LOCAL ja conhecido
-// (ADR-23, emenda de 06/10). Quem chama ja sabe onde o acervo mora nesta maquina;
+// (captura de `origem` no uso). Quem chama ja sabe onde o acervo mora nesta maquina;
 // aqui so se le, no catalogo, de onde na nuvem aquela pasta vem.
 //
 //   exata: true  — o caminho E uma pasta sincronizada: a `origem` e completa.
@@ -419,7 +419,7 @@ export function origemEmYaml(o) {
 
 // ---------------------------------------------------------------------------
 // Efeitos no host. Isolados para o teste poder substitui-los.
-// Windows: medido. macOS (P175, 0.37.0): NAO medido — cada efeito degrada
+// Windows: medido. macOS (em validacao, 0.37.0): NAO medido — cada efeito degrada
 // declarado (status + motivo), nunca em silencio.
 // ---------------------------------------------------------------------------
 export const PLATAFORMAS_SYNC = ['win32', 'darwin'];

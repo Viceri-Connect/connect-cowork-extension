@@ -48,7 +48,7 @@ o acesso antes de escrever — nunca pular o passo silenciosamente.
 Para **cada coletivo** que a sessão tocou (um por alias do Passo 1, exceto `./operador` e
 `./pessoal`), atualizar `./operador/_cerebro/vinculos/{coletivo}/estado.md` — **o hot cache do
 operador naquele coletivo**. Este passo existe porque a sua ausência foi medida: nenhum executor
-escrevia nesse arquivo, e o `estado.md` do vínculo `mapfre` **nasceu vazio e permaneceu vazio**
+escrevia nesse arquivo, e o `estado.md` de um vínculo real **nasceu vazio e permaneceu vazio**
 enquanto o cérebro pessoal legado tinha a tabela cheia e fresca.
 
 Forma do arquivo — é **hot cache**, e a forma é o que o mantém útil:

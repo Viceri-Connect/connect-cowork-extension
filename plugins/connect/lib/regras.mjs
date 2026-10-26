@@ -1,15 +1,15 @@
 // connect/lib/regras.mjs
 // FONTE UNICA das regras duras da sessao.
 //
-// Por que existe como modulo proprio (ADR-18, Fase 2 do plano):
+// Por que existe como modulo proprio (`canal-injetado-governado`):
 //   Ate a 0.14.x este texto era const dentro de `render.mjs`, porque so o bloco
-//   injetado pelo hook precisava dele. A ADR-18 poe as MESMAS regras dentro do
+//   injetado pelo hook precisava dele. A decisao do canal injetado poe as MESMAS regras dentro do
 //   `{vault}/CLAUDE.md` — o arquivo de governanca que o harness carrega sozinho da
 //   raiz de pasta conectada, no slot de maior precedencia do contexto.
 //
 //   Dois consumidores, um texto. Se cada um carregar a sua copia, a primeira edicao
 //   os separa em silencio — e sao regras que o agente le como nao-negociaveis, vindo
-//   de dois canais que passariam a discordar. E o modo de falha do D34/D35 aplicado
+//   de dois canais que passariam a discordar. E o modo de falha de `ponteiro-tipado`/`path-por-maquina` aplicado
 //   ao proprio mecanismo.
 //
 // Estas regras ficam SEMPRE no canal injetado (nunca so em arquivo a abrir), porque

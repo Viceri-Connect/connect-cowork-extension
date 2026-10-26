@@ -27,7 +27,7 @@ eixo de governança" é conteúdo da empresa. O que o produto faz é **exigir a 
 
 ## Passo 1 — Localizar o vault e ler o que já existe
 
-1. Identificar o vault alvo pelo alias montado na sessão (`./matriz`, `./impulsa`, …). Se o
+1. Identificar o vault alvo pelo alias montado na sessão (`./matriz`, `./{conceito}`, …). Se o
    operador nomear um conceito ainda não montado, `resolver` primeiro — nunca pedir caminho.
 2. Ler, nesta ordem, e **não inventar nada** a partir de outra fonte:
    - `_cerebro/camada-1.md` — a carta canônica (existe? o que já responde?);

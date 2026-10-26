@@ -1,5 +1,5 @@
 // connect/lib/vinculo.mjs
-// O LEITOR do vinculo operador x coletivo (ADR-22 item 8, fecha P81).
+// O LEITOR do vinculo operador x coletivo (`curadoria-pessoal-coletivo`).
 //
 // O defeito que este arquivo corrige, medido em 08/09: `vinculos` tinha ZERO
 // ocorrencias em lib/, mcp/, hooks/ e config/. As skills (`daily-ingest`,
@@ -7,12 +7,12 @@
 // `./operador/_cerebro/vinculos/{coletivo}/estado.md` desde a migracao do E2, e
 // nada no mecanismo jamais leu. Escrita sem leitor nao e memoria, e deposito.
 //
-// A decisao de QUE isso e lido antes da carta do coletivo nao e nova: a ADR-14
-// (D131, 18/08) ja a tomou — "o vinculo operador x coletivo e lido ANTES da carta
+// A decisao de QUE isso e lido antes da carta do coletivo nao e nova: a `curadoria-pessoal-coletivo`
+// ja a tomou — "o vinculo operador x coletivo e lido ANTES da carta
 // de navegacao do coletivo, sempre que declarado". O que faltava era a
-// implementacao, registrada como P81 e parada desde entao.
+// implementacao, registrada como pendencia e parada ate entao.
 //
-// Divisao de trabalho (ADR-22 item 8): markdown continua sendo a CASA (versionavel,
+// Divisao de trabalho: markdown continua sendo a CASA (versionavel,
 // editavel, legivel por humano — converter para JSON perderia justamente a prosa
 // que da valor, como os gotchas de build do `repos.md` legado); o MCP passa a ser
 // o CARTEIRO, entregando o recorte junto do `resolver` daquele coletivo.
@@ -30,7 +30,7 @@ const CASA = ['_cerebro', 'vinculos'];
 // por onde se chega ao que e do operador naquele coletivo. Ate 28/09 ele nao era entregue: o `resolver`
 // trazia o hot cache e omitia o papel, e quem precisava saber "o que e meu" tinha
 // de abrir o arquivo por fora. Depois `estado.md`, que e o que as skills instaladas
-// ja escrevem; os outros nascem da ADR-22 item 7 (os eixos orfaos do `repos.md`:
+// ja escrevem; os outros nascem do escopo por coletivo (os eixos orfaos do `repos.md`:
 // ambientes locais, particularidades por-maquina de repo).
 const ARQUIVOS = ['config.md', 'estado.md', 'ambientes.md', 'repos.md'];
 
@@ -101,8 +101,8 @@ export function lerVinculo(perfilOperadorRoot, coletivo) {
     coletivo: conceito,
     casa: path.join(...CASA, conceito),
     blocos,
-    // A ordem e o ponto da ADR-14: isto vem ANTES da carta do coletivo, nao depois.
-    nota: 'leitura pessoal do operador sobre este coletivo — vale antes da carta de navegacao (ADR-14/D131). Nunca fundir ao acervo coletivo: fato e do vault, leitura e do operador',
+    // A ordem e o ponto da `curadoria-pessoal-coletivo`: isto vem ANTES da carta do coletivo, nao depois.
+    nota: 'leitura pessoal do operador sobre este coletivo — vale antes da carta de navegacao (curadoria-pessoal-coletivo). Nunca fundir ao acervo coletivo: fato e do vault, leitura e do operador',
     avisos,
   };
 }
@@ -111,10 +111,10 @@ export function lerVinculo(perfilOperadorRoot, coletivo) {
 // chaveDoVinculo — QUAL vinculo pertence a uma entidade resolvida.
 //
 // O defeito que isto corrige, medido em 28/09 na primeira execucao do briefing
-// diario: `resolver('vendas')` entregou o `estado.md` do vinculo `interno-viceri`,
-// e nao o de `vendas`. A chave era `local.entrada.coletivo || entry.conceito` — o
-// coletivo que ESCOPA O PONTEIRO LOCAL (a area Vendas mora sob a matriz, entao o
-// ponteiro dela e `interno-viceri/vendas`) vencia o conceito da propria entidade.
+// diario: `resolver('area-x')` entregou o `estado.md` do vinculo da matriz,
+// e nao o de `area-x`. A chave era `local.entrada.coletivo || entry.conceito` — o
+// coletivo que ESCOPA O PONTEIRO LOCAL (a area mora sob a matriz, entao o
+// ponteiro dela e `{matriz}/area-x`) vencia o conceito da propria entidade.
 // Escopo de ponteiro responde "onde este path foi registrado"; vinculo responde
 // "qual e a leitura do operador sobre ESTA entidade". Sao perguntas diferentes, e
 // a primeira nao pode responder pela segunda.

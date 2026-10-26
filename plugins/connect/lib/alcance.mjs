@@ -113,9 +113,9 @@ export function parseTabelaAlcance(secaoMd) {
       cols = celulas.map((c) => semAcento(c));
       // Uma linha de tabela separada do proprio cabecalho (por um blockquote,
       // uma linha em branco, um paragrafo) e lida como cabecalho NOVO e a
-      // declaracao dela e perdida. Aconteceu de verdade em 02/09: a linha de
-      // `squads/{squad}` na carta de processo `sdd` ficou depois de uma nota e
-      // as 10 declaracoes viraram 9 — em silencio, e so apareceu porque alguem
+      // declaracao dela e perdida. Aconteceu de verdade: numa carta de processo,
+      // uma linha de alcance ficou depois de uma nota e as 10 declaracoes
+      // viraram 9 — em silencio, e so apareceu porque alguem
       // foi contar. Declaracao engolida sem aviso e a mesma classe de defeito
       // que este modulo existe para combater, um andar acima. Heuristica: um
       // "cabecalho" cuja primeira celula parece caminho ou padrao de arquivo
@@ -191,7 +191,7 @@ export function corpoSemAlcance(md) {
 // (`projetos/{projeto}/{projeto}.md` na carta de PROCESSO) ou concreto
 // (`projetos/Connect/adr/adr-connect.md` num hub local).
 //
-// Casamento por NOME antes do posicional (VIC-040, 29/09): o placeholder do hub
+// Casamento por NOME antes do posicional: o placeholder do hub
 // e resolvido pelo segmento de MESMO NOME na casa declarada. Antes era so por
 // posicao, com o ultimo segmento da casa como curinga — certo na casa do
 // proprio projeto (onde o ultimo segmento E o projeto) e errado em qualquer
@@ -280,7 +280,8 @@ export function resolverCorrente({
       // DELEGACAO e a linha com hub e SEM padrao: "o alcance deste nivel esta
       // la". Linha com hub E padrao e outra coisa — o nivel ja tem padrao (logo
       // e alcancavel por construcao) e ainda mantem um indice autorado, que e a
-      // classe de defeito da IMP-001. Ela entra como folha, e a M2 reporta.
+      // classe de defeito do indice autorado sobre nivel listavel. Ela entra
+      // como folha, e a M2 reporta.
       if (!d.hub || d.padrao) { decls.push({ ...d, origem }); continue; }
 
       // Casa delegada: o alcance mora no hub. A casa em si continua declarada

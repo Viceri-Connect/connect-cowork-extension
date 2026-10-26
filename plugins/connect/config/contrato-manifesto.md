@@ -25,7 +25,7 @@ segundo lugar onde a entidade existe — a duplicação que o [[modelo-roteament
 primeira linha e que é, no fim, cache que apodrece.
 
 **Path é sempre por-operador, por-máquina — nunca conteúdo coletivo (corte de raiz
-17/08, reescrito pela ADR-23 em 06/10).** O manifesto **não declara caminho local, nem
+17/08, reescrito em 06/10 com a origem na nuvem).** O manifesto **não declara caminho local, nem
 relativo.** O que ele pode declarar é a **origem na nuvem** (bloco `origem`, §2): ela é igual
 para todo operador, e é dela que o mecanismo parte para sincronizar e depois **lê** o caminho
 no próprio cliente de sincronização — nunca deduz. Fora isso, ele só declara o *fato* de
@@ -51,20 +51,20 @@ que estruturou a organização. O agente nunca cria um manifesto por inferência
 
 Campos que todo manifesto declara. Frontmatter **puro** — nenhum caminho local, nem
 relativo (corte de raiz 17/08). A única URL admitida é a da origem na nuvem, dentro de
-`origem` (ADR-23).
+`origem` (§2).
 
 | Campo | Obrigatório | Semântica |
 |---|---|---|
 | `tipo` | **sim** | O que a entidade **é** (`organizacao`, `programa`, `squad`, `cliente`, `produto`, `operador`, …). A empresa declara; o produto não prescreve o conjunto |
 | `papel` | **sim** | Como a entidade **opera** / o que ela hospeda (ex.: `tribo`, `cliente-externo`). Distinto de `tipo`: uma entidade pode ser `tipo: programa` e, ao mesmo tempo, `papel: tribo` |
-| `classe` | não (default `vault`) | O que o **mecanismo** faz com a entidade. Conjunto **fechado, do produto** — ao contrário de `tipo`, que é ilimitado e do coletivo: `vault` (acervo de conhecimento: monta, cobra carta de navegação, herda processo, pousa na `entrada`) ou `diretorio` (diretório de **output** do processo, como um Delivery Hub: monta e entrega a concessão, e **não** cobra carta, herança nem ponto de pouso). São dois campos porque são duas perguntas: *o que isto é* (o coletivo responde) e *o que fazer com isto* (o produto precisa saber). Inferir a classe a partir do nome do `tipo` obrigaria todo coletivo a batizar a entidade como o produto adivinhou — foi a primeira implementação da ADR-22 e foi corrigida no mesmo dia |
+| `classe` | não (default `vault`) | O que o **mecanismo** faz com a entidade. Conjunto **fechado, do produto** — ao contrário de `tipo`, que é ilimitado e do coletivo: `vault` (acervo de conhecimento: monta, cobra carta de navegação, herda processo, pousa na `entrada`) ou `diretorio` (diretório de **output** do processo, como um Delivery Hub: monta e entrega a concessão, e **não** cobra carta, herança nem ponto de pouso). São dois campos porque são duas perguntas: *o que isto é* (o coletivo responde) e *o que fazer com isto* (o produto precisa saber). Inferir a classe a partir do nome do `tipo` obrigaria todo coletivo a batizar a entidade como o produto adivinhou — foi a primeira implementação do escopo por coletivo e foi corrigida no mesmo dia |
 | `governanca` | **sim** | Quem governa a entidade. É o que transforma a falha de mount de beco sem saída em ação; sem ele, o modelo promete transparência e entrega erro |
 | `conceito` / `alias` | não (default: slug do arquivo) | Chave **estável** de casamento — já existia no contrato anterior. Reaproveitada: também indexa a tabela local `subVaults` (por-operador, por-máquina). Declare quando o slug do arquivo não for estável o bastante |
 | `externo` | não (default `false`) | Booleano: esta entidade tem acervo **fora** da matriz? `false`/omitido = conteúdo mora inline na própria matriz, nada a montar |
 | `criado-por` / `criado-em` | não | Quem e quando **declarou que o acervo já foi materializado**. Ausência dos dois = a entidade foi concebida mas o acervo ainda não nasceu (`pendente-criacao`) — nunca inferido, sempre um operador que preenche |
 | `entrada` | não | **Caminho relativo à raiz do acervo** da nota-hub onde o mecanismo pousa assim que monta, sem tatear diretório — só faz sentido com `externo:true`. Ex.: `_cerebro/camada-1.md`. ⚠️ **Nome puro de nota** (sem caminho) é aceito como **legado** e resolvido por busca limitada que **deixa marca** (aviso + issue): a busca é o sintoma de um manifesto incompleto, nunca o caminho normal. Fonte da regra: `contrato-navegacao.md` §4 — esta linha dizia *nome da nota* e contradizia aquele contrato desde a v0.5.0 dele |
 | `depende-de` | quando houver relação | Arestas do **grafo**: relação declarada para outros vaults. Cada item: `{ alvo, relacao }`. **Bidirecional explícito** — os dois lados declaram a aresta (ver §4) |
-| `origem` | não (só faz sentido com `externo:true`) | **Onde o acervo mora na nuvem** — identidade coletiva, igual para todo operador (ADR-23). Lista de objetos (o parser não lê mapa aninhado); um item por provedor. Usado por `sincronizar_subvault` para disparar o sync e, depois, achar a pasta no catálogo do cliente **por id**, nunca por nome. Ausente = o mecanismo segue perguntando o caminho ao operador. Ver §2.1 |
+| `origem` | não (só faz sentido com `externo:true`) | **Onde o acervo mora na nuvem** — identidade coletiva, igual para todo operador. Lista de objetos (o parser não lê mapa aninhado); um item por provedor. Usado por `sincronizar_subvault` para disparar o sync e, depois, achar a pasta no catálogo do cliente **por id**, nunca por nome. Ausente = o mecanismo segue perguntando o caminho ao operador. Ver §2.1 |
 
 ### 2.1 O bloco `origem`
 
@@ -84,7 +84,7 @@ origem:
 |---|---|
 | **`provedor` decide a estratégia** | Hoje só `sharepoint` (OneDrive for Business no Windows). Provedor desconhecido devolve status, nunca tentativa |
 | **Quem localiza é o `pasta-id`** | Medido em 06/10, sincronizando uma pasta nova com `folderUrl` errado: o cliente achou a pasta pelo id. `pasta` é **informativo** — o caminho dentro da biblioteca quando se sabe, ou **só o nome** da pasta (que é o que o catálogo do OneDrive guarda) |
-| **`site-titulo` nomeia a pasta local** | O cliente cria `{site-titulo} - {nome da pasta}`. Sem ele, o título cai no slug do site (`impulsa.connect - Marketing`). Opcional, mas a captura o traz sempre. O caminho local continua **lido** depois do sync, nunca declarado |
+| **`site-titulo` nomeia a pasta local** | O cliente cria `{site-titulo} - {nome da pasta}`. Sem ele, o título cai no slug do site (`{slug-do-site} - {pasta}`). Opcional, mas a captura o traz sempre. O caminho local continua **lido** depois do sync, nunca declarado |
 | **Reter no dispositivo vem da `classe`** | `vault` é fixado (*Manter sempre neste dispositivo*); `diretorio` fica sob demanda. Sem campo próprio |
 | **Escrito uma vez, capturado passivamente** | Por quem já tem a pasta sincronizada. Duas vias, as duas por **id**: o `resolver`, ao resolver uma entidade sem `origem`, devolve `origemCapturavel` (bloco pronto, com o manifesto a editar) — o agente oferece gravar, pelo protocolo de escrita; e o `catalogo_sync`, para o curador, lista as pastas sincronizadas sem manifesto. Ninguém grava em silêncio: é escrita na matriz |
 
@@ -122,7 +122,7 @@ origem:
   independente de onde no organograma ela morar (área, tribo, cliente, squad — o produto não
   restringe a árvore).
 - **Path nunca é conteúdo coletivo:** nenhum manifesto guarda diretório local, relativo
-  ou absoluto. A URL admitida é só a da origem na nuvem, no bloco `origem` (ADR-23). O `resolver` nunca advinha nem pergunta por si só — devolve `status` pra a skill
+  ou absoluto. A URL admitida é só a da origem na nuvem, no bloco `origem` (§2). O `resolver` nunca advinha nem pergunta por si só — devolve `status` pra a skill
   decidir (perguntar ao operador, acionar fábrica, avisar ausência). Ver `lib/resolver.mjs`.
 
 ---

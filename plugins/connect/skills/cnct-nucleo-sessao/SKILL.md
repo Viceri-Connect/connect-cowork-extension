@@ -62,13 +62,13 @@ O que o mecanismo precisa para funcionar são **duas** coisas, e só a primeira 
 > ⚠️ **Não pergunte pelo "cérebro pessoal" nem por "vault pessoal".** Ele é enriquecimento
 > **opcional** (`CONCEITOS.md` §4) — um vault Obsidian próprio que o operador já mantenha. Só
 > entra se o **operador** mencionar que tem um; aí `configurar cerebro_pessoal`. Perguntar por ele
-> no 1º uso fazia o operador novo criar uma pasta que nenhum protocolo usa (medido nos onboardings
-> da squad Novos Negócios, MAPFRE, e no guia do time de Vendas e Marketing).
+> no 1º uso fazia o operador novo criar uma pasta que nenhum protocolo usa (medido nos primeiros
+> onboardings de operador, em mais de um coletivo).
 
 **Antes de perguntar o caminho da matriz, chame `catalogo_sync`** (0.35.1). Ele lista as pastas
 que o OneDrive desta máquina sincroniza (`naoDeclaradas[].local` — a matriz é raiz, não tem
 manifesto, e por isso aparece ali). Proponha ao operador a que se chama `Matriz` (ex.:
-`…\Viceri Seidor\Impulsa - Connect - Matriz`) e confirme em uma pergunta de sim/não — operador
+`…\{Empresa}\{Biblioteca} - Matriz`) e confirme em uma pergunta de sim/não — operador
 leigo não sabe onde o OneDrive põe as pastas, e não deveria precisar saber. A validação continua
 sendo do `configurar` (`_cerebro/vault-config.md` presente); nome de pasta é só proposta. Nenhuma
 pasta `Matriz` no catálogo = a matriz ainda não foi sincronizada: peça para sincronizar pelo botão
@@ -154,7 +154,7 @@ gestão"), ou ao abrir qualquer nota que declare `tipo`+`externo:true` no frontm
    - `pendente-criacao` → entidade existe, acervo não. Oferecer a `cnct-fabrica-<tipo>`
      ao operador — nunca criar nada sozinho.
    - `local-nao-configurado` → esta máquina nunca resolveu esse `conceito`.
-     **Com `sincronizavel: true`** (o manifesto declara `origem`, ADR-23): chamar
+     **Com `sincronizavel: true`** (o manifesto declara `origem`): chamar
      `sincronizar_subvault(conceito)` — **não perguntar caminho nenhum**. `sincronizado` →
      repetir o `resolver`. `aguardando` → dizer ao operador, em linguagem simples, que o OneDrive
      ainda está baixando **ou** que falta permissão, e nomear a `governanca` devolvida como quem
@@ -171,7 +171,7 @@ gestão"), ou ao abrir qualquer nota que declare `tipo`+`externo:true` no frontm
      `registrar_subvault_local`, repetir.
    - `origem-ausente` → path conhecido mas não existe/não sincronizado. Com `sincronizavel: true`,
      mesmo tratamento acima (`sincronizar_subvault`); sem, avisar.
-   - `resolvido` **com `origemCapturavel`** (0.36.0, ADR-23) → o manifesto não declara de onde o
+   - `resolvido` **com `origemCapturavel`** (0.36.0) → o manifesto não declara de onde o
      acervo vem, e o OneDrive desta máquina sabe. **Uma vez por entidade**, ofereça ao operador
      gravar `origemCapturavel.yaml` no manifesto indicado em `origemCapturavel.manifesto` (antes de
      `tags:`), pelo `cnct-nucleo-escrita`. Com `exata: false`, a origem é de uma pasta **maior** que
@@ -187,7 +187,7 @@ gestão"), ou ao abrir qualquer nota que declare `tipo`+`externo:true` no frontm
    mesmo `conceito`; navegação dentro dele é path relativo normal.
 
 O modelo canônico é **grafo de manifestos**: cada entidade é **manifesto**
-(frontmatter puro — nunca caminho local; a origem na nuvem pode vir no bloco `origem`, ADR-23)
+(frontmatter puro — nunca caminho local; a origem na nuvem pode vir no bloco `origem`)
 + **acervo** (no diretório que o mecanismo lê no OneDrive, ou que o operador informa). O casamento conceito→entrada acontece **no `resolver`**, e o índice é
 **derivado** dos manifestos, nunca autorado; o path local vive só em
 `connect.config.json` (`subVaults`), nunca no vault.

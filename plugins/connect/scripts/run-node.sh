@@ -1,7 +1,7 @@
 #!/bin/sh
 # run-node.sh - garante o Node portatil e executa o script recebido (macOS/Linux).
 #
-# Espelho POSIX de run-node.bat (P175, 0.37.0). Mesma garantia do D153: o hook e o
+# Espelho POSIX de run-node.bat (0.37.0). Mesma garantia do Node gerenciado: o hook e o
 # MCP nunca dependem de `node` no PATH. Mesma casa do runtime da 0.15.0: fora do
 # pacote, em $CONNECT_HOME/bin - atualizar o plugin nunca toca arquivo em uso.
 #
@@ -30,7 +30,7 @@ limpar_tmp() { [ -n "${TMP:-}" ] && rm -rf "$TMP"; }
 usar_path() {
   # `exec` nao dispara o trap de EXIT: a pasta temporaria sai aqui, antes.
   limpar_tmp; trap - EXIT INT TERM HUP
-  # Ultimo recurso, declarado (D153): avisa em stderr em vez de degradar em silencio.
+  # Ultimo recurso, declarado: avisa em stderr em vez de degradar em silencio.
   if command -v node >/dev/null 2>&1; then
     erro "AVISO: usando o node do PATH - runtime portatil indisponivel."
     exec node "$@"
@@ -56,7 +56,7 @@ if [ ! -x "$NODE_BIN" ]; then
   URL="https://nodejs.org/dist/$NODE_VERSAO/$PACOTE.tar.gz"
   mkdir -p "$BIN_DIR" 2>/dev/null || usar_path "$@"
 
-  # Sobra de download interrompido (0.38.3, medido no Mac do Advisor em 14/10: 24 MB
+  # Sobra de download interrompido (0.38.3, medido num Mac real: 24 MB
   # em `.node-download.3402`). O `rm` do fim nunca roda quando o processo morre no meio
   # (estouro de tempo do hook, SIGKILL). Apaga so a de processo que ja nao existe: o
   # hook e o MCP sobem juntos e podem estar baixando ao mesmo tempo.

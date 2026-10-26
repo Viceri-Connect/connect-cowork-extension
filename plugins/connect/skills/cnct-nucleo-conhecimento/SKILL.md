@@ -9,7 +9,7 @@ description: >-
   uso — isso é da `cnct-nucleo-sessao`, que tem protocolo executável e a configuração
   guiada. Esta skill é conceito, não executor: reivindicar aqueles gatilhos fazia o
   operador novo receber teoria sobre junctions em vez de ser perguntado onde fica a
-  matriz, e a sessão nunca montava (P118, corrigido em 02/09).
+  matriz, e a sessão nunca montava (corrigido em 02/09).
 metadata:
   version: "0.4.0"
   eixo: nucleo

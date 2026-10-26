@@ -1,7 +1,7 @@
 // connect/lib/sincronizar.mjs
-// sincronizar_subvault e catalogo_sync — a ponta executavel da ADR-23.
+// sincronizar_subvault e catalogo_sync — a ponta executavel da `origem` declarada no manifesto.
 //
-// Ordem (ADR-23 item 4), e o porque de cada passo:
+// Ordem, e o porque de cada passo:
 //   1. casa o conceito no registro derivado — a mesma regua do `resolver`
 //      (ambiguidade recusada, desempate por parametro);
 //   2. sem `origem` declarada -> `sem-origem`: o fluxo antigo (perguntar o caminho)
@@ -78,10 +78,10 @@ export async function sincronizarSubvault({
   if (!PLATAFORMAS_SYNC.includes(host.plataforma)) {
     return { ...base, status: 'plataforma-nao-suportada', link: montarLinkSync(origem, { email }), avisos: [`sync automatico so no Windows e no macOS (esta maquina: ${host.plataforma}). O operador pode abrir o \`link\` (ou sincronizar pelo SharePoint) e informar o caminho`] };
   }
-  // macOS (P175, 0.37.0): caminho NAO medido. Tudo o que falhar aqui degrada para o
+  // macOS (em validacao, 0.37.0): caminho NAO medido. Tudo o que falhar aqui degrada para o
   // fluxo antigo (perguntar o caminho e registrar_subvault_local), que funciona.
   const avisosPlataforma = host.plataforma === 'darwin'
-    ? ['macOS: sync automatico em validacao (P175) — se algo falhar, chame catalogo_sync e devolva o `diagnostico` ao time do Connect; o caminho manual (registrar_subvault_local) segue valendo']
+    ? ['macOS: sync automatico em validacao — se algo falhar, chame catalogo_sync e devolva o `diagnostico` ao time do Connect; o caminho manual (registrar_subvault_local) segue valendo']
     : [];
 
   let link = null;
@@ -89,7 +89,7 @@ export async function sincronizarSubvault({
   const concluir = (achado, ja, cat) => {
     if (!achado.caminho) {
       // O cliente sincroniza a pasta, mas o caminho que ele gravou nao virou pasta de
-      // disco (P175: token `$Group.Container$` no Mac). Esperar nao resolve — declara,
+      // disco (token `$Group.Container$` no Mac). Esperar nao resolve — declara,
       // grava o diagnostico e devolve o fluxo manual.
       const diagnosticoArquivo = gravarDiagnostico({ home, nome: 'onedrive-sincronizar', dados: { conceito: entry.conceito, status: 'caminho-nao-traduzido', bruto: achado.entrada?.mountPointBruto || null, motivo: achado.entrada?.mountPointMotivo || null, diagnostico: cat?.diagnostico || null } });
       return {
@@ -110,7 +110,7 @@ export async function sincronizarSubvault({
     }
     const fixacao = base.classe === 'vault'
       ? host.fixar(achado.caminho)
-      : { status: 'nao-aplicavel', motivo: 'classe diretorio fica sob demanda (ADR-23 item 3)' };
+      : { status: 'nao-aplicavel', motivo: 'classe diretorio fica sob demanda' };
     const reg = registrarSubVaultLocal({ conceito: entry.conceito, caminho: achado.caminho, coletivo: coletivoChave, escopo, home: override.home });
     return {
       ...base,
@@ -141,7 +141,7 @@ export async function sincronizarSubvault({
   if (!emailFinal) {
     const contas = host.emailsDasContas();
     if (!contas.length && host.plataforma === 'darwin') {
-      // No macOS a leitura da conta e hipotese (P175): nao achar nao prova que nao ha
+      // No macOS a leitura da conta e hipotese: nao achar nao prova que nao ha
       // conta. Segue sem `userEmail` e declara — no Windows o mesmo caso e bloqueio.
       avisosPlataforma.push('macOS: e-mail da conta OneDrive nao localizado nas preferencias — link disparado sem `userEmail`. Se nada abrir, repita informando `email`');
     } else if (!contas.length) {
@@ -187,7 +187,7 @@ export async function sincronizarSubvault({
 }
 
 // ---------------------------------------------------------------------------
-// catalogoSync — o caminho inverso (ADR-23 item 5). Le o que o cliente OneDrive
+// catalogoSync — o caminho inverso. Le o que o cliente OneDrive
 // sincroniza e cruza com o registro POR ID. Serve para:
 //   - registrar de uma vez o caminho de quem ja sincroniza tudo (`registrar: true`);
 //   - o curador gerar o bloco `origem` de quem ainda nao tem.
@@ -213,7 +213,7 @@ export function catalogoSync({ registrar = false, host = hostPadrao, ...override
       temOrigem: !!o,
       origemErros: e.origemErros?.length ? e.origemErros : undefined,
       localNestaMaquina: achado ? achado.caminho : null,
-      // Sincronizado, mas o caminho do catalogo nao virou pasta de disco (P175).
+      // Sincronizado, mas o caminho do catalogo nao virou pasta de disco (validacao no macOS).
       ...(achado && !achado.caminho ? { sincronizadoSemCaminho: true, motivo: achado.entrada?.mountPointMotivo || null } : {}),
       registrado,
     };
@@ -257,7 +257,7 @@ export function catalogoSync({ registrar = false, host = hostPadrao, ...override
     status: cat.status,
     plataforma: host.plataforma,
     // Onde o leitor procurou o catalogo e o que achou em cada raiz (so nomes e
-    // contagens, nunca conteudo). E o insumo para calibrar o macOS (P175).
+    // contagens, nunca conteudo). E o insumo para calibrar o macOS.
     diagnostico: cat.diagnostico || null,
     ...(diagnosticoArquivo ? { diagnosticoArquivo } : {}),
     entidades,
@@ -266,7 +266,7 @@ export function catalogoSync({ registrar = false, host = hostPadrao, ...override
       ...(semCaminho ? [`${semCaminho} pasta(s) sincronizada(s) sem caminho de disco traduzido — o fluxo manual (registrar_subvault_local) segue valendo`] : []),
       ...(diagnosticoArquivo && (host.plataforma === 'darwin' || semCaminho || cat.status !== 'ok') ? [`se algo aqui estiver errado, peca ao operador para enviar ao time do Connect o arquivo ${diagnosticoArquivo} — ele nao precisa rodar nada`] : []),
       ...(!PLATAFORMAS_SYNC.includes(host.plataforma) ? [`catalogo do OneDrive so e lido no Windows e no macOS (esta maquina: ${host.plataforma})`] : []),
-      ...(host.plataforma === 'darwin' && cat.status !== 'ok' ? ['macOS: leitor do catalogo em validacao (P175) — devolva este `diagnostico` ao time do Connect'] : []),
+      ...(host.plataforma === 'darwin' && cat.status !== 'ok' ? ['macOS: leitor do catalogo em validacao — devolva este `diagnostico` ao time do Connect'] : []),
       ...(cat.avisos || []),
       ...(naoDeclaradas.length ? ['`origemSugerida` esta completa para gravar: `pasta` vem so com o nome (o catalogo nao guarda o caminho na biblioteca) e isso basta, porque o OneDrive localiza pelo `pasta-id`. Antes de gravar, confirme com o operador QUAL entidade e — o casamento por nome e so candidato'] : []),
     ],

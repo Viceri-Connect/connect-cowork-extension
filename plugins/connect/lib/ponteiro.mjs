@@ -1,5 +1,5 @@
 // connect/lib/ponteiro.mjs
-// A gramatica UNICA de "onde isso mora nesta maquina" (ADR-22).
+// A gramatica UNICA de "onde isso mora nesta maquina" (`path-por-maquina`, escopado por coletivo).
 //
 // Antes desta ADR o produto tinha duas: `subVaults` (mapa plano conceito->path,
 // lido por resolver.mjs) e `repos` (mapa plano conceito->path, lido por repos.mjs).
@@ -10,14 +10,14 @@
 //
 // O que este modulo e:
 //   - a CHAVE escopada `{coletivo}[/{escopo}]/{conceito}` e sua normalizacao;
-//   - o casamento, com a assimetria da ADR-22 item 6 (bidirecional so em leitura);
+//   - o casamento, com a assimetria declarada (bidirecional so em leitura);
 //   - a recusa de ambiguidade, qualificada por coletivo.
 //
 // O que este modulo NAO e: comportamento de classe. Montar junction, cobrar `.git`,
 // injetar carta — isso e de quem chama. Aqui so se responde "qual entrada da tabela
 // o operador quis dizer, e ela e unica?".
 //
-// Retrocompatibilidade (ADR-22 item 1): chave em formato antigo (sem `/`) continua
+// Retrocompatibilidade: chave em formato antigo (sem `/`) continua
 // valida e nunca e reescrita sozinha — config de operador so muda quando ele pede.
 //
 // Zero dependencias externas.
@@ -58,7 +58,7 @@ export function montarChave({ coletivo, escopo = [], conceito } = {}) {
 // ---------------------------------------------------------------------------
 // lerTabela — normaliza o shape gravado.
 //
-// Shim da ADR-22 item 1: a tabela aceita `chave: "caminho"` (formato ate 0.27.0)
+// Shim de retrocompatibilidade: a tabela aceita `chave: "caminho"` (formato ate 0.27.0)
 // e `chave: { caminho, ... }`. Ler os dois e o que permite subir o plugin sem
 // tocar em nenhuma config ja gravada em campo — e nao ha validador de schema no
 // produto, entao mudanca de shape so apareceria na sessao do operador.

@@ -2,7 +2,7 @@
 // Leitura da matriz e do cerebro pessoal para (a) restaurar a identidade do
 // operador e (b) montar a carga inicial de contexto "lazy camada 1" (L1).
 //
-// Filosofia (ADR-6, token-efficiency lazy): L1 nao despeja o vault inteiro no
+// Filosofia (`carregamento-lazy`): L1 nao despeja o vault inteiro no
 // contexto. Ela traz o minimo sempre-ligado — identidade + verdades globais da
 // matriz — e PONTEIROS relativos para o resto, que o agente le sob demanda.
 //
@@ -12,10 +12,10 @@
 // MUDANCA DE CONTRATO (0.12.0): a camada 1 e DECLARADA PELO VAULT, nunca
 // prescrita pelo produto. Antes, `montarL1` emitia um conjunto fixo de ponteiros
 // (`modelo-roteamento`, `organizacao`, `projetos/`...) — o produto decidindo os
-// eixos do vault, contradicao direta com D98, e `ponteiros: []` em qualquer
+// eixos do vault, contradicao direta com `vault-declara-produto-nao-prescreve`, e `ponteiros: []` em qualquer
 // vault que nao seguisse esses nomes. Agora o mecanismo le a carta (contrato em
 // config/contrato-navegacao.md) e, na ausencia dela, reporta LACUNA — jamais
-// inventa ponteiro (D97: ausencia e gatilho de nascimento, nao erro).
+// inventa ponteiro (`gatilho-de-nascimento`: ausencia nao e erro).
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -75,7 +75,7 @@ export function lerIdentidade(cerebroPessoalRoot) {
     .map((s) => s.replace(/["']/g, '').trim())
     .filter(Boolean);
 
-  // VIC-018 — `parseKeyValues` exige o valor NA MESMA LINHA, e a lista YAML de
+  // `parseKeyValues` exige o valor NA MESMA LINHA, e a lista YAML de
   // bloco (`papeis-estaveis:` seguido de `  - Dev`) e a forma que o operador
   // escreve naturalmente, alem de ser o que o proprio template sugere ao pedir
   // "e-mail(s)" e "papel por coletivo". O resultado era `papeis: []` e
@@ -95,7 +95,7 @@ export function lerIdentidade(cerebroPessoalRoot) {
     ? asList(kv['papeis-estaveis'])
     : doFm('papeis-estaveis');
   // Campo generico (agnostico de empresa): `emails` (lista) ou `email` (escalar).
-  // NUNCA um campo especifico de empresa (ex.: `email-viceri`) — isso e conteudo
+  // NUNCA um campo especifico de empresa (ex.: `email-{empresa}`) — isso e conteudo
   // da instancia, nao contrato do produto.
   const emails = asList(kv['emails'] || kv['email']).length
     ? asList(kv['emails'] || kv['email'])
@@ -120,7 +120,7 @@ export function lerIdentidade(cerebroPessoalRoot) {
 
 // ---------------------------------------------------------------------------
 // L1 — carga inicial de contexto de UM vault (a matriz ou qualquer sub-vault:
-// a forma e a mesma em todos os niveis, corolario do D97).
+// a forma e a mesma em todos os niveis, corolario do `gatilho-de-nascimento`).
 //
 // Duas partes, ambas do proprio vault:
 //   - identidadeVault — `_cerebro/vault-config.md` (camada machine-readable:
@@ -129,13 +129,13 @@ export function lerIdentidade(cerebroPessoalRoot) {
 //     (por onde entra, o que carrega por gatilho, onde termina). Injetada
 //     verbatim pelo render. Ausente => lacuna anunciada, nunca suprida.
 // ---------------------------------------------------------------------------
-// GOVERNANCA DA RAIZ (ADR-18, Fase 3): quem ocupa `{vault}/CLAUDE.md` — o slot que
-// o harness carrega sozinho e rotula como *override* (D226). O check mora AQUI, e
+// GOVERNANCA DA RAIZ (`canal-injetado-governado`): quem ocupa `{vault}/CLAUDE.md` — o slot que
+// o harness carrega sozinho e rotula como *override*. O check mora AQUI, e
 // nao em session.mjs, porque `montarL1` e o unico ponto por onde passam os dois
 // casos que importam: a matriz (eager, no startup) e todo sub-vault (lazy, via
 // `resolver`). Um lugar so cobre o grafo inteiro.
 //
-// E o recorte da ADR-18 §6 cai de graca: `montarL1` e para vault de CONHECIMENTO;
+// E o recorte do canal injetado (so vault de conhecimento) cai de graca: `montarL1` e para vault de CONHECIMENTO;
 // o perfil do operador entra por `montarL1Pessoal`, onde `CLAUDE.md` e a Camada 0
 // legitima e nao pode ser tratada como ocupacao indevida.
 // HERANCA DE PROCESSO (contrato-navegacao.md §9, v0.5.0): a carta local declara
@@ -158,7 +158,7 @@ export function montarL1(matrizRoot, aliasMatriz = 'matriz', opcoes = {}) {
   // ESTAVEL do vault, e o alias e nome de sessao (o mesmo acervo pode montar sob
   // outro alias). Comparar com o alias produziria falso positivo, e falso positivo
   // em check de procedencia queima a confianca no check. Fica para quando a
-  // identidade de vault tiver casa declarada (P101/P103).
+  // identidade de vault tiver casa declarada.
   const governanca = verificarRaiz(matrizRoot);
 
   const heranca = resolverHeranca({
@@ -186,7 +186,7 @@ export function montarL1(matrizRoot, aliasMatriz = 'matriz', opcoes = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// L1 do cerebro pessoal — Camada 0 do operador (D104).
+// L1 do cerebro pessoal — Camada 0 do operador (`espinha-e-mecanismo`).
 // O bootstrap montava so a identidade (`meu-config.md`) e ignorava o hot cache
 // pessoal; esta funcao carrega a Camada 0 pessoal SEMPRE, junto do L1 da matriz.
 // A espinha do mecanismo NAO vem daqui — vem de `lerProtocoloMecanismo()` (e do
@@ -196,7 +196,7 @@ export function montarL1(matrizRoot, aliasMatriz = 'matriz', opcoes = {}) {
 // Casa canonica da Camada 0 do operador: `CLAUDE.md` na RAIZ do perfil — que e onde
 // a `cnct-fabrica-operador` materializa (tabela do Passo 3 da skill). Ate a 0.12.2 esta
 // funcao lia so `_cerebro/CLAUDE.md` e emitia a raiz como mero ponteiro: quem rodasse a
-// fabrica ao pe da letra nascia com uma Camada 0 que o mecanismo nunca injetava (P76).
+// fabrica ao pe da letra nascia com uma Camada 0 que o mecanismo nunca injetava.
 // O caminho `_cerebro/CLAUDE.md` continua sendo lido como LEGADO — e o mesmo nome da
 // carta legada do contrato de navegacao, e a colisao originou a divergencia.
 export function montarL1Pessoal(cerebroPessoalRoot, aliasPessoal = 'pessoal') {
@@ -219,7 +219,7 @@ export function montarL1Pessoal(cerebroPessoalRoot, aliasPessoal = 'pessoal') {
   };
   // Ponteiros PRESCRITOS pelo produto ficam restritos ao que o proprio produto
   // materializa (fabrica de operador). Nome de pasta de vault de operador especifico
-  // nao entra aqui — era vazamento de instancia no mecanismo, contra D98.
+  // nao entra aqui — era vazamento de instancia no mecanismo, contra `vault-declara-produto-nao-prescreve`.
   addPtr('_cerebro/memory', 'memoria profunda (indice)');
   addPtr('TASKS.md', 'kanban pessoal');
 
@@ -234,7 +234,7 @@ export function montarL1Pessoal(cerebroPessoalRoot, aliasPessoal = 'pessoal') {
 
 // ---------------------------------------------------------------------------
 // Protocolo do mecanismo — a espinha dorsal do dois-cerebros, entregue pelo
-// PRODUTO (D104/D96). Vive no proprio plugin (`config/protocolo-mecanismo.md`)
+// PRODUTO (`espinha-e-mecanismo`, `corte-mecanismo-conteudo`). Vive no proprio plugin (`config/protocolo-mecanismo.md`)
 // e e injetada no bloco de sessao pelo render — garantia estrutural de que o
 // protocolo executa, sem depender de arquivo do operador. Retorna o markdown
 // (ou null se, por algum motivo de empacotamento, o arquivo faltar).

@@ -82,8 +82,7 @@ skill atua. Nome semântico e em PT — diz a camada e o objeto sem abrir o arqu
 | L2 · construção | *(objeto direto — a fábrica é uma só)* | `cnct-fabrica`, `cnct-elicitacao` |
 | L2 · referências anteriores, por tipo | `fabrica` | `cnct-fabrica-operador`, `cnct-fabrica-navegacao` |
 
-> Skills de **conteúdo da empresa** (§5.3, família SDD: `discovery-intake`,
-> `refinement-technical`, …) **mantêm seus nomes de domínio** — viajam com o coletivo, não
+> Skills de **conteúdo da empresa** (§5.3, as skills do processo da empresa) **mantêm seus nomes de domínio** — viajam com o coletivo, não
 > com o plugin, e ficam fora do namespace `cnct-` do mecanismo.
 
 ### 3.2 Quem emite o nome — o namespace é de ORIGEM, nunca de assunto
@@ -106,9 +105,8 @@ entregador de skill precisa saber para decidir o que entregar. Três regras, sem
    nome de domínio. Emitir `cnct-*` seria assinar, em nome do produto, contrato que o produto não
    escreveu. Emissor e emitido ficam em namespaces distintos — é isso que remove a contradição da L3.
 
-**Eixo de trabalho é dado, não nome.** A classificação (`nucleo`, `processo-sdd`, `processo-corporativo`,
-`dogfooding`, …) vive em `metadata.eixo` no frontmatter — obrigatório em toda skill deste catálogo.
-Prefixo de assunto (`sdd-*`, `corp-*`) foi considerado e descartado: aposta que o eixo não muda, e
+**Eixo de trabalho é dado, não nome.** A classificação (`nucleo`, `processo-{nome}`, `dogfooding`, …) vive em `metadata.eixo` no frontmatter — obrigatório em toda skill deste catálogo.
+Prefixo de assunto (`{processo}-*`) foi considerado e descartado: aposta que o eixo não muda, e
 `elicitacao-captura` mudou de eixo em 24/08 (ver §5.4). A **lista** de eixos vigentes é conteúdo da
 empresa e mora em `_inteligencia/convencao-skills.md` da matriz, nunca aqui.
 
@@ -181,15 +179,15 @@ pelo hook. Fábrica que reescreve espinha é defeito.
 | `cnct-nucleo-audit` | `_automacoes/` (mecanismo); lê `criterios-customizados.md` (conteúdo) | mesmo padrão; é o produto se auditando, não a squad entregando |
 | `cnct-nucleo-encerramento` | orquestra escritas por vault; escreve **direto** só no perfil do operador (`TASKS.md` + `vinculos/{coletivo}/estado.md`) | orquestrador. O Passo 4b nasceu de defeito medido: o estado do vínculo não tinha quem escrevesse |
 | `elicitacao-captura` | `_inteligencia/`/caso-zero | ~~candidata a split~~ → **eixo próprio `dogfooding`** (24/08). Ver §5.4 |
-| `tasks-sync` | `tasks.md` master (conteúdo) — executor genérico | conteúdo da empresa, eixo `processo-sdd` |
 
-### 5.3 Conteúdo da empresa (processo SDD · knowledge no coletivo, produz em pasta sem `_`)
+### 5.3 Conteúdo da empresa (skills de processo · knowledge no coletivo, produz em pasta sem `_`)
 
-`discovery-intake` · `discovery-doc` · `daily-ingest` · `refinement-technical` ·
-`refinement-architecture` · `planning-sdd` · `spec-openspec` · `apf-orcamento` ·
-`lei-do-bem` — todas escrevem em `projetos/`, Delivery Hub ou repo (conteúdo). Executor é
-mecanismo genérico (convenção-skills), mas a **skill como entrada de catálogo é da empresa**:
-seu knowledge vive no coletivo e viaja com o coletivo, não com o plugin.
+Skills que executam o processo da empresa (discovery, refinamento, planning, orçamento…) escrevem
+em casa de conteúdo — projetos, Delivery Hub, repositório. Executor é mecanismo genérico
+(convenção de skills), mas a **skill como entrada de catálogo é da empresa**: seu knowledge vive no
+coletivo e viaja com o coletivo, não com o plugin. **A lista dessas skills não mora aqui:** é o
+portfólio da matriz (`_inteligencia/skills/portfolio.md`), que a empresa mantém. Listá-las no
+produto foi como esta seção envelheceu — uma skill aposentada continuou listada.
 
 ### 5.4 `elicitacao-captura` — de "candidata a split" a eixo próprio (24/08)
 

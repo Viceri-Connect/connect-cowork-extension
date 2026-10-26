@@ -1,6 +1,6 @@
 // connect/lib/config-local.mjs
 // Escrita das TABELAS LOCAIS do connect.config.json — o unico lugar onde path de
-// maquina pode existir (D35: path e sempre por-operador, por-maquina; nunca conteudo
+// maquina pode existir (`path-por-maquina`: path e sempre por-operador, por-maquina; nunca conteudo
 // coletivo, nunca frontmatter de manifesto).
 //
 // Duas tabelas hoje, mesma mecanica:
@@ -8,7 +8,7 @@
 //   repos:     { conceito: caminho }  — repositorio de codigo (nunca montado; ver repos.mjs)
 //
 // Extrair este modulo evitou a terceira copia da mesma funcao de gravacao: o
-// primitivo de repo (P64) precisava exatamente do mecanismo que `registrarSubVaultLocal`
+// primitivo de repo precisava exatamente do mecanismo que `registrarSubVaultLocal`
 // ja tinha inline. Tabela nova entra aqui, nao em copia.
 //
 // Zero dependencias externas.
@@ -29,9 +29,9 @@ const clean = (v) => (typeof v === 'string' && v.trim() && !v.includes('${') ? v
 // mesmo depois de a pasta ser concedida.
 //
 // Consequencia direta de deixar o home em AppData (o estado ate 0.12.2):
-//   - ./operador inalcancavel pelas file tools do harness (P93) — o Passo 4 do
+//   - ./operador inalcancavel pelas file tools do harness — o Passo 4 do
 //     cnct-nucleo-encerramento ("persistir estado do operador") nunca executava;
-//   - cada origem montada exigia a sua propria concessao manual (P62/P90), porque o
+//   - cada origem montada exigia a sua propria concessao manual, porque o
 //     workspace da sessao tambem morava em AppData e nao servia de porta unica.
 //
 // Com o home no perfil do usuario, UMA concessao (a propria CONNECT_HOME) alcanca o

@@ -7,10 +7,10 @@
 // carrego so por gatilho, onde termina este vault".
 //
 // Regras que este modulo implementa (nao negocia):
-//   - a camada 1 e DECLARADA pelo vault, nunca prescrita pelo produto (D98).
+//   - a camada 1 e DECLARADA pelo vault, nunca prescrita pelo produto (`vault-declara-produto-nao-prescreve`).
 //     Se a carta nao existe, o retorno e LACUNA — jamais um conjunto de ponteiros
 //     inventado pelo mecanismo.
-//   - ausencia e gatilho de nascimento, nao erro (D97): o vault monta igual, com a
+//   - ausencia e gatilho de nascimento, nao erro (`gatilho-de-nascimento`): o vault monta igual, com a
 //     lacuna anunciada e a fabrica oferecida.
 //   - compatibilidade de LEITURA com o hot cache legado (`_cerebro/CLAUDE.md`) dos
 //     coletivos que funcionavam antes do Connect: le, injeta, marca origem
@@ -30,7 +30,7 @@ export const CARTA_CANONICA = path.join('_cerebro', 'camada-1.md');
 export const CARTA_LEGADA = path.join('_cerebro', 'CLAUDE.md');
 
 // Secoes obrigatorias (contrato-navegacao.md §3). O contrato exige a RESPOSTA,
-// nao o titulo literal (D98: o produto declara a exigencia, a empresa responde
+// nao o titulo literal (`vault-declara-produto-nao-prescreve`: o produto declara a exigencia, a empresa responde
 // como quiser). Cada exigencia traz os sinonimos observados em vault real que
 // contam como resposta valida — destilados do coletivo maduro que ja funciona
 // sem Connect. Titulos sao comparados normalizados (sem acento, minusculo), em
@@ -42,6 +42,30 @@ export const SECOES_OBRIGATORIAS = [
   { chave: 'quando carregar', sinonimos: ['quando carregar', 'protocolo de carregamento', 'carregamento em camadas', 'tabela de gatilhos', 'gatilhos de carregamento'] },
   { chave: 'fronteiras', sinonimos: ['fronteiras', 'fronteira', 'o que nao mora aqui', 'o que fica fora'] },
 ];
+
+// Secoes opcionais (contrato-navegacao.md §3). Nunca cobradas: carta sem elas e
+// valida. Existem em codigo por um motivo so — junto com as obrigatorias, sao o
+// VOCABULARIO que o produto declara para a carta, e a M5 le ponteiro apenas
+// dentro dele. Qualquer outra secao (guardas, historico, narrativa do processo)
+// e texto do vault: o produto nao conhece o nome dela, e nao deve precisar.
+// Secao nova que precise ter ponteiro conferido entra no CONTRATO primeiro, e
+// so depois nesta lista.
+export const SECOES_OPCIONAIS = [
+  { chave: 'modelo relacional', sinonimos: ['modelo relacional'] },
+  { chave: 'camadas de heranca', sinonimos: ['camadas de heranca'] },
+  { chave: 'triggers obrigatorios', sinonimos: ['triggers obrigatorios', 'gatilhos obrigatorios'] },
+  { chave: 'estado volatil', sinonimos: ['estado volatil'] },
+  { chave: 'pessoas-chave', sinonimos: ['pessoas-chave', 'pessoas chave'] },
+];
+
+// secaoDoContrato — o titulo (cru, como esta no markdown) e de uma secao que o
+// contrato declara, obrigatoria ou opcional? Mesmo casamento do validarCarta:
+// normalizado, por igualdade ou prefixo, inteiro ou apos um separador.
+export function secaoDoContrato(titulo) {
+  const t = semAcento(String(titulo).replace(/[#*`>]/g, ''));
+  const sinonimos = [...SECOES_OBRIGATORIAS, ...SECOES_OPCIONAIS].flatMap((s) => s.sinonimos);
+  return variantesTitulo(t).some((v) => sinonimos.some((s) => v === s || v.startsWith(s)));
+}
 
 // ---------------------------------------------------------------------------
 // Orcamentos — a face de verificacao do PESO (contrato-navegacao.md §9.4).

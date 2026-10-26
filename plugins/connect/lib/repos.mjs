@@ -1,19 +1,19 @@
 // connect/lib/repos.mjs
-// resolverRepo(conceito) — o analogo do `resolver` para REPOSITORIO DE CODIGO (P64).
+// resolverRepo(conceito) — o analogo do `resolver` para REPOSITORIO DE CODIGO.
 //
 // Por que existe: a espinha promete "ao mencionar ou investigar codigo, resolver o
 // repositorio e conecta-lo direto — sem perguntar o caminho ao operador nem pedir
 // reconexao a toa". Sem primitivo, essa promessa era cumprida por `grep` no vault
 // pessoal (`_cerebro/clientes/{slug}/repos.md`) — path de maquina escrito dentro de
-// conteudo coletivo, exatamente o que D35 proibe, e um contorno que virou atrito
-// recorrente de dogfooding (D108).
+// conteudo coletivo, exatamente o que `path-por-maquina` proibe, e um contorno que virou atrito
+// recorrente de dogfooding.
 //
 // Modelo (o mesmo do sub-vault, deliberadamente — um so conceito de "onde isso mora
 // nesta maquina"):
 //   - o CONHECIMENTO declara que o repo existe e como ele se chama (nota do projeto
 //     no vault: nome, remoto, papel). Isso e coletivo, viaja, e verdade pra todos.
 //   - o PATH LOCAL mora so em connect.config.json, tabela `repos: { conceito: caminho }`,
-//     por-operador, por-maquina (D35). Nunca no vault.
+//     por-operador, por-maquina (`path-por-maquina`). Nunca no vault.
 //
 // Diferenca em relacao ao sub-vault: repo NAO e montado como junction dentro do
 // workspace da sessao. Codigo tem ferramental proprio (git, build, IDE) e caminho
@@ -32,11 +32,11 @@ import { lerTabela, casarPonteiro, montarChave, resumirCandidatos } from './pont
 const norm = (s) => String(s || '').toLowerCase().trim();
 
 // ---------------------------------------------------------------------------
-// registrarRepoLocal — grava o path local de UM repo (por-maquina, D35).
+// registrarRepoLocal — grava o path local de UM repo (`path-por-maquina`).
 // Chamada legitima: (a) handshake guiado, depois de `resolver_repo` devolver
 // 'local-nao-configurado'; (b) apos um clone que o proprio agente conduziu.
 //
-// `coletivo` (ADR-22 item 1): quando informado, a chave nasce escopada
+// `coletivo`: quando informado, a chave nasce escopada
 // (`cliente-alfa/pagamentos-api`). Sem ele a chave e legada (so o conceito) e continua
 // valendo — nunca se reescreve config do operador sem que ele peca.
 // ---------------------------------------------------------------------------
@@ -72,16 +72,16 @@ export function resolverRepo({ conceito, coletivo = null, escopo = null, ...over
   // Casamento: exato SEMPRE vence. Fuzzy so como prefixo/substring do NOME
   // REGISTRADO (UMA direcao), com piso de 3 caracteres, e AMBIGUIDADE E RECUSADA.
   //
-  // Por que tao restrito, e por que a ADR-22 NAO afrouxou isto: repo e superficie
+  // Por que tao restrito, e por que o escopo por coletivo NAO afrouxou isto: repo e superficie
   // de ESCRITA (o agente vai commitar ali). O casamento bidirecional que existia
   // aqui resolvia silenciosamente pro repo errado — `resolverRepo('connect-web-api')`
   // (nao registrado) devolvia o caminho de `connect-web` com status 'resolvido'.
-  // Achado na revisao da 0.12.0, e reencontrado na varredura de drift da ADR-22:
+  // Achado na revisao da 0.12.0, e reencontrado na varredura de drift do escopo por coletivo:
   // o item 6 dela chegou a propor bidirecional em todas as classes e foi emendado
   // no mesmo dia por causa deste bloco. Termo mais longo que a chave, em repo,
   // significa entrada AUSENTE — nao entrada parecida.
   //
-  // O que a ADR-22 mudou aqui: o EIXO. Antes a tabela era plana, entao dois
+  // O que o escopo por coletivo mudou aqui: o EIXO. Antes a tabela era plana, entao dois
   // clientes com repo homonimo colidiam por construcao; agora `coletivo` filtra
   // duro, e a recusa vem qualificada (`cliente-alfa/pagamentos-api`), nao com dois
   // nomes iguais que nao ajudam ninguem a escolher.
@@ -121,7 +121,7 @@ export function resolverRepo({ conceito, coletivo = null, escopo = null, ...over
 
   const temGit = fs.existsSync(path.join(caminho, '.git'));
   const avisos = temGit ? [] : [`${caminho} existe mas nao contem .git — confirmar se e a raiz do repo antes de usar`];
-  // Desempate por parametro e sempre DECLARADO (ADR-22 item 4): heuristica silenciosa
+  // Desempate por parametro e sempre DECLARADO: heuristica silenciosa
   // e o modo de falha que esta ADR existe para extinguir.
   if (m.desempatadoPor) avisos.push(`desempatado pelo coletivo "${m.desempatadoPor}"`);
 
@@ -151,7 +151,7 @@ export function listarRepos({ ...override } = {}) {
       existe: fs.existsSync(e.caminho),
       git: fs.existsSync(path.join(e.caminho, '.git')),
       // Entrada sem coletivo declarado ainda funciona (shim), mas e o que
-      // reabre a colisao que a ADR-22 fechou — visivel na listagem de proposito.
+      // reabre a colisao que o escopo por coletivo fechou — visivel na listagem de proposito.
       legado: e.legado,
     })),
     semColetivo: entradas.filter((e) => e.legado).map((e) => e.chave),

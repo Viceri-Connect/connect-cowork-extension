@@ -13,7 +13,7 @@ description: >
   Roda no estado zero — não exige coletivo montado. Estado zero é gatilho de
   nascimento, não erro.
 metadata:
-  version: "0.4.0"
+  version: "0.5.0"
   eixo: nucleo
   program: "Impulsa / Viceri"
   camada: "L2 — fábrica por tipo"
@@ -38,6 +38,12 @@ fábrica (`FRAMEWORK.md` §4).
   **self-contained** — seu knowledge (banco de perguntas, templates) é embutido, não
   depende de ler conhecimento de coletivo (que pode nem existir). Artefato ausente =
   **gatilho de nascimento** (`GLOSSARIO.md#gatilho-de-nascimento`).
+- **O que depende do coletivo vem do knowledge desta skill na matriz**, nunca deste executor:
+  `_inteligencia/skills/cnct-fabrica-operador/cnct-fabrica-operador.md`. Ele declara onde a matriz
+  guarda a definição dos papéis e a forma do conciliador, a regra de herança de equipe, o template
+  do briefing (forma do `TASKS.md` e prompt da tarefa agendada). Os Passos 3 (vínculo), 5 e 5b o
+  leem antes de agir. **Ausente** → lacuna anunciada ao operador e os padrões do briefing valem;
+  nunca supor caminho.
 
 ## Quando disparar
 
@@ -95,7 +101,7 @@ reportar e pular.**
 | `_cerebro/vinculos/.gitkeep` | — | pasta vazia; **um registro por coletivo** (cliente, tribo, área) entra depois. Schema vigente: `vinculos-v1`. ⚠️ **Nunca** materializar `_cerebro/clientes/` — schema aposentado |
 | `_cerebro/memory/MEMORY.md` | inline | `# Memória profunda — {{NOME}}\n\n> Índice. Notas de memória entram aqui, cada uma linkada.` |
 | `_cerebro/atualizacoes-aplicadas.md` | inline | cabeçalho do log do check de atualizações + lista vazia |
-| `TASKS.md` | inline | a forma da skill de tarefas do `productivity`, **literal e com os cabeçalhos em inglês**: `# Tasks` + `## Active` · `## Waiting On` · `## Someday` · `## Done`, vazias. Forma e deltas do item (tag de coletivo, lastro) em `99 - Templates e Modelos Globais/Template-Briefing-Diario.md` da matriz — não repetir aqui. ⚠️ Até 28/09 nascia `A fazer / Fazendo / Feito`, e as skills que escrevem em `## Active` / `## Waiting On` não achavam a seção |
+| `TASKS.md` | inline | a forma da skill de tarefas do `productivity`, **literal e com os cabeçalhos em inglês**: `# Tasks` + `## Active` · `## Waiting On` · `## Someday` · `## Done`, vazias. Forma e deltas do item (tag de coletivo, lastro) no template de briefing que o knowledge desta skill na matriz declara — não repetir aqui. ⚠️ Até 28/09 nascia `A fazer / Fazendo / Feito`, e as skills que escrevem em `## Active` / `## Waiting On` não achavam a seção |
 
 Se o Passo 2.4 trouxe um coletivo: semear `_cerebro/vinculos/{coletivo}/` com **dois** arquivos, no
 schema `vinculos-v1`:
@@ -104,8 +110,8 @@ schema `vinculos-v1`:
   houver, e a seção **`## Alocações`** — **só ponteiros**: uma linha de lotação (a squad-base) e uma
   por frente em que o operador atua, `| Frente | Hub (ponteiro tipado, no coletivo) |`. Nasce **vazia
   com o cabeçalho**; a fábrica não infere frente nenhuma. Papel, cargo e peso **não** entram: são fato
-  do coletivo e se resolvem pela herança de equipe (`modelo-de-celula` § *Herança de equipe* e `R8`
-  do `processo-viceri`, na matriz) — copiá-los aqui criaria a segunda fonte que envelhece. É o que o briefing percorre para saber o que é do operador. **Sem path** — o path local
+  do coletivo e se resolvem pela herança de equipe que o processo do coletivo declara (onde: knowledge
+  desta skill na matriz) — copiá-los aqui criaria a segunda fonte que envelhece. É o que o briefing percorre para saber o que é do operador. **Sem path** — o path local
   vive só em `connect.config.json`, gravado por `registrar_subvault_local`, nunca no vault, nem no
   perfil (`GLOSSARIO.md#path-por-maquina`).
 - `estado.md` — hot cache do operador naquele coletivo, **com cabeçalho de forma e tabela vazia**:
@@ -131,9 +137,9 @@ como enriquecimento (`./pessoal`) — isso é opcional e independente do perfil.
 
 **Passo 5 — Sintonia pessoal do papel (opcional).**
 A **definição** de um papel nunca mora no perfil do operador: é do **processo** que o coletivo
-declara (no SDD, `_cerebro/metodologias/sdd/papeis/` da matriz), e a ocupação por frente é do
-coletivo. O que o perfil pode ter é só a **sintonia pessoal** do papel primário, na forma do
-*conciliador* (`_papeis.md` § *Conciliador*, na matriz):
+declara, e a ocupação por frente é do coletivo. O que o perfil pode ter é só a **sintonia pessoal**
+do papel primário, na forma do *conciliador* que o processo declara. Onde a matriz guarda os dois
+vem do knowledge desta skill na matriz:
 
 - `_{papel}/rotina.md` — horários, limites por balde do briefing, blocos, o que o briefing nunca traz;
 - `_{papel}/papeis-ativos.md` — só se o operador acumula papéis: o primário e o que cada secundário
@@ -147,21 +153,21 @@ operador pedir — nunca a partir desta fábrica, e nunca como aviso de skill au
 **Passo 5b — Briefing diário (opcional, vale também para operador que já existe).**
 Dispara aqui ou quando um operador já provisionado pede *"criar meu briefing"*, *"agendar o
 briefing diário"*, *"quero o review de sexta"*. A **lógica** do briefing é da matriz
-(`99 - Templates e Modelos Globais/Template-Briefing-Diario.md`); a tarefa agendada é **gatilho
+(o template que o knowledge desta skill declara); a tarefa agendada é **gatilho
 fino** e nunca carrega lógica, para não envelhecer contra a forma.
 
-1. **Pré-requisitos, conferidos antes de criar:** `TASKS.md` na forma da Parte 1 do template;
+1. **Pré-requisitos, conferidos antes de criar:** `TASKS.md` na forma que o template declara;
    vínculos com `## Alocações` preenchida (sem alocação o briefing não tem o que ler — ajudar o
    operador a declarar as frentes, **só ponteiros**); rotina do papel primário, se ele quiser
    sintonia (Passo 5). Falta de rotina **não** bloqueia.
-2. **Ler a Parte 5 do template na matriz** e usar o prompt **dela, verbatim**, trocando só
+2. **Ler, no template da matriz, a seção da execução agendada** e usar o prompt **dela, verbatim**, trocando só
    `{papel}` pela pasta do papel primário e a variante (`diária` × `de sexta`). Nunca redigir outro
    prompt, nunca mandar a tarefa ler pasta ou projeto inteiro, nunca embutir baldes ou limites.
 3. **Criar com a ferramenta de tarefa agendada da plataforma**, carregando-a se estiver diferida.
    Horário vem da rotina (sem rotina: perguntar). ⚠️ A tarefa tem de nascer **no projeto Cowork que
    tem as pastas do Connect conectadas** — criada fora dele, roda sem matriz nem operador ao alcance.
    Se a ferramenta não estiver disponível ou a sessão não estiver nesse projeto, **dizer exatamente
-   isso** ao operador e entregar o prompt da Parte 5 para ele criar pela interface — nunca
+   isso** ao operador e entregar o prompt do template para ele criar pela interface — nunca
    improvisar um prompt alternativo.
 4. **Rodar uma vez na hora** (ou pedir ao operador que dispare) e conferir que o briefing saiu
    lendo os vínculos — é o teste de que as alocações estão certas.
@@ -184,7 +190,8 @@ fosse podada). Protocolo:
 
 ## Regras
 
-- **Nunca hardcodar cliente** nem assumir `mapfre`/`viceri` — tudo vem da elicitação.
+- **Nunca hardcodar cliente** nem assumir coletivo nenhum — tudo vem da elicitação e do knowledge
+  da matriz.
 - **Nunca reescrever a espinha** no `CLAUDE.md` do operador — é mecanismo. O
   `CLAUDE.md` do operador é **só delta**.
 - **Dado pessoal fica no vault do operador**, nunca no plugin. Os templates são forma vazia.
@@ -196,7 +203,7 @@ fosse podada). Protocolo:
 ## Supersede
 
 - `Template-Onboarding-Vault-Individual` do coletivo → **superado por esta
-  fábrica genérica**: a versão do coletivo era a instância Viceri; a forma sobe para
-  o produto.
+  fábrica genérica**: a versão do coletivo era a da instância de referência; a forma
+  sobe para o produto.
 
-<!-- SKILL-END cnct-fabrica-operador v0.2.0 · L2 · ref. FRAMEWORK.md §4 -->
+<!-- SKILL-END cnct-fabrica-operador v0.5.0 · L2 · ref. FRAMEWORK.md §4 -->

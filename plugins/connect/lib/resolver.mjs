@@ -1,8 +1,8 @@
 // connect/lib/resolver.mjs
 // resolver(conceito) — entrega um SUB-VAULT por CONCEITO como atalho no workspace.
 //
-// Realinhado (17/08, 2a rodada — corte de raiz sobre P69): o manifesto NUNCA guarda
-// path/url de acervo, nem relativo. Path e por-maquina, por-operador (D35) — nunca
+// Realinhado (17/08, 2a rodada — corte de raiz): o manifesto NUNCA guarda
+// path/url de acervo, nem relativo. Path e por-maquina, por-operador (`path-por-maquina`) — nunca
 // conteudo coletivo. O manifesto so declara FATOS coletivos:
 //   - `externo` (bool)   — esta entidade tem acervo fora da matriz? (default false)
 //   - `criado-por`/`criado-em` — alguem ja declarou que isso nasceu de verdade?
@@ -36,13 +36,13 @@ import { lerTabela, casarPonteiro, vizinhos } from './ponteiro.mjs';
 import { lerVinculoDaEntidade } from './vinculo.mjs';
 
 // ---------------------------------------------------------------------------
-// CLASSE DE ARTEFATO (ADR-22 item 2, emendado em 08/09) — declarada, nunca inferida.
+// CLASSE DE ARTEFATO — declarada, nunca inferida.
 //
 // O produto tinha duas gramaticas para "onde isso mora nesta maquina": sub-vault
 // (aqui) e repo (lib/repos.mjs). Diretorio de OUTPUT do processo — o Delivery Hub —
 // nao cabia em nenhuma, e cinco skills instaladas mandavam resolve-lo por
 // `resolver_repo`, que devolveria `sem-git`, status que nenhuma delas trata:
-// instrucao morta em cinco lugares (P149).
+// instrucao morta em cinco lugares.
 //
 // ⚠️ A PRIMEIRA implementacao disto era uma lista de `tipo` conhecidos aqui dentro
 // (`diretorio-entrega`, `delivery-hub`, ...). Estava errada, e o proprio
@@ -96,7 +96,7 @@ function extrairFrontmatter(text) {
 const desaspar = (v) => v.replace(/\s+#.*$/, '').trim().replace(/^["'](.*)["']$/, '$1');
 const ehVerdadeiro = (v) => /^(true|sim|yes)$/i.test(String(v || '').trim());
 
-// Interpreta o frontmatter PURO de um manifesto (D35: nunca path/url aqui).
+// Interpreta o frontmatter PURO de um manifesto (`path-por-maquina`: nunca path/url aqui).
 // Retorna null se a nota nao declarar `tipo` (nao e entidade).
 export function parseManifesto(fmText) {
   if (!fmText) return null;
@@ -165,7 +165,7 @@ export function lerRegistro(roots = []) {
       const man = parseManifesto(fm);
       if (!temCasaFora(man)) continue;
 
-      // `origem` (ADR-23) e lista de objetos — o parser de topo acima nao a le.
+      // `origem` e lista de objetos — o parser de topo acima nao a le.
       // So entra quando declarada: ausente nao e erro (contrato §5, check 3b).
       const origemBruta = parseFrontmatter(head || '').origem;
       const origem = origemBruta ? lerOrigem(origemBruta) : null;
@@ -194,7 +194,7 @@ export function lerRegistro(roots = []) {
         nota: `${man.tipo}${man.papel ? '/' + man.papel : ''} — manifesto derivado`,
         _fonte: root,
         // Onde o manifesto mora, relativo a raiz que o declarou — e o destino da
-        // escrita quando a `origem` e capturada (ADR-23, emenda de 06/10).
+        // escrita quando a `origem` e capturada no uso.
         manifesto: path.relative(root, file).split(path.sep).join('/'),
       });
     }
@@ -203,7 +203,7 @@ export function lerRegistro(roots = []) {
 }
 
 // Varredura rasa de .md (ignora pastas ocultas e node_modules). Profundidade
-// limitada: manifestos vivem perto da raiz (matriz enxuta, D103).
+// limitada: manifestos vivem perto da raiz (matriz enxuta).
 function walkMd(root, maxDepth = 4) {
   const out = [];
   const walk = (dir, depth) => {
@@ -228,19 +228,19 @@ function walkMd(root, maxDepth = 4) {
 //
 // Achado real testando contra o vault de producao (17/08): indexar QUALQUER
 // nota com `tipo` (pra sem-acervo-externo funcionar) tem um preco — tags
-// topicas genericas ("connect", "impulsa") aparecem em N documentos de
+// topicas genericas (o nome do produto, o do programa) aparecem em N documentos de
 // conteudo (metodologia, papeis, politicas) que nunca foram pensados como
 // alvo de mount. Sem essa restricao, `casar('connect')` colidia com 11
 // entidades e resolvia pra uma delas por ordem de travessia, nunca a tribo.
 // Fuzzy-match (gatilho/substring) so faz sentido entre quem TEM acervo pra
 // montar — e' literalmente o unico caso em que resolver tem o que fazer.
 // ---------------------------------------------------------------------------
-// Duas mudancas da ADR-22 (itens 5 e 6), e elas se sustentam uma na outra:
+// Duas mudancas do escopo por coletivo, e elas se sustentam uma na outra:
 //
 //   (6) o casamento passa a ser BIDIRECIONAL. Antes so se testava
 //       `conceito.includes(termo)` — logo termo MAIS ESPECIFICO que a chave nunca
-//       casava. Medido em 08/09, em sessao real: `resolver('tribo-impulsa')` deu
-//       `nao-encontrado` com o registro inteiro, e `resolver('impulsa')` resolveu.
+//       casava. Medido em 08/09, em sessao real: `resolver('tribo-x')` deu
+//       `nao-encontrado` com o registro inteiro, e `resolver('x')` resolveu.
 //       O operador pagou duas chamadas por uma resolucao.
 //
 //   (5) por isso a ambiguidade passa a ser RECUSADA aqui tambem. Bidirecional
@@ -289,11 +289,11 @@ export function casarMuitos(registro, termo, coletivo = null) {
 
   // Fuzzy em DEGRAUS, e o degrau importa mais que o casamento em si.
   //
-  // Medido em 08/09, contra o registro real da matriz: `casarMuitos('tribo-impulsa')`
+  // Medido em 08/09, contra o registro real da matriz: `casarMuitos('tribo-x')`
   // devolveu `ambigua` entre uma entidade de conceito proprio e duas de conceito
   // prefixado por `tribo-` — as tres
   // declaram o gatilho generico `tribo`, e o lado novo do bidirecional
-  // (`termo.includes(alvo)`) faz "tribo-impulsa".includes("tribo") casar todas.
+  // (`termo.includes(alvo)`) faz "tribo-x".includes("tribo") casar todas.
   // Sem degrau, o bidirecional teria apenas TROCADO a forma do defeito: de resolver
   // a entidade errada em silencio para recusar uma resolucao que e obvia.
   //
@@ -336,7 +336,7 @@ export function casarMuitos(registro, termo, coletivo = null) {
 //   'resolvido'             — montado; usar `entrada` (se houver) pra pousar
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
-// origemCapturavel — ADR-23, emenda de 06/10. Entidade resolvida cujo manifesto
+// origemCapturavel — captura de `origem` no uso. Entidade resolvida cujo manifesto
 // NAO declara `origem`: o caminho local acabou de ser usado, entao o catalogo do
 // OneDrive desta maquina diz de onde na nuvem ele vem. O mecanismo so PROPOE —
 // gravar e escrita na matriz, e passa pelo protocolo de escrita com quem pode.
@@ -408,7 +408,7 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, colet
     };
   }
 
-  // Path local pela tabela ESCOPADA (ADR-22 item 1). O shim de `lerTabela` mantem
+  // Path local pela tabela ESCOPADA por coletivo. O shim de `lerTabela` mantem
   // valida toda chave plana ja gravada — config de operador nunca e reescrita
   // sozinha, e nao ha validador de schema no produto que avisasse antes da sessao.
   const entradasLocais = lerTabela(cfg.subVaults || {});
@@ -431,7 +431,7 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, colet
     };
   }
 
-  // Com `origem` declarada (ADR-23), o proximo passo deixa de ser perguntar o
+  // Com `origem` declarada, o proximo passo deixa de ser perguntar o
   // caminho: o mecanismo sincroniza e LE onde o cliente montou a pasta.
   const temOrigem = (entry.origem || []).length > 0;
   const dicaSync = `chame sincronizar_subvault({ conceito: "${entry.conceito}"${entry.escopo ? `, coletivo: "${entry.escopo}"` : ''} }) — a entidade declara origem na nuvem: o mecanismo sincroniza, acha a pasta no catalogo do OneDrive e registra o caminho, sem perguntar nada ao operador`;
@@ -472,9 +472,9 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, colet
     return { status: 'erro-mount', conceito: entry.conceito, alias: aliasFinal, avisos: [e.message] };
   }
 
-  // A concessao vale para as duas classes: montar nunca foi alcancar (M2, P97), e
+  // A concessao vale para as duas classes: montar nunca foi alcancar, e
   // o Delivery Hub e justamente onde isso mais dói — pasta sincronizada por
-  // OneDrive exige concessao propria, e era o atrito manual de toda sessao (P149).
+  // OneDrive exige concessao propria, e era o atrito manual de toda sessao.
   const concessao = {
     necessaria: true,
     caminho: caminhoLocal,
@@ -482,7 +482,7 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, colet
   };
 
   // ---------------------------------------------------------------------------
-  // Classe `diretorio` (ADR-22 item 2): sai AQUI, antes de montarL1.
+  // Classe `diretorio`: sai AQUI, antes de montarL1.
   //
   // Um diretorio de output nao tem carta de navegacao, nao herda processo e nao
   // tem ponto de pouso — cobrar isso dele produziria "lacuna de navegacao" a cada
@@ -509,7 +509,7 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, colet
     };
   }
 
-  // Camada 1 do sub-vault — MESMA forma da matriz (corolario do D97: o interior
+  // Camada 1 do sub-vault — MESMA forma da matriz (corolario do `gatilho-de-nascimento`: o interior
   // tem o mesmo contrato em todos os niveis). Sempre montada: a carta de
   // navegacao e o que orienta o agente dentro do acervo, e a AUSENCIA dela e
   // informacao (lacuna anunciada), nao motivo para omitir a camada.
@@ -528,7 +528,7 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, colet
 
   // Ponto de pouso — `entrada` do manifesto resolvida a CAMINHO real. Sem isso,
   // pousar exigiria varrer o diretorio: exatamente o contorno que o protocolo
-  // proibe (o gap que o D120 deixou aberto).
+  // proibe (um gap que tinha ficado aberto).
   const entradaResolvida = resolverEntrada(caminhoLocal, entry.entrada, aliasFinal);
 
   const avisos = [
@@ -536,9 +536,9 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, colet
     ...(entradaResolvida.avisos || []),
   ];
 
-  // Vinculo do operador com este coletivo (ADR-22 item 8, fecha P81).
+  // Vinculo do operador com este coletivo (`curadoria-pessoal-coletivo`).
   //
-  // A ADR-14 (D131) decidiu em 18/08 que o vinculo operador x coletivo e lido ANTES
+  // A `curadoria-pessoal-coletivo` decidiu que o vinculo operador x coletivo e lido ANTES
   // da carta de navegacao do coletivo. A implementacao nunca aconteceu: em 08/09,
   // `vinculos` tinha ZERO ocorrencias em todo o codigo — as skills escreviam e nada
   // lia. Aqui o mecanismo vira o carteiro; a casa continua sendo markdown no perfil
@@ -564,16 +564,16 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, colet
     entrada: entry.entrada || null,
     entradaResolvida,
     mount: mountReport,
-    // Ordem de leitura da ADR-14: o vinculo vem ANTES da carta. Aparece antes de
+    // Ordem de leitura da `curadoria-pessoal-coletivo`: o vinculo vem ANTES da carta. Aparece antes de
     // `l1` no objeto de proposito — quem le o payload le nesta ordem.
     vinculo,
     l1,
     nota: entry.nota,
     // M2 (24/08) — montar nao e alcancar. O harness aplica politica de acesso sobre o
     // DESTINO REAL da junction; conceder o CONNECT_HOME nao alcancou este acervo em
-    // nenhuma das 4 ocorrencias medidas (P97). O mecanismo declara a origem a conceder
+    // nenhuma das 4 ocorrencias medidas. O mecanismo declara a origem a conceder
     // em vez de deixar o agente descobrir por tentativa — e a alternativa a tentativa
-    // e o contorno (D148), que e o que estamos tentando extinguir.
+    // e o contorno (`bloqueio-reporta-nunca-contorna`), que e o que estamos tentando extinguir.
     concessao,
     origemCapturavel: origemCapturavel(entry, caminhoLocal, cfg, hostOD) || undefined,
     avisos,

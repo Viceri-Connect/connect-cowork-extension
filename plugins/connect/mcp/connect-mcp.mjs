@@ -10,7 +10,7 @@
 //   - resolver_repo            : caminho local de um repo de codigo (nunca monta junction)
 //   - registrar_repo_local     : grava o path LOCAL de um repo (substitui o repos.md do vault)
 //   - listar_repos             : tabela local de repos, para conferencia do operador
-//   - sincronizar_subvault     : sync OneDrive de um conceito com `origem` declarada (ADR-23)
+//   - sincronizar_subvault     : sync OneDrive de um conceito com `origem` declarada no manifesto
 //   - catalogo_sync            : caminho inverso — o que o OneDrive ja sincroniza, por id
 //   - mount_junction           : primitivo de mount (base do resolver)
 //   - unmount_junction         : remove um atalho
@@ -32,9 +32,9 @@ import { sincronizarSubvault, catalogoSync } from '../lib/sincronizar.mjs';
 
 const log = (...a) => process.stderr.write(`[connect-mcp] ${a.join(' ')}\n`);
 
-// Versao do servidor: DERIVADA do plugin.json, nunca hardcoded (fecha metade da P74).
-// Estava fixa em '0.13.0' e ficou para tras no bump da 0.14.0 — exatamente o defeito que
-// a P74 descreve: o servidor nao sabe a versao do disco, e o operador nao tem como saber
+// Versao do servidor: DERIVADA do plugin.json, nunca hardcoded.
+// Estava fixa em '0.13.0' e ficou para tras no bump da 0.14.0 — exatamente o defeito de
+// versao desalinhada: o servidor nao sabe a versao do disco, e o operador nao tem como saber
 // que a sessao esta servindo codigo de outra versao. Se a leitura falhar, 'desconhecida'
 // e resposta honesta; numero errado nao e.
 function versaoDoPacote() {
@@ -102,7 +102,7 @@ const TOOLS = [
       'Resolve um CONCEITO numa entidade do registro derivado (varredura de manifestos — ' +
       'frontmatter `tipo` do cerebro pessoal e da matriz; contrato em config/contrato-manifesto.md). ' +
       'O manifesto NUNCA guarda caminho local — declara `externo` (tem acervo fora da matriz?), ' +
-      'opcionalmente `origem` (onde mora na nuvem, ADR-23 — ver sincronizar_subvault) e ' +
+      'opcionalmente `origem` (onde mora na nuvem — ver sincronizar_subvault) e ' +
       '`criado-por`/`criado-em` (ja foi materializado?); o proprio `conceito` (chave de casamento) ' +
       'tambem indexa o path local. O path fica so em connect.config.json (subVaults). Nunca pergunta ' +
       'nada nem advinha path — devolve `status` pra ' +
@@ -111,13 +111,13 @@ const TOOLS = [
       '(monta, injeta a CARTA DE NAVEGACAO do sub-vault verbatim e devolve ' +
       '`entradaResolvida.caminhoRelativo` — o ponto de pouso ja resolvido a caminho real, ' +
       'nunca nome de nota a caçar). ' +
-      'Entidade resolvida cujo manifesto NAO declara `origem` traz `origemCapturavel` (ADR-23): o bloco ' +
+      'Entidade resolvida cujo manifesto NAO declara `origem` traz `origemCapturavel`: o bloco ' +
       'lido do catalogo do OneDrive desta maquina e o manifesto a editar — ofereca gravar, pelo protocolo ' +
       'de escrita, nunca em silencio. ' +
       'Resolve TAMBEM diretorio de output (Delivery Hub) quando o manifesto declara tipo de ' +
       'diretorio: nesse caso devolve `classe: "diretorio"`, monta e entrega a concessao, e NAO ' +
-      'cobra carta de navegacao nem heranca de processo (ADR-22). ' +
-      'Devolve tambem `vinculo` — a leitura do operador sobre este coletivo, que pela ADR-14 vale ' +
+      'cobra carta de navegacao nem heranca de processo. ' +
+      'Devolve tambem `vinculo` — a leitura do operador sobre este coletivo, que pela curadoria-pessoal-coletivo vale ' +
       'ANTES da carta. `ambigua` significa PERGUNTE (ou repita com `coletivo`), nunca escolha.',
     inputSchema: {
       type: 'object',
@@ -140,7 +140,7 @@ const TOOLS = [
       'por-operador, por-maquina. Use depois que o `resolver` devolver "local-nao-configurado" ' +
       '(pergunte o caminho ao operador antes de chamar) ou quando uma fabrica acabou de materializar ' +
       'um sub-vault e ja sabe o path. SEMPRE informe `coletivo` quando souber: sem ele a chave nasce ' +
-      'sem escopo e reabre a colisao entre coletivos que a ADR-22 fechou.',
+      'sem escopo e reabre a colisao entre coletivos que o escopo por coletivo fechou.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -170,7 +170,7 @@ const TOOLS = [
       type: 'object',
       properties: {
         vault_dir: { type: 'string', description: 'Diretorio absoluto da raiz do vault de conhecimento. Nunca o perfil do operador (la CLAUDE.md e a Camada 0).' },
-        vault: { type: 'string', description: 'Nome/conceito do vault, usado no marcador (ex.: "Tribo Impulsa").' },
+        vault: { type: 'string', description: 'Nome/conceito do vault, usado no marcador (ex.: "Tribo X").' },
         nome_exibicao: { type: 'string', description: 'Titulo legivel do vault no arquivo (opcional; default = vault).' },
       },
       required: ['vault_dir', 'vault'],
@@ -232,7 +232,7 @@ const TOOLS = [
     description:
       'Le o registro de VINCULO do operador com um coletivo (`operador/_cerebro/vinculos/{coletivo}/`): ' +
       'a leitura pessoal dele sobre aquele contexto — estado, ambientes locais, particularidades de ' +
-      'repo por-maquina. Pela ADR-14 isso vale ANTES da carta de navegacao do coletivo. ' +
+      'repo por-maquina. Pela curadoria-pessoal-coletivo isso vale ANTES da carta de navegacao do coletivo. ' +
       'O `resolver` ja entrega esse recorte junto quando resolve; use esta tool quando precisar do ' +
       'vinculo SEM resolver o coletivo, ou para listar com quais coletivos o operador tem vinculo. ' +
       'Status "ausente" e o estado normal do primeiro contato, nunca erro.',
@@ -297,7 +297,7 @@ const TOOLS = [
     name: 'sincronizar_subvault',
     description:
       'Sincroniza no OneDrive desta maquina o acervo de um CONCEITO cujo manifesto declara `origem` ' +
-      '(ADR-23) e registra o caminho local — sem perguntar nada ao operador. Use quando o `resolver` ' +
+      '(declarada no manifesto) e registra o caminho local — sem perguntar nada ao operador. Use quando o `resolver` ' +
       'devolver `sincronizavel: true` (local-nao-configurado ou origem-ausente) e no onboarding. ' +
       'Ordem: se a pasta ja esta sincronizada (catalogo do cliente OneDrive, casado por id), so ' +
       'registra; senao dispara o link de sync e espera a pasta aparecer no catalogo. `classe: vault` ' +
@@ -321,13 +321,13 @@ const TOOLS = [
   {
     name: 'catalogo_sync',
     description:
-      'Caminho inverso da ADR-23: le o que o cliente OneDrive desta maquina sincroniza e cruza com ' +
+      'Caminho inverso da `origem` declarada: le o que o cliente OneDrive desta maquina sincroniza e cruza com ' +
       'as entidades do registro, POR ID. Devolve, por entidade, se tem `origem` e onde mora aqui; e ' +
       'as pastas sincronizadas que nenhum manifesto declara, com `origemSugerida` completa (e `yaml` ' +
       'pronto) para o curador confirmar a entidade e gravar no manifesto. Com ' +
       '`registrar: true`, grava o caminho local de toda entidade achada (operador que ja sincroniza ' +
       'tudo). Cruzamento por nome nunca registra — so aparece como `candidatoPorNome`. Windows e ' +
-      'macOS (macOS em validacao, P175): `diagnostico` diz onde o catalogo foi procurado e o que se ' +
+      'macOS (em validacao): `diagnostico` diz onde o catalogo foi procurado e o que se ' +
       'achou em cada raiz — catalogo nao encontrado no Mac = devolver o `diagnostico` ao time do Connect.',
     inputSchema: {
       type: 'object',
@@ -358,7 +358,7 @@ function toolText(obj) {
   return { content: [{ type: 'text', text }] };
 }
 
-// Contrato de entrega de contexto (0.13.0 — fecha o lado B da P74). A regra e o
+// Contrato de entrega de contexto (0.13.0). A regra e o
 // rationale vivem em lib/entrega.mjs; aqui o servidor so usa o registro do processo.
 import { entregaDaSessao } from '../lib/entrega.mjs';
 const dedupInline = (obj) => entregaDaSessao.dedup(obj);

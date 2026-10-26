@@ -63,20 +63,20 @@ export function resolveConfig(override = {}) {
     vaultMatriz: override.vaultMatriz || clean(process.env.CONNECT_VAULT_MATRIZ) || clean(fileCfg.vaultMatriz),
     cerebroPessoal: override.cerebroPessoal || clean(process.env.CONNECT_CEREBRO_PESSOAL) || clean(fileCfg.cerebroPessoal),
     // subVaults: { conceito: caminhoAbsoluto } — tabela LOCAL, por-maquina, de onde
-    // cada sub-vault mora nesta maquina (D35). Chave e o `conceito` do manifesto
+    // cada sub-vault mora nesta maquina (`path-por-maquina`). Chave e o `conceito` do manifesto
     // (mesmo campo usado pra casar — nunca inventamos um `escopo` novo, esse nome
     // ja e usado em toda a matriz pra governanca/cliente, achado no dogfooding).
     // Nunca vem do vault, so daqui. override vence arquivo (mesma precedencia dos
     // demais campos).
     subVaults: { ...(fileCfg.subVaults || {}), ...(override.subVaults || {}) },
     // repos: { conceito: caminhoAbsoluto } — mesma natureza da tabela acima, para
-    // REPOSITORIO DE CODIGO (P64). Repo nunca e montado como junction (ver
+    // REPOSITORIO DE CODIGO. Repo nunca e montado como junction (ver
     // lib/repos.mjs); o primitivo devolve o caminho real da maquina.
     repos: { ...(fileCfg.repos || {}), ...(override.repos || {}) },
     // Raiz do perfil do operador. Derivada do home (nunca configuravel a parte —
     // duas fontes para o mesmo caminho e o defeito que a migracao de home resolveu).
     // Exposta aqui porque o `resolver` passou a ler o vinculo operador x coletivo
-    // (ADR-22 item 8 / P81) e nao tem outro jeito de alcancar o perfil sem
+    // (`curadoria-pessoal-coletivo`) e nao tem outro jeito de alcancar o perfil sem
     // reimplementar a derivacao — que e como duas fontes nascem.
     perfilOperador: path.join(home, 'operador'),
     _configPath: fs.existsSync(cfgPath) ? cfgPath : null,
@@ -93,7 +93,7 @@ export function sanitizeSessionId(sessionId) {
 // ---------------------------------------------------------------------------
 // garantirRetencaoMatriz — a matriz e o vault que TODA sessao le; online-only ela
 // abre devagar, ou nem abre offline, e no Mac o catalogo chegou vazio antes de o
-// operador fixar a pasta (P175, 14/10). O Connect nao sincroniza a matriz (o caminho
+// operador fixar a pasta (validacao no macOS). O Connect nao sincroniza a matriz (o caminho
 // vem do operador no `configurar`), mas pode garantir que ela fique no dispositivo.
 //   - fora de nuvem: nada a fazer.
 //   - Windows: sem o atributo P na raiz, fixa (raiz agora, arvore em segundo plano
@@ -189,7 +189,7 @@ export function iniciarSessao({ sessionId, ...override } = {}) {
 
   // 3. vault pessoal (ENRIQUECIMENTO OPCIONAL) — montado como ./pessoal se o
   // operador tiver um e o configurar. Deixou de ser requisito: a espinha vem do
-  // produto (D104) e a identidade, do perfil gerido no CONNECT_HOME (passo 3b).
+  // produto (`espinha-e-mecanismo`) e a identidade, do perfil gerido no CONNECT_HOME (passo 3b).
   // Um vault Obsidian proprio do usuario CONVIVE — nunca condiciona o mecanismo.
   if (cfg.cerebroPessoal) {
     try {
@@ -226,7 +226,7 @@ export function iniciarSessao({ sessionId, ...override } = {}) {
     avisos.push('perfil do operador ainda nao provisionado ({CONNECT_HOME}/operador) — rode a cnct-fabrica-operador para materializa-lo. O vault pessoal Obsidian e opcional.');
   } else if (identidade.lacunas?.length) {
     // Perfil PRESENTE e incompleto era indistinguivel de perfil ausente: a
-    // sessao subia com camada 0 parcial e sem sinal (VIC-018). Campo vazio
+    // sessao subia com camada 0 parcial e sem sinal. Campo vazio
     // agora e declarado, porque skill que decide por papel nao tem como saber
     // que o papel nao chegou.
     avisos.push(`perfil do operador incompleto — sem ${identidade.lacunas.join(', ')} em ${identidade._origem}. A sessao sobe, mas skill que decide por papel ou por e-mail vai operar sem esse dado. Se voce preencheu como lista YAML e mesmo assim aparece aqui, reporte: e defeito de leitura, nao de escrita.`);
@@ -248,13 +248,13 @@ export function iniciarSessao({ sessionId, ...override } = {}) {
     // provou insuficiente para o agente parar e agir (licao da 0.12.1).
   }
 
-  // 4b. Camada 0 do operador (D104) — hot cache/delta. Prefere o perfil gerido no
+  // 4b. Camada 0 do operador — hot cache/delta. Prefere o perfil gerido no
   // CONNECT_HOME; se ausente, cai no vault pessoal montado (quando houver). A espinha
   // NAO vem daqui (vem de lerProtocoloMecanismo) — aqui e so o delta do operador.
   // O gate NAO pode ser `fs.existsSync(perfilOperador)`: o passo 3c faz ensureDir()
   // nessa mesma pasta, entao ela existe SEMPRE a partir da 1a sessao e o fallback
   // ficava inalcancavel — operador com vault legado perdia a Camada 0 em silencio
-  // (P75). O gate certo e a presenca de CONTEUDO de Camada 0, nao da pasta.
+  // O gate certo e a presenca de CONTEUDO de Camada 0, nao da pasta.
   let l1Pessoal = montarL1Pessoal(perfilOperador, ALIAS_OPERADOR);
   if ((!l1Pessoal || l1Pessoal.hotCacheOrigem === 'ausente') && cfg.cerebroPessoal && fs.existsSync(cfg.cerebroPessoal)) {
     const alt = montarL1Pessoal(cfg.cerebroPessoal, ALIAS_PESSOAL);
@@ -269,7 +269,7 @@ export function iniciarSessao({ sessionId, ...override } = {}) {
   // 0.12.1 corrigiu para a matriz e deixou de corrigir para o operador.
   const operadorProvisionado = !!identidade && l1Pessoal?.hotCacheOrigem !== 'ausente';
 
-  // 4c. Espinha do mecanismo (D104/D96) — protocolo entregue pelo produto,
+  // 4c. Espinha do mecanismo (`espinha-e-mecanismo`) — protocolo entregue pelo produto,
   // injetado no bloco de sessao. Independe de arquivo do operador.
   const protocoloMecanismo = lerProtocoloMecanismo();
   if (!protocoloMecanismo) {
@@ -290,14 +290,14 @@ export function iniciarSessao({ sessionId, ...override } = {}) {
     matrizConfigurada,
     retencaoMatriz,
     operadorProvisionado,
-    // Concessao de acesso — contrato ESTRUTURAL, nao instrucao em prosa (P90).
+    // Concessao de acesso — contrato ESTRUTURAL, nao instrucao em prosa.
     // Ate a 0.12.2 a exigencia vivia so no texto da skill ("resolvido -> pedir acesso
-    // ao Cowork") e dois agentes independentes a contornaram (D148, 3 recorrencias).
+    // ao Cowork") e dois agentes independentes a contornaram (`bloqueio-reporta-nunca-contorna`, 3 recorrencias).
     // O mecanismo passa a devolver o pedido pronto, com o caminho exato: uma pasta so,
     // porque o workspace e a porta unica para todas as origens montadas nele.
     //
     // M2 (24/08) — a promessa de "uma concessao so" foi RETIRADA, por medicao.
-    // O D149 concluiu que junction com destino no perfil do usuario ou no OneDrive
+    // Concluiu-se que junction com destino no perfil do usuario ou no OneDrive
     // e lida "inclusive SEM conceder a origem separadamente". Medido em 24/08, em
     // sessao real: conceder o CONNECT_HOME nao alcancou `./matriz` nem o sub-vault
     // resolvido — as tres origens (duas no OneDrive) tiveram de ser concedidas uma a
@@ -362,7 +362,7 @@ export function gravarConfig({ home, vaultMatriz, cerebroPessoal } = {}) {
 // ---------------------------------------------------------------------------
 // registrarSubVaultLocal — grava o path LOCAL (nesta maquina) de UM conceito na
 // tabela `subVaults` do connect.config.json. Nunca grava path/url no vault —
-// so aqui, por operador, por maquina (D35). Duas origens legitimas de chamada:
+// so aqui, por operador, por maquina (`path-por-maquina`). Duas origens legitimas de chamada:
 //   1. handshake guiado — a skill perguntou ao operador onde o sub-vault mora
 //      e grava a resposta (resolver devolveu 'local-nao-configurado');
 //   2. fabrica — ao materializar um sub-vault do zero, ja sabe o path que
@@ -375,7 +375,7 @@ export function registrarSubVaultLocal({ home, conceito, caminho, coletivo = nul
   // 'local-nao-configurado' para sempre — loop infinito de handshake, o operador
   // informando o diretorio de novo a cada sessao (achado na revisao da 0.12.0).
   //
-  // Com `coletivo` (ADR-22 item 1) a chave nasce escopada — e o que permite dois
+  // Com `coletivo` a chave nasce escopada — e o que permite dois
   // clientes declararem um `delivery-hub` cada sem colidir. Sem ele, chave legada.
   const chave = coletivo
     ? montarChave({ coletivo, escopo: escopo ? [escopo] : [], conceito })

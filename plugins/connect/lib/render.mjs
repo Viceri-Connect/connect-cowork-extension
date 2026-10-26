@@ -9,7 +9,7 @@ import { REGRAS_DURAS } from './regras.mjs';
 // blocoCarta — a carta de navegacao de UM vault, pronta para injecao.
 // Injetada VERBATIM quando presente (o vault fala por si); quando ausente, o
 // bloco diz a lacuna e o proximo passo — nunca substitui a carta por ponteiros
-// inventados pelo mecanismo (D98).
+// inventados pelo mecanismo (`vault-declara-produto-nao-prescreve`).
 // ---------------------------------------------------------------------------
 export function blocoCarta(carta, rotulo = 'vault') {
   const L = [];
@@ -139,7 +139,7 @@ export function renderMetricas(r) {
 
 // ---------------------------------------------------------------------------
 // blocoGovernanca — quem ocupa `{vault}/CLAUDE.md`, o slot que o harness carrega
-// sozinho e rotula como *override* (D226). Emitido so no caso 'nao-governado' e
+// sozinho e rotula como *override*. Emitido so no caso 'nao-governado' e
 // no 'ilegivel': 'ausente' e normal (vault sem escrita nao recebe o arquivo) e
 // 'governado' e o esperado — nenhum dos dois merece linha no contexto.
 //
@@ -177,11 +177,11 @@ export function blocoGovernanca(governanca, rotulo = 'vault') {
 }
 
 // ---------------------------------------------------------------------------
-// blocoCanalInjetado — a metade da ADR-18 que o mecanismo NAO consegue verificar
+// blocoCanalInjetado — a metade do `canal-injetado-governado` que o mecanismo NAO consegue verificar
 // sozinho: o vault esta conectado como pasta do projeto Cowork?
 //
 // O hook nao tem como saber — "pasta conectada" e estado do harness, e ele escreve
-// antes de o agente existir (mesmo limite que bloqueou a P139 por tres sessoes).
+// antes de o agente existir (mesmo limite que ja bloqueou uma pendencia por tres sessoes).
 // Quem sabe e o AGENTE: se o vault tem governanca publicada, o marcador
 // `CNCT-GOV-{slug}` ou chegou no contexto dele, ou nao chegou. A verificacao e
 // dele, sobre o proprio contexto — nao uma pergunta que o mecanismo responde.
@@ -249,7 +249,7 @@ export function renderResolucao(res, { cartaInline = true } = {}) {
     L.push(`- Ponto de pouso declarado (\`${res.entrada}\`) nao resolvido: ${res.entradaResolvida?.status || 'desconhecido'} — nao tatear o diretorio; avisar o operador.`);
   }
   if (res.origemCapturavel) {
-    L.push(`- ☁️ Origem capturavel (ADR-23): ${res.origemCapturavel.aviso} — bloco em \`origemCapturavel.yaml\` (structuredContent).`);
+    L.push(`- ☁️ Origem capturavel: ${res.origemCapturavel.aviso} — bloco em \`origemCapturavel.yaml\` (structuredContent).`);
   }
   if (res.concessao?.necessaria) {
     L.push(`- 🔑 Acesso: se \`${res.caminhoRelativo}\` nao abrir, solicite ao operador a pasta \`${res.concessao.caminho}\` — montar nao e alcancar. Nao contorne por varredura.`);
@@ -298,7 +298,7 @@ export function renderResolucao(res, { cartaInline = true } = {}) {
 function blocoAcionavel(report) {
   const L = [];
 
-  // Conteudo nao governado no slot de maior precedencia (ADR-18/P145) — vai antes
+  // Conteudo nao governado no slot de maior precedencia (`canal-injetado-governado`) — vai antes
   // de tudo, inclusive da concessao: se ha instrucao de terceiro com rotulo de
   // *override* ja no contexto, ela ja esta agindo sobre TODA decisao seguinte,
   // inclusive sobre como o agente interpreta os blocos abaixo.
@@ -309,10 +309,10 @@ function blocoAcionavel(report) {
   // marcador; matriz sem governanca pede a fabrica.
   if (report.matrizConfigurada) L.push(...blocoCanalInjetado(report.l1?.governanca, 'matriz'));
 
-  // Concessao de acesso (P97, era P90) — vai ANTES de tudo, inclusive do estado
+  // Concessao de acesso — vai ANTES de tudo, inclusive do estado
   // zero da matriz, porque e a precondicao de qualquer leitura: sem ela o agente
   // monta e nao alcanca. Ate a 0.12.2 a exigencia vivia so em prosa dentro da
-  // skill, e tres agentes independentes a contornaram (D148).
+  // skill, e tres agentes independentes a contornaram (`bloqueio-reporta-nunca-contorna`).
   if (report.concessao?.necessaria) {
     L.push('## Connect — acesso de pasta (faca isto primeiro)');
     L.push('');
@@ -338,7 +338,7 @@ function blocoAcionavel(report) {
     L.push('');
   }
 
-  // Estado zero (D97/D105): matriz nunca configurada nesta maquina, ou o path
+  // Estado zero (`gatilho-de-nascimento`): matriz nunca configurada nesta maquina, ou o path
   // gravado nao existe mais. Vai PRIMEIRO, antes de identidade/protocolo/atalhos —
   // nao pode ser so mais um item na lista de avisos do fim (defeito real, achado no
   // 1o uso da Helena: o hook rodou, mas o aviso solto no fim nao disparou a pergunta).
@@ -361,7 +361,7 @@ function blocoAcionavel(report) {
     L.push('');
   }
 
-  // Estado zero do OPERADOR (D105) — simetrico ao da matriz, e pela mesma razao.
+  // Estado zero do OPERADOR — simetrico ao da matriz, e pela mesma razao.
   // A 0.12.1 deu secao dedicada ao estado zero da matriz porque aviso solto no fim
   // do bloco nao fazia o agente parar e agir; o operador ficou de fora e reproduziu
   // o defeito: `ensureDir` cria a pasta na 1a sessao, entao ./operador existe e
@@ -380,7 +380,7 @@ function blocoAcionavel(report) {
   return L;
 }
 
-// REGRAS_DURAS vem de `lib/regras.mjs` desde a ADR-18: o mesmo texto passa a viver
+// REGRAS_DURAS vem de `lib/regras.mjs` desde o `canal-injetado-governado`: o mesmo texto passa a viver
 // tambem no `{vault}/CLAUDE.md` (arquivo de governanca), e duas copias divergiriam
 // na primeira edicao — com o agente recebendo regras nao-negociaveis discordantes
 // por dois canais. Ver o cabecalho daquele modulo.
@@ -519,7 +519,7 @@ export function renderContexto(report) {
     L.push('');
   }
 
-  // Protocolo do mecanismo (D104) — espinha dorsal entregue pelo produto,
+  // Protocolo do mecanismo (`espinha-e-mecanismo`) — espinha dorsal entregue pelo produto,
   // injetada verbatim para garantir execucao sem depender de arquivo do operador.
   if (report.protocoloMecanismo) {
     L.push('### Protocolo do mecanismo (garantido pelo Connect)');
@@ -538,7 +538,7 @@ export function renderContexto(report) {
 
   // Camada 1 da matriz — identidade do vault + CARTA DE NAVEGACAO injetada
   // verbatim (contrato-navegacao.md). A carta e declarada pelo vault; o produto
-  // nao prescreve ponteiro nenhum (D98). Ausencia = lacuna anunciada (D97).
+  // nao prescreve ponteiro nenhum (`vault-declara-produto-nao-prescreve`). Ausencia = lacuna anunciada (`gatilho-de-nascimento`).
   if (report.l1) {
     const iv = report.l1.identidadeVault || {};
     L.push('### Matriz — camada 1 (declarada pelo vault)');
@@ -556,7 +556,7 @@ export function renderContexto(report) {
     L.push('');
   }
 
-  // Cerebro pessoal — Camada 0 (D104): hot cache pessoal (delta) + ponteiros.
+  // Cerebro pessoal — Camada 0: hot cache pessoal (delta) + ponteiros.
   const lp = report.l1Pessoal;
   if (lp && (lp.hotCacheInline || (lp.ponteiros && lp.ponteiros.length))) {
     L.push(lp.alias === 'pessoal' ? '### Vault pessoal (opcional) — camada 0' : '### Perfil do operador — camada 0');

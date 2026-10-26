@@ -109,8 +109,8 @@ nome exato; os executores os leem literalmente, e variar um nome quebra entre va
 > detectado por pergunta do operador, não pelo mecanismo.
 
 **Scaffold aponta, nunca copia.** A forma canônica de cada artefato vive nos templates do coletivo
-(`99 - Templates e Modelos Globais/`, índice no `README.md` da pasta). A fábrica **resolve o template
-lá** e preenche. Molde embutido nesta skill seria a terceira cópia da mesma forma, e a que apodrece
+(a casa de formas que a carta da matriz declara no gatilho de forma de artefato, entrando pelo índice
+dela). A fábrica **resolve o template lá** e preenche. Molde embutido nesta skill seria a terceira cópia da mesma forma, e a que apodrece
 primeiro — é a razão de esta fábrica não ter pasta `templates/`.
 
 ## Passo 4 — Elicitar o que falta (uma pergunta por vez, cada uma dizendo por que importa)

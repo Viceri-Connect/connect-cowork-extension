@@ -110,7 +110,7 @@ const cat = lido.entradas;
 let h = hostFalso({ plataforma: 'darwin', contas: [], catalogos: [cat] });
 let s = await sincronizarSubvault({ conceito: 'marketing', host: h, ...cfg });
 ok(s.status === 'sincronizado' && s.caminho === cloud('Acervo - Marketing'), 'darwin: ja sincronizado registra o caminho do CloudStorage');
-ok(s.avisos.some((a) => /nao foi fixada/.test(a)) && s.avisos.some((a) => /P175/.test(a)), 'darwin: fixacao nao-suportada e validacao em curso viram aviso');
+ok(s.avisos.some((a) => /nao foi fixada/.test(a)) && s.avisos.some((a) => /macOS: sync automatico em validacao/.test(a)), 'darwin: fixacao nao-suportada e validacao em curso viram aviso');
 
 h = hostFalso({ plataforma: 'darwin', contas: [], catalogos: [cat] });
 s = await sincronizarSubvault({ conceito: 'vendas', host: h, aguardarSegundos: 0, ...cfg });

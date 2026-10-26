@@ -73,9 +73,9 @@ podem sincronizar). Guarda três coisas, todas geridas pela extensão:
   sub-vaults resolvidos, e `./pessoal` quando houver).
 
 Default, criado automaticamente: no Windows `%USERPROFILE%\Connect`; no macOS `~/.connect`
-(desde a 0.37.0, `P175`). Guarda também `bin/`, o Node portátil que o plugin baixa uma vez por
+(desde a 0.37.0). Guarda também `bin/`, o Node portátil que o plugin baixa uma vez por
 máquina. Nunca pasta de aplicativo (`%LOCALAPPDATA%`): medido no Windows, o Cowork recusa ler
-através de atalho cujo destino mora ali (D149). No macOS o equivalente ainda não foi medido. O operador **não precisa administrá-lo** — a única
+através de atalho cujo destino mora ali. No macOS o equivalente ainda não foi medido. O operador **não precisa administrá-lo** — a única
 escolha que lhe importa é qual é a matriz da instância.
 
 > **macOS:** `~/.connect` é oculto no seletor de pastas do Finder. Quando o Cowork pedir a

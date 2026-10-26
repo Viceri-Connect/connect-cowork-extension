@@ -9,11 +9,11 @@
 //   23/08, duas vezes, em sessao recem-iniciada: esse bloco de texto NAO alcanca o
 //   cliente Cowork. O agente recebia o marcador e nada mais — e a carta de navegacao
 //   tinha de ser aberta a mao em toda sessao, devolvendo ao agente exatamente o
-//   trabalho que o D98 tirou dele e deu ao vault.
+//   trabalho que `vault-declara-produto-nao-prescreve` tirou dele e deu ao vault.
 //
 //   A troca: elidir deixa de ser por CHAMADA e passa a ser por SESSAO, com hash do
 //   conteudo. A primeira entrega de cada bloco vai inteira; da segunda em diante vira
-//   marcador. A economia da ADR-6 e preservada — o que ela nunca pediu foi economizar
+//   marcador. A economia do `carregamento-lazy` e preservada — o que ela nunca pediu foi economizar
 //   a PRIMEIRA entrega.
 //
 // Zero dependencias externas.
@@ -40,7 +40,7 @@ export function criarEntrega() {
   // `corpo` e o mesmo arquivo que `inline`, sem o frontmatter e sem a secao Alcance.
   // Os dois SEMPRE viajaram juntos no structuredContent, e ninguem os le em par:
   // `render.mjs` e `metricas.mjs` usam `corpo ?? inline` e rodam DENTRO do servidor,
-  // antes desta poda. Medido em 08/09 contra o vault da Tribo Impulsa: 905 tok de
+  // antes desta poda. Medido contra um vault real: 905 tok de
   // `l1.carta.corpo` + 1.275 de `cartaProcesso.corpo` = 2.180 tok por chamada de
   // `resolver`, 37% do payload, sem um leitor do outro lado.
   const podarCorpo = (bloco) => {
@@ -54,7 +54,7 @@ export function criarEntrega() {
     if (!obj || typeof obj !== 'object') return obj;
     const out = { ...obj };
     if (out.protocoloMecanismo) out.protocoloMecanismo = trate(out.protocoloMecanismo);
-    // Vinculo do operador (ADR-22 item 8). O `resolver` o anexa a TODA resolucao, e o
+    // Vinculo do operador (`curadoria-pessoal-coletivo`). O `resolver` o anexa a TODA resolucao, e o
     // comentario de la afirmava que ele estava "sujeito a mesma deduplicacao por
     // sessao dos outros blocos longos" — nao estava. Medido em 28/09 no briefing
     // diario: quem resolve varias frentes do mesmo coletivo (ou coletivos que caem no
@@ -70,9 +70,9 @@ export function criarEntrega() {
       if (out[k] && typeof out[k] === 'object') {
         out[k] = { ...out[k] };
         if (out[k].carta?.inline) out[k].carta = podarCorpo({ ...out[k].carta, inline: trate(out[k].carta.inline) });
-        // Carta de PROCESSO: injetada uma vez por sessao por desenho (ADR-21/§9.3),
+        // Carta de PROCESSO: injetada uma vez por sessao por desenho (heranca de processo, contrato de navegacao §9.3),
         // e ate aqui escapava inteira do dedup — nos dois campos. O segundo sub-vault
-        // que declarasse `sdd` pagava a carta de novo, que e exatamente a escala
+        // que declarasse o mesmo processo pagava a carta de novo, que e exatamente a escala
         // linear que a heranca existe para eliminar.
         if (out[k].heranca?.cartaProcesso?.inline) {
           out[k].heranca = {

@@ -19,6 +19,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   lerCarta,
+  secaoDoContrato,
   ORCAMENTO_TOKENS_DELTA,
   ORCAMENTO_TOKENS_PROCESSO,
   ORCAMENTO_TOKENS_ENTRADA,
@@ -28,7 +29,7 @@ import { estimarTokens, extrairFrontmatter } from './frontmatter.mjs';
 import { resolverCorrente, lerDeclaracoes } from './alcance.mjs';
 
 // Casas do MECANISMO — cobertas por construcao, nunca exigidas da carta de um
-// vault. Sao do produto (corte `_`/conteudo, D96): obrigar cada vault a declarar
+// vault. Sao do produto (`corte-mecanismo-conteudo`): obrigar cada vault a declarar
 // alcance para `_cerebro/` seria o produto cobrando do coletivo a declaracao de
 // uma pasta que o proprio produto impoe.
 export const CASAS_MECANISMO = ['_cerebro', '_inteligencia', '_automacoes'];
@@ -219,7 +220,7 @@ function normalizarDeclaracao(d, origem) {
     filtros,
     // Linha com padrao E hub declara duas coisas ao mesmo tempo: o nivel TEM
     // padrao (logo e alcancavel por construcao) e ainda mantem um indice
-    // autorado. E exatamente a classe da IMP-001, e a M2 reporta.
+    // autorado. E a classe do indice autorado sobre nivel listavel, e a M2 reporta.
     // Linha com hub e SEM padrao e delegacao, nao indice — outra coisa.
     indiceAutorado: d['indice-autorado'] ? String(d['indice-autorado']) : ((d.hub && d.padrao) ? String(d.hub) : null),
     // PRESERVAR o hub: era aqui que a corrente morria. `normalizarDeclaracao`
@@ -248,7 +249,7 @@ function cobre(decl, relArquivo) {
 // So o que esta em `backtick` e parece caminho de vault — nunca prosa, nunca
 // wikilink (wikilink e nome de nota, resolvido pelo Obsidian, nao caminho).
 // ---------------------------------------------------------------------------
-export function caminhosCitados(md) {
+export function caminhosCitados(md, { soSecoesDoContrato = false } = {}) {
   if (!md) return [];
   // So o CORPO. O frontmatter e declaracao de alcance (`padrao: "ADR-{N}-{slug}.md"`)
   // e nao ponteiro: medir padrao de nomenclatura como se fosse caminho produziu 8
@@ -259,10 +260,28 @@ export function caminhosCitados(md) {
   // So POSICAO DE DESTINO conta como ponteiro: linha de tabela (gatilho, alcance,
   // estrutura), item de lista (ordem de entrada, fronteiras) ou linha com seta.
   // Prosa corrida que MENCIONA um caminho para explicar algo (*"a topologia e
-  // `contas/{conta}`, e nao `projetos/`"*) nao e ponteiro: contá-la produziu
-  // morto falso no acervo de Vendas (`VND-002`), e o contorno foi reescrever a
-  // frase para agradar o detector — o defeito pelo avesso (`IMP-007`).
+  // `x/`, e nao `y/`"*) nao e ponteiro: conta-la produziu morto falso, e o
+  // contorno foi reescrever a frase para agradar o detector — o defeito pelo avesso.
+  //
+  // Com `soSecoesDoContrato` (a M5), so conta a linha que esta numa secao que o
+  // CONTRATO declara (obrigatoria ou opcional, `secaoDoContrato`). O resto da carta
+  // e texto do vault — historico, guardas, narrativa — e o produto nao conhece o
+  // nome dessas secoes: uma tabela de historico que citava uma casa para narrar
+  // uma mudanca virou morto em todo vault que herdava a carta. Elegivel quando o
+  // H2 corrente OU o H3 corrente e do contrato (vault real aninha a tabela de
+  // gatilho sob um H2 guarda-chuva). Texto antes do primeiro titulo nao conta.
+  // Sem a opcao (quem extrai de uma secao ja recortada, como o pouso), o filtro
+  // por secao nao se aplica.
+  let h2 = false;
+  let h3 = false;
   const destino = String(corpo).split(/\r?\n/).filter((linha) => {
+    const h = linha.match(/^(#{1,6})\s+(.+?)\s*$/);
+    if (h) {
+      const nivel = h[1].length;
+      if (nivel <= 2) { h2 = nivel === 2 && secaoDoContrato(h[2]); h3 = false; }
+      else if (nivel === 3) h3 = secaoDoContrato(h[2]);
+    }
+    if (soSecoesDoContrato && !(h2 || h3)) return false;
     const l = linha.replace(/^\s*(?:>\s*)+/, '');
     return /^\s*\|/.test(l) || /^\s*(?:[-*+]|\d+[.)])\s/.test(l) || /→|->/.test(l);
   }).join('\n');
@@ -360,7 +379,7 @@ export function medirVault({
   });
 
   // Linha de alcance que caiu fora da propria tabela: declaracao perdida em
-  // silencio. Medido em 02/09 na carta de processo `sdd` — 10 declaracoes viraram
+  // silencio. Medido numa carta de processo real — 10 declaracoes viraram
   // 9 e o defeito so apareceu porque alguem foi contar.
   for (const [rotulo, texto] of [['carta local', carta.inline], ['carta de processo', cartaProcesso?.inline]]) {
     if (!texto) continue;
@@ -534,8 +553,8 @@ export function medirVault({
       // Caminho que nao existe aqui e existe no GOVERNANTE nao e morto: e
       // ponteiro cross-vault que deveria ser tipado (nomear o conceito a
       // resolver, nunca o caminho do outro acervo). Medido na carta de um
-      // cliente maduro, que citava `_cerebro/metodologias/sdd/...` da matriz
-      // como se fosse caminho local — tres "mortos" que estavam vivos, no
+      // sub-vault maduro, que citava `_cerebro/metodologias/{processo}/...` da
+      // matriz como se fosse caminho local — tres "mortos" que estavam vivos, no
       // vault ao lado.
       if (governanteRoot && existeExpandindo(governanteRoot, c)) {
         fora.push({ caminho: c, natureza: 'existe no vault que governa, nao neste — nomear o conceito a resolver, nunca o caminho do outro acervo', origem });
@@ -549,14 +568,14 @@ export function medirVault({
   // `corpo`, nao `inline`: a secao `## Alcance` declara PADRAO, e padrao nao e
   // ponteiro. Ler o arquivo inteiro aqui fazia a propria declaracao de alcance
   // ser reportada como ponteiro morto.
-  conferir(caminhosCitados(carta.corpo ?? carta.inline), 'carta local');
+  conferir(caminhosCitados(carta.corpo ?? carta.inline, { soSecoesDoContrato: true }), 'carta local');
 
   // O modo de falha NOVO que a heranca cria: o ponteiro da carta de processo e
   // valido no vault A e morto no vault B, e nenhum dos dois donos ve isso.
   //
   // Mas a carta de processo mora no vault que GOVERNA o processo, e cita caminhos
   // dos dois mundos. Confundi-los produziria falso positivo em massa:
-  //   - sem placeholder (`_cerebro/metodologias/sdd/`) -> e caminho do governante;
+  //   - sem placeholder (`_cerebro/metodologias/x/`)  -> e caminho do governante;
   //     resolve la, e ausencia AQUI nao significa nada.
   //   - com placeholder (`projetos/{projeto}/rnf/`)    -> e caminho de quem herda;
   //     ausencia aqui e real, e e exatamente o que a M7 reporta — entao vai para
@@ -564,7 +583,7 @@ export function medirVault({
   const herdadosSemCasa = [];
   if (cartaProcesso?.presente) {
     const origem = `carta de processo (${processo})`;
-    for (const c of caminhosCitados(cartaProcesso.corpo ?? cartaProcesso.inline)) {
+    for (const c of caminhosCitados(cartaProcesso.corpo ?? cartaProcesso.inline, { soSecoesDoContrato: true })) {
       const generico = /[{}*]/.test(c);
       if (!generico) {
         if (governanteRoot && existeExpandindo(governanteRoot, c)) continue;

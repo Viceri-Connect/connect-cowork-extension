@@ -4,7 +4,7 @@
 // navegacao §8).
 //
 // Por que existe um parser aqui em vez de uma dependencia: o produto e zero-dep
-// por decisao (ADR-12/ADR-6 — runtime sem arvore de terceiros), e o subconjunto
+// por decisao (runtime sem arvore de terceiros), e o subconjunto
 // de YAML que os contratos usam e pequeno e fechado. O parser recusa o que nao
 // entende em vez de adivinhar: chave nao reconhecida vira string crua, e quem le
 // decide. Nunca lanca.

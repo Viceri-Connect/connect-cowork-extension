@@ -1,7 +1,7 @@
 # Connect — Glossário de comportamento do produto
 
 > Este arquivo é a fonte de "por que o mecanismo se comporta assim" para **qualquer instalação** do
-> Connect — viaja com o plugin, não com o vault Impulsa. Cada entrada: nome descritivo → regra em uma
+> Connect — viaja com o plugin, não com o vault do time do produto. Cada entrada: nome descritivo → regra em uma
 > frase → por que importa em uma frase. Sem código de ADR/decisão aqui de propósito: quem quiser a
 > arqueologia completa (data, incidente, quem decidiu) encontra no log de ADR do produto, que é
 > conteúdo de engenharia interna e não precisa ser resolvido por quem só está usando o Connect.

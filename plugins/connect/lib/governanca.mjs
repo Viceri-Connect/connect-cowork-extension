@@ -1,19 +1,19 @@
 // connect/lib/governanca.mjs
 // O arquivo de GOVERNANCA na raiz do vault — `{vault}/CLAUDE.md`.
 //
-// Historia curta, porque ela e a decisao (ADR-18, que substitui a ADR-17):
-//   Mediu-se em 26/08 (D225) que o harness carrega sozinho o `CLAUDE.md` da raiz de
+// Historia curta, porque ela e a decisao (`canal-injetado-governado`):
+//   Mediu-se que o harness carrega sozinho o `CLAUDE.md` da raiz de
 //   pasta conectada: ~300 tok, sem concessao extra, sem passo de leitura, antes de
 //   qualquer ferramenta. E que nao o entrega neutro — embrulha como *override*
-//   (D226), nivel de precedencia que a saida de hook nao alcanca.
+//   nivel de precedencia que a saida de hook nao alcanca.
 //
-//   A ADR-17 quis usar esse canal para espelhar o CONTEUDO da carta, com hash de
+//   Uma primeira decisao quis usar esse canal para espelhar o CONTEUDO da carta, com hash de
 //   frescor e regeneracao. Caiu em horas: espelho de conteudo exige escrita
-//   recorrente, e a P144 ja tinha medido o OneDrive resolvendo dois conflitos a
+//   recorrente, e ja se tinha medido o OneDrive resolvendo dois conflitos a
 //   favor da versao velha — um deles a propria carta da matriz, silenciosamente,
 //   por sessoes.
 //
-//   A ADR-18 poe INSTRUCAO no slot, nunca conteudo:
+//   A decisao vigente poe INSTRUCAO no slot, nunca conteudo:
 //     - o arquivo declara que o vault e governado, carrega as REGRAS DURAS e aponta
 //       para `_cerebro/camada-1.md`;
 //     - o texto NAO depende do que a carta diz, logo nunca desatualiza, logo e
@@ -24,9 +24,9 @@
 //
 //   O que garante a leitura do ponteiro nao e persuasao — e configuracao: a matriz
 //   entra como pasta conectada do projeto Cowork, e ai `_cerebro/camada-1.md` abre
-//   por construcao (ADR-18, decisao 5).
+//   por construcao.
 //
-// RECORTE (ADR-18, decisao 6): so vault de CONHECIMENTO (`tipo-vault: matriz` ou
+// RECORTE: so vault de CONHECIMENTO (`tipo-vault: matriz` ou
 // `sub-vault`). Perfil de operador nunca — la `CLAUDE.md` ja e a Camada 0 do
 // operador (ver `lib/matriz.mjs`), e sobrescrever seria destruir conhecimento
 // autorado. Vault que nao recebe escrita (legado, somente leitura) tambem nao
@@ -120,9 +120,9 @@ export function lerMarcador(md) {
 }
 
 // ---------------------------------------------------------------------------
-// verificarRaiz — o check da P145/D222: quem ocupa o slot de maior precedencia?
+// verificarRaiz — o check do `canal-injetado-governado`: quem ocupa o slot de maior precedencia?
 //
-//   'ausente'       -> nao ha arquivo. NAO e lacuna (ADR-18): vault sem escrita
+//   'ausente'       -> nao ha arquivo. NAO e lacuna: vault sem escrita
 //                      nao recebe espelho, e o mecanismo nunca inventa.
 //   'governado'     -> arquivo nosso, marcador legivel.
 //   'nao-governado' -> ha arquivo e ele NAO tem marcador nosso. Issue: alguem
@@ -130,7 +130,7 @@ export function lerMarcador(md) {
 //                      de todo operador que conectar esta pasta.
 //   'ilegivel'      -> existe mas nao pode ser lido (permissao, I/O). Reporta como
 //                      lacuna de acesso, nunca como ausencia — sao coisas
-//                      diferentes e confundi-las esconde o defeito (D148).
+//                      diferentes e confundi-las esconde o defeito (`bloqueio-reporta-nunca-contorna`).
 // ---------------------------------------------------------------------------
 export function verificarRaiz(vaultRoot, { vault } = {}) {
   const vazio = { estado: 'ausente', caminho: null, marcador: null, avisos: [] };

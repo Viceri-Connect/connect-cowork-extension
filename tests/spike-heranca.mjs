@@ -324,7 +324,8 @@ ok(!corrSub.delegacoes.some((d) => d.status === 'hub-ausente'),
 ok(corrSub.delegacoes.some((d) => d.hub === 'projetos/ativos/p9/p9.md' && d.status !== 'hub-ausente'),
   'casa do proprio projeto segue resolvendo (o caso que o posicional ja acertava)');
 
-// --- M5: mencao em prosa nao e ponteiro (IMP-007) ------------------------
+// --- M5: mencao em prosa nao e ponteiro ----------------------------------
+// --- M5: so secao declarada pelo contrato (obrigatoria ou opcional) conta --
 const vProsa = path.join(raiz, 'vault-prosa');
 escrever(vProsa, '_cerebro/camada-1.md', `---
 tipo-artefato: camada-1
@@ -332,11 +333,13 @@ tipo-artefato: camada-1
 
 # Camada 1
 
+- Antes de qualquer titulo → \`antes-do-titulo/\`
+
 ## O que e este vault
 
 A topologia e \`contas/{conta}\`, e nao \`inexistente-em-prosa/\` — frase que explica, nao aponta.
 
-> Nota em citacao: a casa antiga \`citada-em-prosa/\` saiu em 02/09.
+> Nota em citacao: a casa antiga \`citada-em-prosa/\` saiu.
 
 ## Quando carregar
 
@@ -347,6 +350,30 @@ A topologia e \`contas/{conta}\`, e nao \`inexistente-em-prosa/\` — frase que 
 ## Fronteiras
 
 - Outra coisa → \`morto-em-lista/\`
+
+## Registro de mudancas
+
+| Data | O que |
+|---|---|
+| 2026-01-01 | A casa \`narrada-fora-do-contrato/\` mudou de filtro |
+
+### Detalhe
+
+- antes → \`narrada-em-subsecao/\`
+
+## Estado volátil
+
+| O que | Onde |
+|---|---|
+| algo vivo | \`morto-em-opcional/nota.md\` |
+
+## Protocolo do time
+
+### Gatilhos de carregamento
+
+| Gatilho | Arquivo |
+|---|---|
+| aninhado | \`morto-em-h3-do-contrato/nota.md\` |
 `);
 const mProsa = medirVault({ vaultRoot: vProsa, alias: 'prosa' });
 const mortosProsa = (mProsa.metricas?.M5?.mortos ?? []).map((x) => x.caminho);
@@ -354,6 +381,11 @@ ok(!mortosProsa.includes('inexistente-em-prosa/'), 'M5: caminho mencionado em pr
 ok(!mortosProsa.includes('citada-em-prosa/'), 'M5: caminho em citacao de prosa nao e ponteiro morto');
 ok(mortosProsa.includes('morto-em-tabela/nota.md'), 'M5: caminho em linha de tabela segue sendo ponteiro (morto detectado)');
 ok(mortosProsa.includes('morto-em-lista/'), 'M5: caminho em item de lista segue sendo ponteiro (morto detectado)');
+ok(!mortosProsa.includes('narrada-fora-do-contrato/'), 'M5: tabela em secao que o contrato nao declara nao e ponteiro');
+ok(!mortosProsa.includes('narrada-em-subsecao/'), 'M5: subsecao de secao fora do contrato tambem fica de fora');
+ok(!mortosProsa.includes('antes-do-titulo/'), 'M5: texto antes do primeiro titulo nao e ponteiro');
+ok(mortosProsa.includes('morto-em-opcional/nota.md'), 'M5: secao OPCIONAL do contrato e lida (morto detectado)');
+ok(mortosProsa.includes('morto-em-h3-do-contrato/nota.md'), 'M5: H3 do contrato sob H2 guarda-chuva e lido (morto detectado)');
 
 // nunca lanca
 ok(medirVault({ vaultRoot: path.join(raiz, 'nao-existe'), alias: 'x' }).erro, 'vault inexistente devolve erro, nunca excecao');

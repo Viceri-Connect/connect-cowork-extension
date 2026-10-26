@@ -2,7 +2,7 @@
 @echo off
 :: run-node.bat - garante o Node portatil e executa o script recebido.
 ::
-:: POLIGLOTA (P175, 0.37.0): a linha 1 e para o `sh` do macOS/Linux e delega a
+:: POLIGLOTA (0.37.0): a linha 1 e para o `sh` do macOS/Linux e delega a
 :: run-node.sh. Para o cmd.exe ela e um ROTULO (comeca com `:`) e nao executa nada;
 :: para o sh, `:` e no-op e o resto e um `exec`. O `#` final engole o CR do CRLF.
 :: Nao mover nem editar a linha 1 sem rodar tests/spike-multiplataforma.mjs.
@@ -10,7 +10,7 @@
 :: Fonte UNICA da resolucao do runtime, usada pelo launcher do MCP e pelo hook de
 :: SessionStart. Ate a 0.12.2 so o MCP tinha node embarcado; o hook chamava `node` do
 :: PATH e falhava em silencio em maquina sem Node - meia-garantia e o mesmo defeito
-:: que o D104 nomeou (D153).
+:: que a espinha-e-mecanismo nomeou (Node gerenciado pelo produto).
 ::
 :: MUDANCA 0.15.0 - o runtime SAI do diretorio do pacote.
 ::   Medido em 24/08: a atualizacao do plugin apagou o conteudo do pacote, esbarrou em
@@ -22,7 +22,7 @@
 ::   O runtime passa a viver em %CONNECT_HOME%\bin - onde ele sempre pertenceu:
 ::   CONCEITOS.md secao 5 declara o CONNECT_HOME como a pasta de estado/runtime da
 ::   maquina. Efeitos: atualizacao nunca mais toca em arquivo em uso; o download de
-::   ~70 MB deixa de se repetir a cada versao; a garantia do D153 continua de pe.
+::   ~70 MB deixa de se repetir a cada versao; a garantia do Node gerenciado continua de pe.
 ::
 :: Uso: run-node.bat <caminho-do-script.mjs> [args...]
 
@@ -31,7 +31,7 @@ setlocal
 set "PLUGIN_DIR=%~dp0.."
 
 :: Mesma resolucao de lib/config-local.mjs (defaultConnectHome): env var, ou o perfil
-:: do usuario. NUNCA pasta de aplicativo (%LOCALAPPDATA%) - ver D149.
+:: do usuario. NUNCA pasta de aplicativo (%LOCALAPPDATA%) - o harness nao alcanca.
 ::
 :: Variavel NAO definida no ambiente do Cowork chega como o texto literal
 :: "${CONNECT_HOME}" (o .mcp.json repassa `${CONNECT_HOME}` sem valor). Medido em
@@ -63,7 +63,7 @@ if exist "%NODE_LEGADO%" (
 ::    -f faz o curl falhar em erro HTTP: sem ele, uma pagina de erro 404 seria gravada
 ::    como node.exe com exit 0, e o `if exist` das proximas execucoes nunca mais
 ::    tentaria baixar - binario corrompido permanente (mesma classe do .git\index.lock
-::    orfao da P77: artefato parcial que bloqueia o caminho).
+::    orfao: artefato parcial que bloqueia o caminho).
 curl -fsSL "%NODE_URL%" -o "%NODE_EXE%.tmp"
 if errorlevel 1 goto :sem_runtime
 move /y "%NODE_EXE%.tmp" "%NODE_EXE%" >nul 2>&1
@@ -82,8 +82,8 @@ if errorlevel 1 (
 exit /b %errorlevel%
 
 :sem_runtime
-:: Ultimo recurso, declarado: o Node do PATH. Nao e garantia (D153) - por isso avisa
-:: em stderr em vez de degradar em silencio, que e o modo de falha que o D153 fechou.
+:: Ultimo recurso, declarado: o Node do PATH. Nao e garantia - por isso avisa
+:: em stderr em vez de degradar em silencio, que e o modo de falha que o Node gerenciado fechou.
 del /q "%NODE_EXE%.tmp" 2>nul
 where node >nul 2>&1
 if errorlevel 1 (

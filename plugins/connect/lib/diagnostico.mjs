@@ -1,7 +1,7 @@
 // connect/lib/diagnostico.mjs
 // Diagnostico DEVOLVIVEL: um arquivo que o operador leigo repassa ao time, sem terminal.
 //
-// Por que existe (P175, 14/10): o primeiro Mac real devolveu o defeito do catalogo por
+// Por que existe (validacao no macOS): o primeiro Mac real devolveu o defeito do catalogo por
 // print de tela, e o operador nao roda comando. O `diagnostico` ja vinha na resposta
 // da tool, mas resposta de tool o agente resume — e o resumo perde o dado que calibra.
 // Gravar em arquivo da ao agente algo exato para apontar ("envie este arquivo").
