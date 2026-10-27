@@ -12,6 +12,8 @@
 //   - listar_repos             : tabela local de repos, para conferencia do operador
 //   - sincronizar_subvault     : sync OneDrive de um conceito com `origem` declarada no manifesto
 //   - catalogo_sync            : caminho inverso — o que o OneDrive ja sincroniza, por id
+//   - configurar_por_codigo    : 1o uso pelo codigo de instancia (CNCT1-...) — acha, sincroniza e configura a Matriz
+//   - gerar_codigo_instancia   : quem governa gera o codigo a partir da Matriz configurada
 //   - mount_junction           : primitivo de mount (base do resolver)
 //   - unmount_junction         : remove um atalho
 //   - list_mounts              : auditoria dos atalhos do workspace
@@ -29,6 +31,7 @@ import { medirVault } from '../lib/metricas.mjs';
 import { resolverRepo, registrarRepoLocal, listarRepos } from '../lib/repos.mjs';
 import { publicarGovernanca } from '../lib/governanca.mjs';
 import { sincronizarSubvault, catalogoSync } from '../lib/sincronizar.mjs';
+import { configurarPorCodigo, gerarCodigoInstancia } from '../lib/instancia.mjs';
 
 const log = (...a) => process.stderr.write(`[connect-mcp] ${a.join(' ')}\n`);
 
@@ -338,6 +341,49 @@ const TOOLS = [
     },
   },
   {
+    name: 'configurar_por_codigo',
+    description:
+      'PRIMEIRO USO por codigo de instancia (CNCT1-...): o operador cola no pedido inicial o codigo que vem no ' +
+      'guia da empresa, e o Connect acha, sincroniza e configura a Matriz sozinho — sem perguntar caminho. ' +
+      'Passe o codigo (ou o texto do pedido; o codigo e extraido). Ordem: valida o codigo SEM efeito colateral; ' +
+      'se a Matriz ja esta sincronizada (catalogo do OneDrive, por id), so configura; senao exige UMA conta ' +
+      'OneDrive do dominio da instancia, dispara o sync, espera a pasta aparecer, confere que e uma Matriz ' +
+      '(_cerebro/vault-config.md), fixa no dispositivo e grava. Status: configurado | ja-configurado (chame ' +
+      'iniciar_sessao) · aguardando (sync lento OU sem permissao — devolve `governanca` a quem pedir acesso; repita) ' +
+      '· codigo-invalido · onedrive-sem-conta · conta-de-outro-dominio · ambigua-conta (pergunte e repita com ' +
+      '`email`) · outra-matriz-configurada (pergunte; `substituir: true`) · caminho-nao-traduzido · ' +
+      'plataforma-nao-suportada. Nunca registra caminho que o OneDrive nao listou.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        codigo: { type: 'string', description: 'O codigo de instancia (CNCT1-...) ou o texto que o contem.' },
+        email: { type: 'string', description: 'E-mail da conta OneDrive (so quando houver mais de uma conta do dominio). Opcional.' },
+        substituir: { type: 'boolean', description: 'Troca uma Matriz ja configurada por esta. So com confirmacao do operador.', default: false },
+        aguardar_segundos: { type: 'number', description: 'Quanto esperar a pasta aparecer no catalogo (default 120).' },
+      },
+      required: ['codigo'],
+    },
+  },
+  {
+    name: 'gerar_codigo_instancia',
+    description:
+      'Para QUEM GOVERNA a instancia: gera o codigo de instancia (CNCT1-...) que vai no guia de instalacao, a partir ' +
+      'da Matriz ja configurada e sincronizada nesta maquina (origem lida do catalogo do OneDrive). O codigo nao e ' +
+      'segredo e nao concede acesso (a permissao segue no SharePoint), mas carrega ids internos: so em material ' +
+      'interno. Status: ok · matriz-nao-configurada · origem-nao-encontrada · origem-maior (sincronize a Matriz ' +
+      'sozinha) · dominio-indefinido (repita com `dominio`).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        dominio: { type: 'string', description: 'Dominio de e-mail da instancia (ex.: empresa.com.br). Opcional se houver uma so conta OneDrive.' },
+        instancia: { type: 'string', description: 'Nome de exibicao da instancia (ex.: nome da empresa). Opcional.' },
+        governanca: { type: 'string', description: 'A quem pedir acesso quando o sync ficar aguardando (papel ou pessoa). Recomendado.' },
+        pasta: { type: 'string', description: 'Caminho da pasta na biblioteca (ex.: "Documentos/Connect/Matriz"). Opcional: o catalogo so tem o nome, e quem localiza e o id.' },
+      },
+      required: [],
+    },
+  },
+  {
     name: 'list_mounts',
     description: 'Lista os aliases (junctions/symlinks) atualmente montados no workspace.',
     inputSchema: {
@@ -476,6 +522,22 @@ function handleToolCall(id, params) {
           .then((r) => ok(id, { ...toolText(r), structuredContent: r }))
           .catch((e) => send({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: `ERRO: ${e.message || e}` }], isError: true } }));
         return;
+      }
+      case 'configurar_por_codigo': {
+        // Assincrona como o sincronizar_subvault: espera o cliente OneDrive.
+        configurarPorCodigo({
+          codigo: args.codigo,
+          email: args.email || null,
+          substituir: !!args.substituir,
+          aguardarSegundos: typeof args.aguardar_segundos === 'number' ? args.aguardar_segundos : undefined,
+        })
+          .then((r) => ok(id, { ...toolText(r), structuredContent: r }))
+          .catch((e) => send({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: `ERRO: ${e.message || e}` }], isError: true } }));
+        return;
+      }
+      case 'gerar_codigo_instancia': {
+        const r = gerarCodigoInstancia({ dominio: args.dominio || null, instancia: args.instancia || null, governanca: args.governanca || null, pasta: args.pasta || null });
+        return ok(id, { ...toolText(r), structuredContent: r });
       }
       case 'catalogo_sync': {
         const r = catalogoSync({ registrar: !!args.registrar });

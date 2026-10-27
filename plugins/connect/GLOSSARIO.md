@@ -117,3 +117,18 @@ automatizar o último passo transfere a responsabilidade sem transferir o contex
 lista mantida à mão em paralelo.
 **Por que importa:** duas fontes da mesma informação divergem com o tempo; derivar de uma fonte única
 evita o índice ficar desatualizado em relação ao que realmente existe.
+
+## origem-na-nuvem
+
+**Regra:** a entidade com acervo fora da matriz declara no manifesto **de onde** ele vem na nuvem (bloco
+`origem`: site, pasta e os ids que o OneDrive usa para sincronizar) — nunca onde ele mora no disco; a
+Matriz, que não tem manifesto, publica a mesma origem como **código de instância** (`CNCT1-…`).
+**Por que importa:** com a origem o mecanismo sincroniza e acha o acervo sozinho em qualquer máquina, e o
+operador nunca precisa saber caminho de pasta.
+
+## produto-sem-instancia
+
+**Regra:** o pacote do plugin não carrega nada que seja de uma instância — ids de SharePoint, nomes da
+organização, caminhos, pessoas; o que é da instância chega pelo vault dela ou pelo código de instância.
+**Por que importa:** o mesmo plugin serve qualquer empresa, e o repositório pode ser público sem expor a
+estrutura interna de quem o usa.

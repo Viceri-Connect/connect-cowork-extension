@@ -93,7 +93,12 @@ teste('launcher e hook continuam passando pela fonte unica', () => {
   const launcher = fs.readFileSync('plugins/connect/mcp/launcher.bat', 'utf8');
   const hooks = fs.readFileSync('plugins/connect/hooks/hooks.json', 'utf8');
   assert.ok(/run-node\.bat/.test(launcher), 'launcher nao usa run-node.bat');
-  assert.ok(/run-node\.bat/.test(hooks), 'hook nao usa run-node.bat');
+  // 0.39.0: o hook e exec form; no Windows entra pelo run-node.ps1, que so faz a ponte
+  // e delega ao run-node.bat (a fonte unica continua sendo o .bat).
+  const ps1 = fs.readFileSync('plugins/connect/scripts/run-node.ps1', 'utf8');
+  assert.ok(/run-node\.ps1/.test(hooks), 'hook do Windows nao entra pelo run-node.ps1');
+  assert.ok(/run-node\.bat/.test(ps1), 'run-node.ps1 nao delega ao run-node.bat');
+  assert.ok(/run-node\.sh/.test(hooks), 'hook POSIX nao usa run-node.sh');
 });
 
 console.log(falhas ? `\n${falhas} falha(s)` : '\ntodos verdes (contrato textual — execucao em Windows nao coberta)');

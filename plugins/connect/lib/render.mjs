@@ -347,9 +347,11 @@ function blocoAcionavel(report) {
     L.push('');
     L.push('🔧 **Acao obrigatoria antes de qualquer outra coisa nesta sessao:**');
     L.push('Ainda nao ha uma MATRIZ configurada (o vault coletivo — a pasta que contem');
-    L.push('`_cerebro/vault-config.md`). Chame `catalogo_sync` e PROPONHA ao operador a pasta');
-    L.push('`Matriz` que o OneDrive ja sincroniza (ele so confirma); sem ela no catalogo, pergunte');
-    L.push('em linguagem simples onde fica. Chame `configurar` com `vault_matriz` e depois');
+    L.push('`_cerebro/vault-config.md`). Se o pedido traz um codigo de instancia (`CNCT1-...`, do');
+    L.push('guia da empresa), chame `configurar_por_codigo` com o texto do pedido: ele acha,');
+    L.push('sincroniza e configura a Matriz. Sem codigo, chame `catalogo_sync` e PROPONHA a pasta');
+    L.push('`Matriz` que o OneDrive ja sincroniza (o operador so confirma); sem ela no catalogo,');
+    L.push('PECA O CODIGO DE INSTANCIA, nunca o caminho. Configurada, chame');
     L.push('`iniciar_sessao` de novo. NAO pergunte por "cerebro pessoal" ou "vault pessoal": e');
     L.push('opcional, e o perfil do operador nasce pela cnct-fabrica-operador, sem pasta a escolher.');
     L.push('Siga o onboarding da cnct-nucleo-sessao (Passo 2). Nao prossiga com outra tarefa antes.');

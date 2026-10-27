@@ -12,13 +12,14 @@ description: >
   instalação, ou em pedidos como "configurar o Connect", "conectar minha
   matriz", "onde fica meu vault", "sou novo aqui", "primeiro uso", "setup
   inicial" — mesmo sem menção a projeto/tarefa. Na primeira vez, conduz o
-  onboarding: configura a matriz (tool configurar), faz nascer o perfil do
+  onboarding: configura a matriz (pelo código de instância CNCT1-… colado no
+  pedido — tool configurar_por_codigo — ou pelo catálogo do OneDrive), faz nascer o perfil do
   operador (cnct-fabrica-operador), sincroniza os acervos das frentes dele e
   oferece o briefing diário. É o FALLBACK do hook de SessionStart quando ele não dispara
   no Cowork (inclusive quando o clique em "Personalizar" abre uma janela sem
   disparar o hook) — o mecanismo é o mesmo, só muda o gatilho.
 metadata:
-  version: "0.8.0"
+  version: "0.9.0"
   eixo: nucleo
   program: "Impulsa / Viceri"
 ---
@@ -65,7 +66,31 @@ O que o mecanismo precisa para funcionar são **duas** coisas, e só a primeira 
 > no 1º uso fazia o operador novo criar uma pasta que nenhum protocolo usa (medido nos primeiros
 > onboardings de operador, em mais de um coletivo).
 
-**Antes de perguntar o caminho da matriz, chame `catalogo_sync`** (0.35.1). Ele lista as pastas
+**Código de instância primeiro (0.39.0).** A ordem para achar a matriz no 1º uso é esta, e nunca
+começa por perguntar caminho:
+
+1. **Código no pedido** — o operador colou um texto `CNCT1-…` (vem no guia de instalação da empresa,
+   às vezes quebrado em linhas): chame `configurar_por_codigo` com o **texto inteiro do pedido**, que
+   a tool extrai e remonta o código. Trate o status:
+   - `configurado` / `ja-configurado` → siga para o Passo 2a.
+   - `aguardando` → diga, em linguagem simples, que o OneDrive ainda está trazendo a Matriz **ou** que
+     falta permissão, e nomeie a `governanca` devolvida como quem concede o acesso; repita a tool com o
+     mesmo código depois de um tempo. Nunca troque por perguntar caminho.
+   - `onedrive-sem-conta` / `conta-de-outro-dominio` → peça para abrir o OneDrive e entrar com o e-mail
+     do domínio devolvido; repita. `ambigua-conta` → pergunte qual e-mail e repita com `email`.
+   - `outra-matriz-configurada` → pergunte se troca; só com o sim, `substituir: true`.
+   - `codigo-invalido` → peça para copiar o código de novo do guia, inteiro (versão desconhecida =
+     atualizar o plugin). Nada foi feito na máquina.
+   - `caminho-nao-traduzido` / `plataforma-nao-suportada` → caia no fluxo do catálogo abaixo.
+2. **Sem código** → o fluxo do catálogo abaixo (operador que sincronizou a Matriz à mão).
+3. **Sem código e sem Matriz no catálogo** → **peça o código de instância** ("está no guia de
+   instalação do Connect da sua empresa, começa com CNCT1-"), nunca o caminho da pasta.
+
+> **Quem governa a instância gera o código** com `gerar_codigo_instancia` (a Matriz dele já
+> configurada e sincronizada) e o publica no guia — material interno: o código não é segredo nem
+> concede acesso, mas carrega ids do SharePoint.
+
+**Sem código: antes de perguntar o caminho da matriz, chame `catalogo_sync`** (0.35.1). Ele lista as pastas
 que o OneDrive desta máquina sincroniza (`naoDeclaradas[].local` — a matriz é raiz, não tem
 manifesto, e por isso aparece ali). Proponha ao operador a que se chama `Matriz` (ex.:
 `…\{Empresa}\{Biblioteca} - Matriz`) e confirme em uma pergunta de sim/não — operador

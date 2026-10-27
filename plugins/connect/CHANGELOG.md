@@ -1,5 +1,52 @@
 # Changelog — connect
 
+## 0.39.0 — 2026-10-27
+
+**Primeiro uso sem instalador: código de instância e hook que não depende de Git.** Até aqui o operador
+novo sincronizava a Matriz à mão no SharePoint (o passo em que mais se erra), o plugin não sabia qual era a
+instância antes de a Matriz estar no disco, e o hook de início de sessão só rodava com Git Bash — cuja
+instalação pede administrador. Um instalador externo provou o caminho e mostrou esse custo.
+
+**Código de instância (`CNCT1-…`).** É o bloco `origem` (GLOSSARIO: origem-na-nuvem) da Matriz publicado
+fora dela: prefixo de versão + base64url de um JSON compacto com site, título do site, pasta, os quatro ids,
+o domínio de e-mail da instância e, opcional, a quem pedir acesso. Não é segredo e não concede acesso — a
+permissão segue no SharePoint. Nenhum dado de instância entra no pacote (GLOSSARIO: produto-sem-instancia).
+
+- `lib/instancia.mjs`: `codificarCodigo`, `decodificarCodigo` (aceita o código no meio do pedido e
+  remonta o que a cópia de um PDF quebrou em linhas), `gerarCodigoInstancia`, `configurarPorCodigo`.
+- Tool **`configurar_por_codigo`**: valida sem efeito colateral; Matriz já no catálogo → só configura;
+  senão exige uma conta OneDrive do domínio do código (`userEmail` do link), dispara o sync, espera o
+  catálogo, confere `_cerebro/vault-config.md`, fixa no dispositivo e grava. Recusa conta de outro
+  domínio, nenhuma conta, código malformado ou de versão desconhecida, e não troca uma Matriz já
+  configurada sem `substituir`. Prazo esgotado = `aguardando` com a `governanca` do código — o mesmo
+  contrato do `sincronizar_subvault`: nunca registra caminho que o OneDrive não listou.
+- Tool **`gerar_codigo_instancia`**: para quem governa, a partir da Matriz configurada (origem lida do
+  catálogo). Recusa Matriz copiada (fora do catálogo) e Matriz dentro de pasta maior.
+- `cnct-nucleo-sessao` 0.9.0: no 1º uso, código no pedido → `configurar_por_codigo`; sem código →
+  catálogo (como antes); sem nada → pede o código, nunca o caminho. O bloco de estado zero diz o mesmo.
+- `tests/spike-instancia.mjs`: os seis critérios de aceite da US, com ids fictícios.
+- **macOS no mesmo fluxo.** `configurar_por_codigo` usa o leitor de catálogo, a leitura de conta e o
+  disparo do link que o `sincronizar_subvault` já tem para o Mac; a fixação no dispositivo devolve a
+  instrução para o operador marcar no Finder (não há caminho programático). Não medido num Mac real:
+  a tradução do caminho do catálogo e a leitura do e-mail seguem como hipótese até o diagnóstico.
+
+**Hook em exec form (pendência do hook sem Git Bash).** Shell form no Windows roda em Git Bash; sem ele,
+em PowerShell, que imprimia a linha `"…/run-node.bat" "…"` em vez de executá-la — o hook "passava" e a
+camada 0 sumia sem sinal.
+
+- `hooks.json` passa a ter duas entradas em **exec form** (`command` + `args`, sem shell):
+  `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run-node.ps1` no Windows e
+  `/bin/sh scripts/run-node.sh` fora dele. A do outro SO falha ao iniciar (ENOENT) e não roda nada —
+  nunca em dobro.
+- `scripts/run-node.ps1` só faz a ponte: delega ao `run-node.bat` (fonte única do runtime) por
+  `Start-Process -NoNewWindow`, sem redirecionar a saída — o filho escreve direto no stdout herdado,
+  e os acentos do bloco não passam pela página OEM do PowerShell 5.1. O stdin do hook (o `session_id`)
+  entra por arquivo temporário. ASCII puro.
+- Medido nesta máquina (Windows 11, Node 20): exec form com caminho com espaço, stdin e UTF-8 intactos.
+  **A medir:** numa máquina **sem** Git, no Cowork, se o app honra `args` no hook do plugin e se a
+  falha da entrada do outro SO aparece como ruído na sessão.
+- `spike-multiplataforma` e `spike-runtime-fora-do-pacote` passam a verificar a forma nova.
+
 ## 0.38.5 — 2026-10-26
 
 **M5 só lê ponteiro nas seções que o contrato de navegação declara.** Uma auditoria achou um ponteiro

@@ -13,8 +13,9 @@
 //      cmd, `exec` para o sh, `#` engolindo o CR do CRLF.
 //   3. O servidor MCP sobe pela linha de comando EXATA que o Cowork montaria a
 //      partir do `.mcp.json` desta maquina, e responde initialize + tools/list.
-//   4. O hook de SessionStart, como string de shell, executa o runtime (no sh, isso
-//      exige modo 755 no git — conferido no indice).
+//   4. O hook de SessionStart e EXEC FORM (0.39.0, P176): powershell -File run-node.ps1
+//      no Windows, /bin/sh run-node.sh fora — nenhum depende de Git Bash, e a entrada
+//      do outro SO falha ao iniciar sem rodar nada.
 //   5. Variavel nao definida que chega como "${CONNECT_HOME}" literal nao vira
 //      caminho relativo (bug medido em 13/10: Node baixado no host-cwd por sessao).
 //
@@ -125,22 +126,39 @@ if (fail && stderr) console.error('  stderr do servidor:\n' + stderr.split('\n')
 // --- 4. hook ---------------------------------------------------------------------
 console.log('\n[multiplataforma] hook de SessionStart');
 const hooks = JSON.parse(fs.readFileSync(path.join(ROOT, 'hooks', 'hooks.json'), 'utf8'));
-const hookCmd = hooks.hooks.SessionStart[0].hooks[0].command;
-ok(/run-node\.bat/.test(hookCmd), 'hook continua apontando o run-node.bat (poliglota) — texto do hooks.json inalterado');
+// 0.39.0 (P176): EXEC FORM, uma entrada por SO. Shell form sem Git Bash cai no
+// PowerShell, que imprime a linha em vez de executar — e instalar o Git pede admin.
+const entradas = hooks.hooks.SessionStart[0].hooks;
+const hWin = entradas.find((h) => h.command === 'powershell.exe');
+const hPosix = entradas.find((h) => h.command === '/bin/sh');
+ok(entradas.length === 2 && hWin && hPosix, 'duas entradas: powershell.exe (Windows) e /bin/sh (macOS/Linux)');
+ok(entradas.every((h) => Array.isArray(h.args) && !('shell' in h)), 'todas em exec form (`args` presente) — nenhuma passa por shell');
+ok(hWin && hWin.args.includes('-File') && /run-node\.ps1$/.test(hWin.args[hWin.args.indexOf('-File') + 1]), 'Windows: powershell -File run-node.ps1');
+ok(hWin && hWin.args.includes('-NoProfile') && hWin.args.includes('Bypass'), 'Windows: -NoProfile e -ExecutionPolicy Bypass (sem elevacao, sem profile)');
+ok(hPosix && /run-node\.sh$/.test(hPosix.args[0]), 'POSIX: /bin/sh run-node.sh');
+ok(entradas.every((h) => /session-start\.mjs$/.test(h.args[h.args.length - 1])), 'as duas executam o session-start.mjs');
+const ps1 = fs.readFileSync(path.join(ROOT, 'scripts', 'run-node.ps1'));
+ok(![...ps1].some((b) => b > 0x7f), 'run-node.ps1 em ASCII puro (PowerShell 5.1 le sem BOM como ANSI)');
+ok(/run-node\.bat/.test(ps1.toString()) && /NoNewWindow/.test(ps1.toString()) && /RedirectStandardInput/.test(ps1.toString()), 'run-node.ps1 delega ao .bat herdando o stdout (sem pipeline do PowerShell)');
+
+const eco = path.join(cwdTeste, 'eco com espaco.mjs');
+// O eco devolve o stdin e um acento: prova que o session_id chega e que a saida nao
+// e redecodificada no caminho.
+fs.writeFileSync(eco, "let d='';process.stdin.setEncoding('utf8');process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>console.log('HOOK-RODOU sessão '+d.trim()));\n");
+const rodarExec = (h) => {
+  const args = h.args.map((a) => expandir(a, { CLAUDE_PLUGIN_ROOT: ROOT }).replace(/[^"]*session-start\.mjs$/, eco));
+  return spawnSync(h.command, args, { input: JSON.stringify({ session_id: 'teste' }), encoding: 'utf8', windowsHide: true, env: { ...process.env, CONNECT_HOME: '${CONNECT_HOME}' }, cwd: cwdTeste });
+};
 if (!WIN) {
-  // Mesmo caminho do Cowork no macOS: shell form via `sh -c`. Troca o script do
-  // hook por um eco, para nao montar sessao de verdade.
-  const eco = path.join(cwdTeste, 'eco.mjs');
-  fs.writeFileSync(eco, 'console.log("HOOK-RODOU")\n');
-  const linha = expandir(hookCmd, { CLAUDE_PLUGIN_ROOT: ROOT }).replace(/"[^"]*session-start\.mjs"/, `"${eco}"`);
-  fs.chmodSync(path.join(ROOT, 'scripts', 'run-node.bat'), 0o755);
-  const r = spawnSync('/bin/sh', ['-c', linha], { encoding: 'utf8', env: { ...process.env, CONNECT_HOME: '${CONNECT_HOME}' } });
-  ok(r.status === 0 && /HOOK-RODOU/.test(r.stdout), 'sh -c executa o hook pelo run-node.bat');
+  const r = rodarExec(hPosix);
+  ok(r.status === 0 && /HOOK-RODOU sessão .*teste/.test(r.stdout), 'exec form /bin/sh executa o hook, com stdin e UTF-8 intactos');
+  const outro = rodarExec(hWin);
+  ok(outro.error || outro.status !== 0 || !/HOOK-RODOU/.test(outro.stdout || ''), 'a entrada do Windows nao executa nada aqui');
 } else {
-  const eco = path.join(cwdTeste, 'eco.mjs');
-  fs.writeFileSync(eco, 'console.log("HOOK-RODOU")\n');
-  const r = spawnSync(process.env.ComSpec || 'cmd.exe', ['/c', path.join(ROOT, 'scripts', 'run-node.bat'), eco], { encoding: 'utf8', windowsHide: true, env: { ...process.env, CONNECT_HOME: '${CONNECT_HOME}' }, cwd: cwdTeste });
-  ok(r.status === 0 && /HOOK-RODOU/.test(r.stdout), 'cmd executa o run-node.bat com CONNECT_HOME literal');
+  const r = rodarExec(hWin);
+  ok(r.status === 0 && /HOOK-RODOU sessão .*teste/.test(r.stdout), 'exec form powershell executa o hook, com stdin e UTF-8 intactos, caminho com espaco');
+  const outro = rodarExec(hPosix);
+  ok(!!outro.error, 'a entrada /bin/sh falha ao iniciar no Windows (ENOENT) — nao roda em dobro');
   ok(!fs.existsSync(path.join(cwdTeste, '${CONNECT_HOME}')), 'e nao cria "${CONNECT_HOME}" no cwd');
 }
 

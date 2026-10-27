@@ -1,5 +1,5 @@
 {
-  "description": "Connect (Impulsa/Viceri): no inicio de cada sessao restaura a identidade do operador, monta a matriz como atalho flat e carrega o contexto lazy da camada 1.",
+  "description": "Connect (Impulsa/Viceri): no inicio de cada sessao restaura a identidade do operador, monta a matriz como atalho flat e carrega o contexto lazy da camada 1. Exec form (0.39.0): uma entrada por SO, nenhuma depende de Git Bash; a do outro SO falha ao iniciar e nao faz nada.",
   "hooks": {
     "SessionStart": [
       {
@@ -7,8 +7,26 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/run-node.bat\" \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.mjs\"",
-            "timeout": 20
+            "command": "powershell.exe",
+            "args": [
+              "-NoProfile",
+              "-NonInteractive",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-File",
+              "${CLAUDE_PLUGIN_ROOT}/scripts/run-node.ps1",
+              "${CLAUDE_PLUGIN_ROOT}/hooks/session-start.mjs"
+            ],
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "/bin/sh",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/run-node.sh",
+              "${CLAUDE_PLUGIN_ROOT}/hooks/session-start.mjs"
+            ],
+            "timeout": 30
           }
         ]
       }
