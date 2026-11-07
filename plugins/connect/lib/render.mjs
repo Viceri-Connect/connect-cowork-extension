@@ -233,8 +233,17 @@ export function blocoCanalInjetado(governanca, rotulo = 'matriz') {
 // de orientacao, nao como erro. Enquanto houver so um ponto de medicao, o ponteiro
 // abaixo e o que impede a falha silenciosa: ele diz onde a carta deveria estar.
 // Registro: `decisoes-abertas.md` (canal do MCP por cliente).
+//
+// 0.40.0 — SEGUNDO PONTO DE MEDICAO, e ele inverte o primeiro. Medido em 07/11 numa
+// sessao na nuvem (agente no servidor, MCP no PC do operador, chamado pela ponte do
+// app desktop): chegou o `content[].text` e NAO chegou o `structuredContent`. A carta
+// do sub-vault sumiu, exatamente o modo de falha previsto acima. Com dois clientes que
+// descartam canais OPOSTOS, nao existe canal unico seguro: a PRIMEIRA entrega da carta
+// (e do vinculo do operador) vai nos dois; a partir da segunda, o texto leva so o
+// ponteiro "ja entregue" — o mesmo dedup que o `structuredContent` ja fazia. O custo e
+// uma copia por vault por sessao, e so em cliente que entrega os dois canais.
 // ---------------------------------------------------------------------------
-export function renderResolucao(res, { cartaInline = true } = {}) {
+export function renderResolucao(res, { cartaInline = true, cartaJaEntregue = false, vinculoBlocos = [] } = {}) {
   if (!res || res.status !== 'resolvido') return '';
   const L = [];
   // Antes do bloco do sub-vault: se a raiz dele esta ocupada por conteudo nao
@@ -255,10 +264,32 @@ export function renderResolucao(res, { cartaInline = true } = {}) {
     L.push(`- 🔑 Acesso: se \`${res.caminhoRelativo}\` nao abrir, solicite ao operador a pasta \`${res.concessao.caminho}\` — montar nao e alcancar. Nao contorne por varredura.`);
   }
   L.push('');
+  // Vinculo do operador com este coletivo: pela `curadoria-pessoal-coletivo` vale
+  // ANTES da carta, por isso vem antes dela. So os blocos ainda nao entregues nesta
+  // sessao (quem chama decide; ver connect-mcp.mjs, case 'resolver').
+  const vinc = (vinculoBlocos || []).filter((b) => b && typeof b.texto === 'string' && b.texto.trim());
+  if (vinc.length) {
+    L.push(`### Vinculo do operador com "${res.vinculo?.coletivo || res.conceito}" — vale ANTES da carta`);
+    L.push('');
+    for (const b of vinc) {
+      if (b.arquivo) L.push(`> \`${b.arquivo}\``);
+      L.push(b.texto.trim());
+      L.push('');
+    }
+  }
   // Lacuna de carta SEMPRE vai inteira, mesmo com `cartaInline: false`: e texto
   // curto, e acionavel (oferecer a fabrica), e nao existe copia dela no JSON.
   if (cartaInline || !res.l1?.carta?.presente) {
     L.push(...blocoCarta(res.l1?.carta, res.conceito));
+  } else if (cartaJaEntregue) {
+    const c = res.l1.carta;
+    L.push(`> **Camada 1 deste acervo — \`${c.caminhoRelativo}\`** — ja entregue nesta sessao, nao repetida.`);
+    L.push('> Se ela nao estiver mais no seu contexto (compactacao), abra o arquivo acima. Nao navegue por');
+    L.push('> varredura no lugar dela.');
+    if (c.validacao && !c.validacao.ok) {
+      L.push('>');
+      L.push(`> ⚠️ Carta incompleta (${res.conceito}) — secoes ausentes: ${c.validacao.faltando.join(', ')}. Ofereca \`cnct-fabrica-navegacao\`.`);
+    }
   } else {
     const c = res.l1.carta;
     L.push(`> **Camada 1 deste acervo — \`${c.caminhoRelativo}\`.** A carta vai no \`structuredContent\``);
@@ -591,4 +622,59 @@ export function renderContexto(report) {
   }
 
   return L.join('\n') + '\n';
+}
+
+// ---------------------------------------------------------------------------
+// renderVinculoOperador — texto da tool `estado_operador` com `coletivo`.
+// 0.40.0: antes o texto era so "ver structuredContent", e o cliente que entrega
+// apenas o `content[].text` (sessao na nuvem, medido em 07/11) recebia um ponteiro
+// para um canal que nao chegou. Pedido explicito: vai sempre inteiro, sem dedup.
+// ---------------------------------------------------------------------------
+export function renderVinculoOperador(v) {
+  if (!v || typeof v !== 'object') return 'vinculo do operador: sem resposta';
+  const L = [];
+  if (v.status !== 'lido') {
+    L.push(`Vinculo do operador com "${v.coletivo || '—'}": ${v.status}${v.casa ? ` (casa esperada: \`${v.casa}\`)` : ''}.`);
+  } else {
+    L.push(`## Vinculo do operador com "${v.coletivo}" — vale ANTES da carta do coletivo`);
+    L.push('');
+    for (const b of v.blocos || []) {
+      if (!b || typeof b.texto !== 'string') continue;
+      if (b.arquivo) L.push(`> \`${b.arquivo}\``);
+      L.push(b.texto.trim());
+      L.push('');
+    }
+  }
+  if (v.avisos?.length) {
+    L.push('### Avisos');
+    for (const a of v.avisos) L.push(`- ${a}`);
+  }
+  return L.join('\n').trimEnd() + '\n';
+}
+
+// ---------------------------------------------------------------------------
+// renderSessaoNuvem — o que o hook injeta numa sessao na nuvem SEM configuracao
+// local (ver lib/ambiente.mjs). Nao afirma nada sobre o estado do operador — ele
+// mora no PC, onde so o MCP o le. Orienta o agente a perguntar ao MCP pela ponte.
+// ---------------------------------------------------------------------------
+export function renderSessaoNuvem() {
+  return [
+    '## Connect — sessao na nuvem',
+    '',
+    'Esta sessao roda no servidor; o Connect (configuracao, matriz, perfil do operador) mora no',
+    'computador do operador e e alcancado pelas tools do Connect expostas pela ponte do app',
+    'desktop (o nome delas contem `connect`; podem estar diferidas — carregue-as).',
+    '',
+    '**Nao trate como 1o uso.** Este hook nao enxerga o estado do operador, entao NAO afirma que',
+    'a matriz falta nem que o perfil nao existe. Faca nesta ordem:',
+    '1. `estado_sessao` pela ponte — e ele quem diz se esta configurado.',
+    '2. `iniciar_sessao` pela ponte — identidade, carta da matriz e protocolo.',
+    '3. Os atalhos (`./matriz`, `./{alias}`) sao junctions no computador do operador e nao abrem',
+    '   aqui: leia pelas pastas conectadas a sessao e, se a origem de um atalho nao estiver',
+    '   conectada, peca acesso a ela (pasta de origem informada pelo bloco de concessao).',
+    '',
+    'Se nenhuma tool do Connect aparecer, o app desktop esta fechado ou offline: diga isso ao',
+    'operador — nao configure nada do zero aqui.',
+    '',
+  ].join('\n');
 }

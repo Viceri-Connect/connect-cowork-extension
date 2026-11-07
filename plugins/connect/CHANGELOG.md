@@ -1,5 +1,47 @@
 # Changelog — connect
 
+## 0.40.0 — 2026-11-07
+
+**Sessão na nuvem: o hook orienta em vez de diagnosticar, e a carta volta a chegar.** Desde 06/10, nos
+planos Pro, Max e Ultra, a sessão do Cowork roda no servidor da Anthropic; o MCP do Connect continua no
+PC do operador e é chamado pela ponte do app desktop. Medido em 07/11, numa sessão real (instância
+pessoal, sub-vault `fernando` resolvido pela primeira vez), duas falhas que o desenho de máquina única
+escondia:
+
+- **Hook com diagnóstico falso.** O SessionStart roda no servidor, com um `CONNECT_HOME` vazio, e
+  injetava "matriz não configurada · perfil não provisionado · não prossiga com outra tarefa" — com o
+  operador plenamente configurado no PC. Novo `lib/ambiente.mjs` (`execucaoNaNuvem`: sinal
+  `CLAUDE_CODE_REMOTE=true`, override `CONNECT_EXECUCAO=local|nuvem`). Na nuvem **sem** configuração
+  local, o hook injeta `renderSessaoNuvem()`: não afirma nada sobre o estado, manda perguntar ao MCP pela
+  ponte (`estado_sessao` → `iniciar_sessao`), avisa que os atalhos são junctions do PC e que, sem tools
+  do Connect, o app desktop está fechado. Não cria scaffold nem baixa runtime no servidor
+  (`run-node.sh` usa o `node` do PATH quando `CLAUDE_CODE_REMOTE=true`). Na nuvem **com** configuração
+  local (Connect instalado de fato no servidor), segue o fluxo normal.
+- **Canal oposto ao do Cowork local.** A ponte entrega o `content[].text` e descarta o
+  `structuredContent` — o inverso do medido em 23/08 e 26/08 no Cowork local, que motivou a carta "só no
+  JSON" (0.33.x). É o modo de falha que o próprio `render.mjs` previa ("medição de um cliente só"): a
+  carta do sub-vault não chegou, e o vínculo do operador — que o `resolver` anexava só no JSON e o
+  `estado_operador` respondia com "ver structuredContent" — também não. Com dois clientes descartando
+  canais **opostos**, não há canal único seguro:
+  - `resolver`: a **primeira** entrega da carta e dos blocos de vínculo vai **nos dois** canais; o
+    vínculo antes da carta (`curadoria-pessoal-coletivo`). Da segunda em diante, o texto diz "já entregue
+    nesta sessão" (e manda abrir o arquivo se o contexto compactou) e o JSON leva o marcador do dedup — a
+    pergunta "já entregue?" é feita **antes** do `dedupInline`, que registra o bloco ao processá-lo.
+  - `estado_operador` com `coletivo`: o texto leva o vínculo inteiro (`renderVinculoOperador`).
+  - Custo: uma cópia da carta por vault por sessão, e só em cliente que entrega os dois canais.
+- `tests/spike-sessao-nuvem.mjs` (novo, 28 checagens): detecção de ambiente; hook na nuvem sem config
+  (orienta, não diagnostica, não cria estado), local (inalterado) e nuvem com config (fluxo normal);
+  render de carta já entregue e vínculo; e ponta a ponta no MCP — `resolver` duas vezes na mesma sessão,
+  carta nos dois canais na 1ª e em nenhum na 2ª. O caminho `cartaInline: false` sem "já entregue" segue
+  coberto pelo `spike-custo-contexto`.
+
+**Pendente para a nuvem (não nesta versão):** os blocos ainda citam atalhos (`./matriz`, `./{alias}`) que
+são junctions no PC — na nuvem a leitura é pelas pastas conectadas, e a concessão deveria virar pedido
+de acesso à pasta de origem; tarefas agendadas (briefing diário da `cnct-fabrica-operador`, SCHEDULE da
+`cnct-nucleo-audit`) rodam na nuvem e só alcançam o MCP com o app desktop aberto e a tarefa marcada como
+dependente do computador; e o shell da ponte não apaga arquivo sem permissão, então git rodado por skill
+deixa `.lock` (assinatura do `index.lock` órfão de 15/08 neste repositório).
+
 ## 0.39.0 — 2026-10-27
 
 **Primeiro uso sem instalador: código de instância e hook que não depende de Git.** Até aqui o operador

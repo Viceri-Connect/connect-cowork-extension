@@ -20,6 +20,13 @@ case "${CONNECT_HOME:-}" in
 esac
 export CONNECT_HOME
 
+# 0.40.0 - Sessao na nuvem (CLAUDE_CODE_REMOTE=true): o servidor ja traz Node, e
+# baixar o runtime portatil ali e trafego e disco por sessao sem nenhum ganho - o
+# Connect de verdade roda no PC do operador. Com node no PATH, usa-o direto.
+if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ] && command -v node >/dev/null 2>&1; then
+  exec node "$@"
+fi
+
 BIN_DIR="$CONNECT_HOME/bin"
 NODE_BIN="$BIN_DIR/node"
 

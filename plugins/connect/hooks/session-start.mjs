@@ -15,8 +15,9 @@
 // num caminho que pede concessao a cada sessao — o agente nao abria, e a camada 0
 // sumia sem sinal. Releitura sob demanda = tool `iniciar_sessao`.
 
-import { iniciarSessao } from '../lib/session.mjs';
-import { renderContextoCurto } from '../lib/render.mjs';
+import { iniciarSessao, estadoSessao } from '../lib/session.mjs';
+import { renderContextoCurto, renderSessaoNuvem } from '../lib/render.mjs';
+import { execucaoNaNuvem } from '../lib/ambiente.mjs';
 
 function lerStdin() {
   return new Promise((resolve) => {
@@ -41,6 +42,18 @@ async function main() {
       sessionId = payload.session_id || payload.sessionId || sessionId;
     }
   } catch { /* sem payload utilizavel; segue com env/gerado */ }
+
+  // 0.40.0 — Sessao na nuvem sem configuracao local: o estado do operador esta no PC
+  // dele, fora do alcance deste processo. Orientar, nunca diagnosticar (lib/ambiente.mjs).
+  // Com configuracao presente aqui (Connect instalado de fato no servidor), segue o normal.
+  if (execucaoNaNuvem()) {
+    let configurado = false;
+    try { configurado = estadoSessao({}).configurado; } catch { /* sem config legivel = nao configurado */ }
+    if (!configurado) {
+      process.stdout.write(renderSessaoNuvem());
+      process.exit(0);
+    }
+  }
 
   let report;
   try {

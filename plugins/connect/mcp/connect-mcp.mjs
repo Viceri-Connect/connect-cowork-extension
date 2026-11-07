@@ -26,7 +26,7 @@ import { mount, unmount, listMounts } from '../lib/mount.mjs';
 import { iniciarSessao, gravarConfig, estadoSessao, registrarSubVaultLocal, resolveConfig } from '../lib/session.mjs';
 import { lerVinculo, coletivosComVinculo } from '../lib/vinculo.mjs';
 import { resolver } from '../lib/resolver.mjs';
-import { renderContexto, renderResolucao, renderMetricas } from '../lib/render.mjs';
+import { renderContexto, renderResolucao, renderMetricas, renderVinculoOperador } from '../lib/render.mjs';
 import { medirVault } from '../lib/metricas.mjs';
 import { resolverRepo, registrarRepoLocal, listarRepos } from '../lib/repos.mjs';
 import { publicarGovernanca } from '../lib/governanca.mjs';
@@ -445,10 +445,22 @@ function handleToolCall(id, params) {
         // no Cowork na mesma data: o `content[].text` desta tool nao chegou ao agente
         // — chegou o JSON estruturado e mais nada.
         //
-        // Entao: texto = bloco curto (alias, pouso, concessao, ponteiro para a carta);
-        // structuredContent = a carta inteira na primeira entrega. Uma copia so, pelo
-        // canal que provadamente alcanca.
-        const bloco = renderResolucao(r, { cartaInline: false });
+        // 0.40.0 — e medido em 07/11, numa sessao na nuvem pela ponte do app desktop, o
+        // OPOSTO: chegou o texto e nao o `structuredContent`. Dois clientes, canais
+        // opostos: nenhum canal unico e seguro. Entao a PRIMEIRA entrega da carta e do
+        // vinculo vai nos dois canais; da segunda em diante, os dois levam o marcador de
+        // "ja entregue". A pergunta "ja foi entregue?" tem de ser feita ANTES do
+        // `dedupInline`, que registra o bloco como entregue ao processa-lo.
+        const cartaTxt = r?.l1?.carta?.inline;
+        const cartaNova = typeof cartaTxt === 'string' && cartaTxt.trim() !== '' && !entregaDaSessao.jaEntregue(cartaTxt);
+        const vinculoNovo = Array.isArray(r?.vinculo?.blocos)
+          ? r.vinculo.blocos.filter((b) => b && typeof b.texto === 'string' && b.texto.trim() && !entregaDaSessao.jaEntregue(b.texto))
+          : [];
+        const bloco = renderResolucao(r, {
+          cartaInline: cartaNova,
+          cartaJaEntregue: typeof cartaTxt === 'string' && cartaTxt.trim() !== '' && !cartaNova,
+          vinculoBlocos: vinculoNovo,
+        });
         const structured = bloco ? dedupInline(r) : r;
         const text = bloco || JSON.stringify(r, null, 2);
         return ok(id, { content: [{ type: 'text', text }], structuredContent: structured });
@@ -486,7 +498,10 @@ function handleToolCall(id, params) {
         // (0.33.0) existe para o vinculo que o `resolver` anexa sem ninguem pedir; quem
         // chama esta tool esta justamente buscando o texto de novo (contexto compactado,
         // sessao longa), e receber o marcador "ja entregue" seria um beco sem saida.
-        return ok(id, { content: [{ type: 'text', text: 'vinculo do operador — ver structuredContent' }], structuredContent: { vinculo: lerVinculo(cfg.perfilOperador, args.coletivo) } });
+        // 0.40.0: o texto leva o vinculo inteiro. "ver structuredContent" deixava o agente
+        // sem nada no cliente que so entrega o texto (sessao na nuvem, medido em 07/11).
+        const vinculo = lerVinculo(cfg.perfilOperador, args.coletivo);
+        return ok(id, { content: [{ type: 'text', text: renderVinculoOperador(vinculo) }], structuredContent: { vinculo } });
       }
       case 'configurar':
         return ok(id, toolText(gravarConfig({ vaultMatriz: args.vault_matriz, cerebroPessoal: args.cerebro_pessoal, home: args.home })));
