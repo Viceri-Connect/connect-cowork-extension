@@ -15,9 +15,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { assertDestinoDeMountSeguro } from './sincronizado.mjs';
+import { platformCapabilities } from './environment.mjs';
 
-export const IS_WINDOWS = process.platform === 'win32';
-export const LINK_KIND = IS_WINDOWS ? 'junction' : 'symlink';
+const PLATFORM = platformCapabilities();
+export const IS_WINDOWS = PLATFORM.family === 'windows';
+export const LINK_KIND = PLATFORM.linkKind;
 
 // ---------------------------------------------------------------------------
 // Validacao: o alias e um nome simples dentro do workspace. Nunca pode conter
