@@ -393,7 +393,19 @@ function blocoAcionavel(report, { host = 'claude', acesso = 'completo' } = {}) {
   // Depois da deteccao (que e sobre risco) vem a preparacao do canal (que e sobre
   // alcance). So aparece quando ha acao: matriz governada pede a auto-checagem do
   // marcador; matriz sem governanca pede a fabrica.
-  if (report.matrizConfigurada) L.push(...blocoCanalInjetado(report.l1?.governanca, 'matriz'));
+  // 0.41.0 — fora do Cowork o arquivo de governanca da matriz nao entra sozinho (nao ha
+  // "pasta conectada ao projeto"): procurar o marcador e mandar conectar a pasta seria
+  // instrucao impossivel. Ali, o agente le o arquivo pelo caminho do workspace da sessao.
+  if (report.matrizConfigurada && HOSTS_FORA_DO_COWORK[host] && report.l1?.governanca?.estado === 'governado') {
+    const g = report.l1.governanca;
+    L.push('## Connect — governanca da matriz');
+    L.push('');
+    L.push(`Neste host o arquivo de governanca da matriz (marcador \`CNCT-GOV-${g.marcador?.vault || 'matriz'}\`) nao entra`);
+    L.push(`sozinho no contexto. Leia \`${report.workspace}/matriz/CLAUDE.md\` no inicio da sessao, antes da carta de navegacao.`);
+    L.push('');
+  } else if (report.matrizConfigurada) {
+    L.push(...blocoCanalInjetado(report.l1?.governanca, 'matriz'));
+  }
 
   // Concessao de acesso — vai ANTES de tudo, inclusive do estado
   // zero da matriz, porque e a precondicao de qualquer leitura: sem ela o agente
@@ -543,7 +555,13 @@ export function renderContextoCurto(report, { teto = TETO_INJETADO, host = 'clau
   // ao projeto (o CLAUDE.md de governanca manda ler a carta, e o arquivo abre por
   // construcao). O protocolo inteiro e a carta verbatim seguem disponiveis pela
   // tool — que e o "releia quando o contexto ficar distante" sem arquivo.
-  if (report.matrizConfigurada) {
+  if (report.matrizConfigurada && HOSTS_FORA_DO_COWORK[host]) {
+    L.push('### Camada 1 e protocolo completo');
+    L.push(`- Carta de navegacao da matriz: \`${report.workspace}/matriz/_cerebro/camada-1.md\`. Leia antes de navegar no vault.`);
+    L.push('- Contexto distante, ou carta inalcancavel: chame a tool `iniciar_sessao` — ela devolve o');
+    L.push('  protocolo do mecanismo, a carta verbatim e esta camada 0 pelo canal da tool.');
+    L.push('');
+  } else if (report.matrizConfigurada) {
     L.push('### Camada 1 e protocolo completo');
     L.push('- Carta de navegacao da matriz: `_cerebro/camada-1.md` na pasta da matriz (conectada ao');
     L.push('  projeto; tambem em `./matriz/_cerebro/camada-1.md`). Leia antes de navegar no vault.');

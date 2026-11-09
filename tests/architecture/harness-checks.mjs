@@ -578,11 +578,33 @@ export function checarSkills(pacote) {
   for (const s of tem) {
     const arq = path.join(dir, s, 'SKILL.md');
     if (!fs.existsSync(arq)) { v.push(`${pacote}: ${s}/SKILL.md ausente`); continue; }
-    const meta = parseFrontmatter(fs.readFileSync(arq, 'utf8'));
+    const texto = fs.readFileSync(arq, 'utf8');
+    const meta = parseFrontmatter(texto);
     if (meta.name !== s) v.push(`${pacote}: ${s}/SKILL.md declara name="${meta.name}"`);
     if (!meta.description) v.push(`${pacote}: ${s}/SKILL.md sem description`);
+    // Agent Skills (Codex, Copilot, Antigravity): name kebab-case ate 64, description de 1 a
+    // 1.024 caracteres. Fora disso o host descarta a skill — o Cowork aceita, e por isso a
+    // cnct-nucleo-sessao (1.297) carregava so nele, sem sinal nenhum nos outros.
+    if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(s) || s.length > 64) v.push(`${pacote}: ${s} fora do padrao de nome do Agent Skills`);
+    const descricao = descricaoDoFrontmatter(texto);
+    if (descricao.length < 1 || descricao.length > LIMITE_DESCRICAO_SKILL) {
+      v.push(`${pacote}: ${s}/SKILL.md com description de ${descricao.length} caracteres (Agent Skills aceita 1 a ${LIMITE_DESCRICAO_SKILL}) — os hosts fora do Cowork descartam a skill`);
+    }
   }
   return v;
+}
+
+const LIMITE_DESCRICAO_SKILL = 1024;
+
+// `description` do frontmatter como o host le: escalar simples, aspeado ou bloco `>`/`|`
+// dobrado em uma linha. (lib/frontmatter.mjs nao interpreta bloco dobrado, de proposito.)
+export function descricaoDoFrontmatter(texto) {
+  const fm = String(texto).replace(/\r\n/g, '\n').match(/^---\n([\s\S]*?)\n---/)?.[1] || '';
+  const m = fm.match(/^description:([^\n]*)\n?((?:[ \t]+[^\n]*\n?|\n)*)/m);
+  if (!m) return '';
+  const cabeca = m[1].trim();
+  const corpo = /^[>|][-+]?$/.test(cabeca) ? m[2] : `${cabeca}\n${m[2]}`;
+  return corpo.split('\n').map((l) => l.trim()).filter(Boolean).join(' ').replace(/^["'](.*)["']$/, '$1');
 }
 
 export function checarInventario(pacote) {

@@ -1,25 +1,21 @@
 ---
 name: cnct-nucleo-sessao
 description: >
-  Restaura o contexto coletivo do Connect no INÍCIO de qualquer trabalho e sempre
-  que o operador mencionar uma tarefa, projeto, demanda, cliente, reunião, ticket,
-  ou pedir para "trabalhar em", "continuar", "retomar" algo — chamando a tool
-  iniciar_sessao (identidade do operador + matriz montada em ./matriz + contexto
-  lazy da camada 1). Use também quando o contexto precisar de aprofundamento
-  ("consultar o vault", "onde está", "mais detalhe", "qual a norma/decisão").
-  DISPARA TAMBÉM no primeiro contato do operador com o plugin recém-instalado —
-  inclusive ao clicar em "Personalizar"/"Customizar" no Cowork logo após a
-  instalação, ou em pedidos como "configurar o Connect", "conectar minha
-  matriz", "onde fica meu vault", "sou novo aqui", "primeiro uso", "setup
-  inicial" — mesmo sem menção a projeto/tarefa. Na primeira vez, conduz o
-  onboarding: configura a matriz (pelo código de instância CNCT1-… colado no
-  pedido — tool configurar_por_codigo — ou pelo catálogo do OneDrive), faz nascer o perfil do
-  operador (cnct-fabrica-operador), sincroniza os acervos das frentes dele e
-  oferece o briefing diário. É o FALLBACK do hook de SessionStart quando ele não dispara
-  no Cowork (inclusive quando o clique em "Personalizar" abre uma janela sem
-  disparar o hook) — o mecanismo é o mesmo, só muda o gatilho.
+  Restaura o contexto coletivo do Connect no INÍCIO de qualquer trabalho e sempre que
+  o operador mencionar tarefa, projeto, demanda, cliente, reunião ou ticket, ou pedir
+  para "trabalhar em", "continuar", "retomar" — chamando a tool iniciar_sessao
+  (identidade do operador, matriz em ./matriz, camada 1 lazy). Use também para
+  aprofundar ("consultar o vault", "onde está", "qual a norma/decisão"). DISPARA no
+  primeiro contato com o plugin recém-instalado, mesmo sem menção a tarefa: clique em
+  "Personalizar"/"Customizar" no Cowork, setup pós-instalação de outro host,
+  "configurar o Connect", "conectar minha matriz", "onde fica meu vault", "sou novo
+  aqui", "primeiro uso". No 1º uso conduz o onboarding: matriz pelo código de
+  instância CNCT1-… (configurar_por_codigo) ou pelo catálogo do OneDrive, perfil do
+  operador (cnct-fabrica-operador), acervos das frentes e briefing diário. É o
+  FALLBACK do hook de SessionStart quando ele não dispara — mesmo mecanismo, outro
+  gatilho.
 metadata:
-  version: "0.9.0"
+  version: "0.9.1"
   eixo: nucleo
   program: "Impulsa / Viceri"
 ---
@@ -116,6 +112,12 @@ O perfil **não** depende de `cerebro_pessoal` e não pede pasta nenhuma ao oper
 Depois de `configurar`, **peça ao operador para conectar a pasta da matriz ao projeto Cowork** —
 é uma pasta só, e é o **canal da camada 1**.
 
+> **Fora do Cowork** (Codex, Copilot, Antigravity) não existe projeto a conectar: pule este passo.
+> O bloco do hook já traz o caminho completo da carta (`{workspace da sessão}/matriz/_cerebro/camada-1.md`)
+> e manda ler o `CLAUDE.md` de governança da matriz, que nesses hosts não entra sozinho no contexto. O
+> acesso às pastas é pedido uma vez por host pelo bloco de acesso: confira só que a carta abre e, se não
+> abrir, peça a liberação da pasta como o bloco indica.
+
 - **Por que isso não é detalhe de conforto:** desde a 0.38.0 o bloco do hook leva a camada 0 do
   operador e só **aponta** a carta (`_cerebro/camada-1.md`) — não a copia. Com a matriz conectada,
   a carta abre por construção e o harness carrega sozinho o `CLAUDE.md` de governança da raiz (é
@@ -137,14 +139,16 @@ Depois de `configurar`, **peça ao operador para conectar a pasta da matriz ao p
    ponteiros para o hub — forma na `cnct-fabrica-operador`, Passo 3). Sem alocação o briefing não
    tem o que ler.
 3. **Briefing diário.** Ofereça a tarefa agendada — `cnct-fabrica-operador` **Passo 5b**, com o
-   prompt verbatim da Parte 5 do `Template-Briefing-Diario` da matriz. Ela tem de nascer **neste
-   projeto Cowork** (o que tem a matriz conectada). Rode uma vez na hora para conferir. Recusa do
-   operador não é pendência.
+   prompt verbatim da Parte 5 do `Template-Briefing-Diario` da matriz. No Cowork ela tem de nascer
+   **neste projeto Cowork** (o que tem a matriz conectada); fora do Cowork, o Passo 5b da fábrica diz
+   como criar em cada host. Rode uma vez na hora para conferir. Recusa do operador não é pendência.
 
 **Passo 3 — Restaurar o contexto coletivo.**
 Chamar a tool `iniciar_sessao` (com o `session_id`, se conhecido). Ela devolve o
 bloco "Connect — sessão iniciada" (identidade + `./matriz` + camada 1). Usar esse
 bloco como contexto ativo; referenciar tudo por caminho relativo (ex.: `./matriz/_cerebro/...`).
+Fora do Cowork o diretório de trabalho é o do projeto, não o workspace da sessão: os atalhos ficam
+dentro do workspace que o bloco informa (ex.: `{workspace}/matriz/_cerebro/...`).
 
 **Matriz no dispositivo (0.38.2).** A sessão confere se a matriz está fixada ("Manter sempre neste
 dispositivo"). No Windows, fixa sozinha quando não está, e o aviso só informa. No macOS não existe
@@ -203,7 +207,8 @@ gestão"), ou ao abrir qualquer nota que declare `tipo`+`externo:true` no frontm
      o acervo: explique e só grave se ele aceitar que quem chegar depois sincronize a pasta inteira.
      Sem permissão de escrita na matriz, ou recusa: registre como issue na capa do audit da matriz.
      Nunca grave em silêncio, nunca descarte. Depois, siga o `resolvido` normal abaixo.
-   - `resolvido` → pedir acesso ao Cowork; ler a **carta de navegação do sub-vault** (vem
+   - `resolvido` → pedir acesso à pasta (no Cowork, a concessão; nos outros hosts, a liberação
+     que o bloco de acesso descreve); ler a **carta de navegação do sub-vault** (vem
      injetada no bloco de resolução) e pousar em `entradaResolvida.caminhoRelativo` — o
      caminho real, já resolvido. Se a carta vier ausente, ou a `entrada` tiver sido
      resolvida por **busca** (o aviso diz), isso é lacuna do vault: reportar ao operador,
@@ -228,5 +233,5 @@ O modelo canônico é **grafo de manifestos**: cada entidade é **manifesto**
 
 - **Nunca assumir cliente** nem hardcodar caminho — tudo vem da config resolvida.
 - **Não repetir** a restauração se `estado_sessao` disser que já está montado.
-- Montar dá o caminho estável; **não** concede acesso de leitura — se o Cowork pedir,
-  conceder acesso à origem correspondente.
+- Montar dá o caminho estável; **não** concede acesso de leitura — se o host pedir (no Cowork, a
+  concessão de pasta), conceder acesso à origem correspondente.
