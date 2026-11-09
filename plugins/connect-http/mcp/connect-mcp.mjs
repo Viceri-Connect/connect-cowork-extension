@@ -413,6 +413,44 @@ const TOOLS = [
   },
 ];
 
+// ---------------------------------------------------------------------------
+// ANOTACOES — o que cada tool faz com o mundo (MCP `annotations`, 0.41.0).
+//
+// Os hosts usam isto para decidir quando pedir aprovacao: leitura pura passa sem
+// friccao; escrita destrutiva (sobrescreve config, arquivo de vault ou atalho) pede
+// confirmacao. Classificacao conservadora — na duvida, conta como escrita/destrutiva:
+//   readOnlyHint    nao altera nada (nem config, nem atalho, nem arquivo)
+//   destructiveHint pode SOBRESCREVER ou REMOVER algo existente
+//   idempotentHint  repetir com os mesmos argumentos nao muda o resultado
+//   openWorldHint   fala com algo fora desta maquina (OneDrive/SharePoint)
+// tests/unit/mcp-anotacoes.test.mjs exige anotacao em toda tool.
+// ---------------------------------------------------------------------------
+const LEITURA = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
+const ESCRITA = { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false };
+const SOBRESCREVE = { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false };
+const ANOTACOES = {
+  ambiente_connect: { title: 'Ambiente do Connect', ...LEITURA },
+  iniciar_sessao: { title: 'Iniciar sessao Connect', ...ESCRITA }, // cria o workspace e monta atalhos
+  estado_sessao: { title: 'Estado da sessao', ...LEITURA },
+  configurar: { title: 'Configurar caminhos locais', ...SOBRESCREVE }, // troca a matriz configurada
+  resolver: { title: 'Resolver conceito', ...ESCRITA }, // monta o atalho do sub-vault
+  registrar_subvault_local: { title: 'Registrar sub-vault local', ...ESCRITA },
+  publicar_governanca: { title: 'Publicar governanca no vault', ...SOBRESCREVE }, // reescreve arquivo do vault compartilhado
+  resolver_repo: { title: 'Resolver repositorio', ...LEITURA },
+  registrar_repo_local: { title: 'Registrar repositorio local', ...ESCRITA },
+  listar_repos: { title: 'Listar repositorios', ...LEITURA },
+  estado_operador: { title: 'Vinculo do operador', ...LEITURA },
+  medir_navegacao: { title: 'Medir navegacao do vault', ...LEITURA },
+  mount_junction: { title: 'Montar atalho', ...SOBRESCREVE }, // `replace` troca um atalho existente
+  unmount_junction: { title: 'Remover atalho', ...SOBRESCREVE },
+  sincronizar_subvault: { title: 'Sincronizar sub-vault (OneDrive)', ...ESCRITA, openWorldHint: true },
+  catalogo_sync: { title: 'Catalogo do OneDrive', ...ESCRITA }, // `registrar: true` grava caminhos
+  configurar_por_codigo: { title: 'Configurar pelo codigo de instancia', ...SOBRESCREVE, openWorldHint: true },
+  gerar_codigo_instancia: { title: 'Gerar codigo de instancia', ...LEITURA },
+  list_mounts: { title: 'Listar atalhos', ...LEITURA },
+};
+for (const tool of TOOLS) tool.annotations = ANOTACOES[tool.name];
+
 const responseContext = new AsyncLocalStorage();
 function send(msg) {
   const sink = responseContext.getStore();
