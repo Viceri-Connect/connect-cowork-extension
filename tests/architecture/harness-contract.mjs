@@ -1,0 +1,136 @@
+// tests/architecture/harness-contract.mjs
+// CONTRATO DE ARQUITETURA DOS HARNESSES — fonte unica do que cada host precisa ter.
+//
+// O Connect e UM mecanismo (lib/ + mcp/ + skills/) distribuido para varios hosts
+// (Claude/Cowork, Codex, Antigravity, Copilot), em mais de uma variante de transporte
+// (stdio, http). Cada host le arquivos proprios (manifesto, config de MCP, hook de
+// SessionStart) e cada um desses arquivos pode divergir em silencio: o host instala,
+// mas fica sem MCP, sem bootstrap de sessao ou com versao errada.
+//
+// Este arquivo DECLARA a forma esperada; `harness-checks.mjs` confere; o teste
+// `harnesses.test.mjs` falha o build quando qualquer pacote x harness x feature diverge.
+//
+// Para adicionar um harness novo: declare-o em HARNESSES (todas as chaves). Para um
+// pacote novo do marketplace: declare-o em PACOTES. Arquivo de harness sem dono aqui
+// (ex.: um `.foo-plugin/` novo) tambem falha — nada entra no marketplace sem contrato.
+
+export const SERVIDOR_MCP = 'connect';
+export const ENTRADA_MCP = 'mcp/connect-mcp.mjs';
+export const MARCADOR_BOOTSTRAP = 'Connect — sessao iniciada';
+
+// Versao canonica: o manifesto Claude (amarrado ao CHANGELOG por tests/unit/release.test.mjs).
+export const FONTE_VERSAO = 'plugins/connect/.claude-plugin/plugin.json';
+// Conjunto canonico de skills: todo pacote entrega exatamente estas.
+export const FONTE_SKILLS = 'plugins/connect/skills';
+
+// Eventos de inicio de sessao que todo hook precisa cobrir (quando o host usa matcher).
+export const EVENTOS_OBRIGATORIOS = ['startup', 'resume'];
+
+export const VARIANTES = {
+  stdio: { transporte: 'stdio' },
+  http: { transporte: 'http', url: 'http://127.0.0.1:3737/mcp' },
+};
+
+export const PACOTES = {
+  connect: { dir: 'plugins/connect', variante: 'stdio' },
+  'connect-http': { dir: 'plugins/connect-http', variante: 'http', geradoPor: 'scripts/build-connect-http.mjs' },
+};
+
+// Marketplaces que listam os pacotes. `fonte(entry)` devolve o caminho relativo a raiz.
+export const MARKETPLACES = [
+  { nome: 'Claude / Cowork / Copilot', arquivo: '.claude-plugin/marketplace.json', fonte: (e) => e.source },
+  { nome: 'Codex / Antigravity', arquivo: '.agents/plugins/marketplace.json', fonte: (e) => e.source?.path },
+];
+// O Copilot (VS Code) instala pelo marketplace Claude registrado aqui.
+export const COPILOT_SETTINGS = '.github/copilot/settings.json';
+
+// Arquivos do pacote que sao de TODOS os harnesses (nucleo). Qualquer outro arquivo de
+// "superficie de host" (ver ehSuperficieDeHost) precisa ter dono em HARNESSES.
+export const NUCLEO_COMPARTILHADO = ['hooks/session-start.mjs'];
+
+export function ehSuperficieDeHost(relativo) {
+  const r = relativo.replaceAll('\\', '/');
+  if (/^\.[^/]+-plugin\//.test(r)) return true; // overlays .claude-plugin/, .codex-plugin/, ...
+  if (/^[^/]+\.json$/.test(r)) return true; // manifests e configs na raiz do pacote
+  if (/^hooks\/[^/]+\.(json|mjs)$/.test(r)) return true; // hooks e seus entrypoints
+  if (/^com\.github\.[^/]+\//.test(r)) return true; // overlays por fornecedor
+  if (/^copilot\//.test(r)) return true;
+  return false;
+}
+
+const SESSION_ID = (harness) => `arch-${harness}`;
+
+// Linha de comando do hook: shell form (`command` com tudo) ou exec form (`command` +
+// `args`, adotado pelo Claude na 0.39.0 — uma entrada por SO, sem depender de Git Bash).
+const linha = (h) => [h.command, ...(Array.isArray(h.args) ? h.args : [])].filter(Boolean).join(' ');
+
+export const HARNESSES = {
+  claude: {
+    rotulo: 'Claude (Cowork / Claude Code)',
+    variaveisDeRaiz: ['CLAUDE_PLUGIN_ROOT'],
+    manifesto: '.claude-plugin/plugin.json',
+    exigeVersao: true,
+    // Superficie propria (alem do manifesto). Caminhos sao relativos ao pacote.
+    arquivos: ['.claude-plugin/plugin.json', '.mcp.json', 'hooks/hooks.json'],
+    mcp: (m) => m.mcpServers,
+    hooks: () => './hooks/hooks.json',
+    lerHooks: (j) => (j.hooks?.SessionStart || []).flatMap((g) => (g.hooks || []).map((h) => ({ matcher: g.matcher, command: linha(h) }))),
+    // Forma HTTP que o Claude aceita.
+    mcpHttp: (url) => ({ type: 'http', url }),
+    payload: () => ({ session_id: SESSION_ID('claude') }),
+    lerSaida: (stdout) => stdout,
+  },
+  codex: {
+    rotulo: 'OpenAI Codex / ChatGPT Work',
+    variaveisDeRaiz: ['PLUGIN_ROOT'],
+    manifesto: '.codex-plugin/plugin.json',
+    exigeVersao: false, // overlay: a versao vem do plugin.json portavel
+    arquivos: ['.codex-plugin/plugin.json', 'hooks/codex-hooks.json', 'hooks/session-start-codex.mjs'],
+    mcp: () => './mcp.json',
+    hooks: (m) => m.hooks,
+    lerHooks: (j) => (j.hooks?.SessionStart || []).flatMap((g) => (g.hooks || []).map((h) => ({ matcher: g.matcher, command: linha(h) }))),
+    mcpHttp: (url) => ({ type: 'streamable-http', url }),
+    payload: () => ({ session_id: SESSION_ID('codex') }),
+    lerSaida: (stdout) => {
+      const o = JSON.parse(stdout).hookSpecificOutput;
+      if (o?.hookEventName !== 'SessionStart') throw new Error(`hookEventName inesperado: ${o?.hookEventName}`);
+      return o.additionalContext;
+    },
+  },
+  antigravity: {
+    rotulo: 'Google Antigravity',
+    variaveisDeRaiz: ['PLUGIN_ROOT'],
+    manifesto: '.antigravity-plugin/plugin.json',
+    exigeVersao: true,
+    schema: 'https://antigravity.google/schemas/v1/plugin.json',
+    arquivos: ['.antigravity-plugin/plugin.json', 'mcp_config.json', 'hooks.json', 'hooks/session-start-antigravity.mjs'],
+    mcp: () => './mcp_config.json',
+    hooks: () => './hooks.json',
+    lerHooks: (j) => Object.values(j).flatMap((grupo) => (grupo?.SessionStart || []).map((h) => ({ matcher: h.matcher, command: linha(h) }))),
+    mcpHttp: (url) => ({ serverUrl: url }),
+    payload: () => ({ conversationId: SESSION_ID('antigravity') }),
+    lerSaida: (stdout) => JSON.parse(stdout).injectSteps?.[0]?.systemMessage?.systemMessage,
+  },
+  copilot: {
+    rotulo: 'GitHub Copilot (Agent Plugins)',
+    variaveisDeRaiz: ['PLUGIN_ROOT'],
+    manifesto: 'plugin.json',
+    exigeVersao: true,
+    schema: 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json',
+    arquivos: ['plugin.json', 'mcp.json', 'com.github.copilot/hooks/hooks.json', 'copilot/session-start.mjs'],
+    mcp: () => './mcp.json',
+    hooks: () => './com.github.copilot/hooks/hooks.json',
+    lerHooks: (j) => {
+      if (j.version !== 1) throw new Error(`hooks.json do Copilot exige version 1 (veio ${j.version})`);
+      if (j.hooks?.SessionStart) throw new Error('Copilot usa "sessionStart" (camelCase); "SessionStart" e ignorado pelo host');
+      return (j.hooks?.sessionStart || []).map((h) => ({ matcher: h.matcher, command: linha(h) }));
+    },
+    mcpHttp: (url) => ({ type: 'streamable-http', url }),
+    payload: () => ({ session_id: SESSION_ID('copilot'), source: 'startup' }),
+    lerSaida: (stdout) => JSON.parse(stdout).additionalContext,
+    // Artefato gerado tambem pelo build do bundle: o versionado nao pode divergir.
+    geradoPor: { script: 'scripts/build-copilot.mjs', arquivo: 'com.github.copilot/hooks/hooks.json' },
+  },
+};
+
+export { SESSION_ID };

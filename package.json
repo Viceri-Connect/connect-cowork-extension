@@ -10,6 +10,8 @@
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
     "test:e2e": "vitest run tests/e2e",
+    "test:architecture": "vitest run tests/architecture",
+    "check:harnesses": "node tests/architecture/harness-checks.mjs",
     "build:copilot": "node scripts/build-copilot.mjs",
     "build:connect-http": "node scripts/build-connect-http.mjs",
     "test:ci": "vitest run --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml"

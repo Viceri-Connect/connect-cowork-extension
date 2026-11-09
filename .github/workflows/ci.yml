@@ -13,8 +13,24 @@ permissions:
   contents: read
 
 jobs:
+  # Gate rapido: contrato de harnesses do marketplace (tests/architecture). Se qualquer
+  # pacote x harness perder uma feature (manifesto, MCP, hook de SessionStart, skills),
+  # o build para aqui, antes da matriz de SO e dos bundles.
+  architecture:
+    name: architecture (harness contract)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+          cache: npm
+      - run: npm ci
+      - run: npm run test:architecture
+
   test:
     name: test (${{ matrix.os }}, node ${{ matrix.node }})
+    needs: architecture
     runs-on: ${{ matrix.os }}
     # O codigo de junction/symlink/OneDrive muda por SO; macOS entra como informativo ate
     # a primeira rodada verde provar que o suite inteiro passa la.
@@ -46,6 +62,7 @@ jobs:
 
   bundle:
     name: bundle .plugin
+    needs: architecture
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -60,6 +77,7 @@ jobs:
 
   copilot-bundle:
     name: bundle Copilot Agent Plugin
+    needs: architecture
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
