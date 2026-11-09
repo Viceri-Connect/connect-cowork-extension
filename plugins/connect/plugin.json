@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "connect",
-  "version": "0.40.0",
+  "version": "0.41.0",
   "description": "Connect knowledge, session, and governance tools for compatible agent harnesses.",
   "author": {
     "name": "Impulsa / Viceri"

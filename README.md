@@ -145,23 +145,28 @@ genérica de shell/PowerShell nem controle de desktop. O Windows MCP segue separ
 ## Estrutura (marketplace + plugin)
 
 ```
-.claude-plugin/marketplace.json     # marketplace "impulsa" — aponta ./plugins/connect
-plugins/connect/                     # o plugin instalável
-  ├── .claude-plugin/plugin.json     # ← fonte da VERSÃO
-  ├── .mcp.json                      # registra o MCP stdio local "connect"
-  ├── mcp/connect-mcp.mjs            # servidor MCP (iniciar_sessao + primitivos de mount)
-  ├── lib/                           # núcleo testável, zero-dep
-  │   ├── mount.mjs                  #   junction (Windows) / symlink (POSIX)
-  │   ├── matriz.mjs                 #   identidade + montagem da camada 1
-  │   ├── session.mjs                #   iniciarSessao() — o bootstrap
-  │   └── render.mjs                 #   bloco de contexto da sessão
-  ├── hooks/                         # SessionStart (type: command) → iniciarSessao
-  ├── skills/connect-knowledge-mount/
-  ├── scripts/spike-junction.ps1     # spike da premissa 2 (junction NTFS) no host
-  └── config/connect.config.example.json
-scripts/build-plugin.sh              # empacota o .plugin (caminho secundário)
-docs/                                # SPEC, notas do POC
-tests/                               # spikes que matam premissas (repetíveis)
+.claude-plugin/marketplace.json     # marketplace "impulsa" (Claude/Cowork/Copilot): connect + connect-http
+.agents/plugins/marketplace.json    # marketplace Codex/Antigravity: connect + connect-http
+.github/copilot/settings.json       # registra o marketplace "impulsa" no VS Code
+plugins/connect/                     # o plugin instalável (stdio)
+  ├── .claude-plugin/plugin.json     # ← fonte da VERSÃO (amarrada ao CHANGELOG)
+  ├── .mcp.json, hooks/hooks.json    # Claude/Cowork: MCP via launcher + SessionStart (exec form, uma entrada por SO)
+  ├── plugin.json, mcp.json          # Agent Plugins (Copilot) + MCP portável (Codex); extensions.com.openai
+  ├── com.github.copilot/hooks/      # Copilot: sessionStart → copilot/session-start.mjs
+  ├── .codex-plugin/, hooks/codex-hooks.json          # Codex
+  ├── .antigravity-plugin/, mcp_config.json, hooks.json, rules/AGENTS.md  # Antigravity
+  ├── mcp/connect-mcp.mjs            # servidor MCP (stdio padrão; HTTP local opcional)
+  ├── lib/                           # núcleo testável, zero-dep (compartilhado por todos os hosts)
+  ├── hooks/session-start*.mjs       # envelope por host → lib/bootstrap.mjs (local ou nuvem)
+  ├── hooks/guarda-varredura.mjs     # PreToolUse (Codex/Antigravity) → lib/varredura.mjs (regra dura 4)
+  ├── skills/                        # skills cnct-* (compartilhadas)
+  ├── scripts/run-node.*             # runtime Node portátil de TODOS os hosts: .ps1 Windows, .sh POSIX, .bat fonte única
+  ├── scripts/connect-mcp(.cmd)      # entrada do MCP nos hosts do formato portável
+  └── config/                        # contratos + connect.config.example.json
+plugins/connect-http/                # variante HTTP local — GERADA por scripts/build-connect-http.mjs
+scripts/                             # build-plugin.sh (.plugin), build-copilot.mjs, build-connect-http.mjs
+docs/                                # SPEC, notas do POC, fronteira de controle do host
+tests/                               # architecture/ (contrato de harnesses), unit/, integration/, e2e/
 ```
 
 ## Configuração (paths locais, nunca versionados)
@@ -175,27 +180,23 @@ Via env ou por `{CONNECT_HOME}/connect.config.json`
 
 ## Testes
 
-```
-node tests/spike-mecanismo.mjs     # núcleo ponta a ponta (symlink no Linux, junction no Windows)
-node tests/handshake-mcp.mjs       # handshake do MCP + iniciar_sessao
-```
-
-Ver `docs/POC-NOTES.md` para o spike das premissas 1–3 no host Windows/Cowork.
-
-
-## Testes
-
 Ferramental de desenvolvimento na raiz (não entra no bundle `.plugin`, que empacota só `plugins/connect/`).
 
 ```
-npm ci            # uma vez
-npm test          # tudo: unitários + integração
+npm ci                      # uma vez
+npm test                    # tudo: arquitetura + unitários + integração + e2e
+npm run test:architecture   # contrato de harnesses do marketplace
 npm run test:unit
 npm run test:integration
 npm run test:e2e
 npm run test:watch
+npm run check:harnesses     # contrato de harnesses sem Vitest (diagnóstico)
 npm run build:copilot
+npm run build:connect-http
+npm run gerar:regras        # rules/AGENTS.md do Antigravity, a partir de lib/regras.mjs
 ```
+
+Ver `docs/POC-NOTES.md` para o spike das premissas 1–3 no host Windows/Cowork.
 
 - `tests/unit/*.test.mjs` — testes nativos do Vitest, um arquivo por módulo de `plugins/connect/lib/`.
 - `tests/integration/<domínio>/*.spike.mjs` — os spikes originais, agrupados por domínio (`sessao`, `vault`, `sincronizacao`, `plataforma`, `mcp`). O `tests/integration/spikes.test.mjs` roda cada um como subprocesso **em um perfil de usuário descartável** (`HOME`, `USERPROFILE` e `CONNECT_HOME` apontam para um diretório temporário em `.test-tmp/`; variáveis `CONNECT_*` do seu ambiente são removidas), então nenhum teste toca o seu `~/Connect` nem seus vaults reais. Migrar um spike para teste nativo = mover a lógica para `tests/unit/` e apagar o `.spike.mjs`.

@@ -1,5 +1,81 @@
 # Changelog — connect
 
+## 0.41.0 — 2026-11-09
+
+**O Connect sai do Cowork: o mesmo mecanismo agora atende Codex/ChatGPT Work, Antigravity e
+GitHub Copilot.** Até a 0.40 só o Claude (Cowork/Claude Code) tinha manifesto, MCP e hook de
+SessionStart. Os outros hosts não tinham por onde entrar. Nenhuma tool muda de contrato. A única tool
+nova é somente leitura.
+
+- **Adaptadores por host no mesmo pacote.** `lib/`, `mcp/` e `skills/` são compartilhados. Cada host
+  ganha só a própria superfície:
+  - Copilot: `plugin.json`, `mcp.json` e `com.github.copilot/hooks/hooks.json`.
+  - Codex: `.codex-plugin/` e `hooks/codex-hooks.json`.
+  - Antigravity: `.antigravity-plugin/`, `mcp_config.json` e `hooks.json`.
+
+  Todos usam o mesmo `CONNECT_HOME` do Cowork: `repos`, sub-vaults e matriz são por máquina, não por
+  host.
+- **Node portátil em todos os hosts.** MCP e hooks de Codex, Copilot e Antigravity sobem pelo mesmo
+  runtime do Cowork (`scripts/run-node.*`), sem `node` no PATH:
+  - MCP: `scripts/connect-mcp` e `.cmd`.
+  - Hooks por SO: `commandWindows` no Codex, `bash`/`powershell` no Copilot e uma entrada por SO no
+    Antigravity.
+  - Em host com sandbox que não deixa escrever no `CONNECT_HOME`, o runtime vai para a pasta de dados
+    do host.
+  - A resposta JSON dos hooks sai em ASCII, para atravessar o PowerShell do Windows.
+- **Pedido de acesso no ritmo do host.** Fora do Cowork, o bloco de acesso às pastas vai inteiro na
+  1ª sessão do host e quando as pastas mudam; nas demais, vira um lembrete de uma linha. Cada host
+  recebe a dica de como liberar.
+- **Tools anotadas.** Toda tool do MCP declara `annotations` de leitura e escrita: o host pede
+  confirmação só para o que sobrescreve ou remove.
+- **Codex no formato atual.** A configuração da OpenAI foi para `plugin.json > extensions.com.openai`:
+  hooks explícitos, vitrine e `onboardingSkill` (`cnct-nucleo-sessao`, que conduz o 1º uso no setup
+  pós-instalação). O overlay `.codex-plugin/` só espelha, para versões antigas do Codex.
+- **Regras duras sempre ativas no Antigravity** (`rules/AGENTS.md`, gerado de `lib/regras.mjs`). O
+  SessionStart dele roda uma vez por conversa, sem resume nem compact.
+- **Guarda de varredura (regra dura 4)** no Codex e no Antigravity. Busca recursiva dentro de um vault
+  do Connect deixa marca em `CONNECT_HOME/logs/varredura.jsonl`. O Antigravity pede confirmação ao
+  operador; o Codex segue, entrega a regra ao agente e avisa o operador.
+- **Skills utilizáveis fora do Cowork.**
+  - A description da `cnct-nucleo-sessao` passava de 1.024 caracteres, e os hosts do Agent Skills
+    descartavam em silêncio a skill de onboarding.
+  - Os passos que só existem no Cowork (conectar pasta ao projeto, concessão, briefing no projeto)
+    ganharam o equivalente em cada host. O bloco injetado fora do Cowork entrega os caminhos completos
+    da governança e da carta.
+  - O teste de arquitetura valida nome e description no padrão Agent Skills.
+- **Um bootstrap só para todos os hosts (`lib/bootstrap.mjs`).** O que o hook injeta é decidido num
+  lugar; cada host muda só o envelope. A regra da 0.40.0 vale em todos eles: sessão na nuvem sem
+  configuração local orienta e não diagnostica "1º uso". Antes, os hooks de Codex e Copilot chamavam
+  `iniciarSessao` direto e perdiam essa regra.
+- **Variante `connect-http`** nos marketplaces, para host que não consegue iniciar MCP stdio. O
+  servidor sobe com `--transport=http` (ou `CONNECT_MCP_TRANSPORT=http`) e só escuta em
+  `127.0.0.1:3737`. Ele recusa Host e Origin externos e corpo acima de 1 MiB. stdio continua padrão.
+  O pacote é gerado por `scripts/build-connect-http.mjs`, com o hook do Claude em exec form, como o
+  do pacote stdio desde a 0.39.0. Não instale as duas variantes no mesmo host.
+- **Tool `ambiente_connect`.** Relatório somente leitura de runtime, plataforma e acessibilidade do
+  `CONNECT_HOME`. O que não dá para confirmar sem efeito colateral (persistência, suporte a links)
+  sai como desconhecido.
+- **`resolver_repo` mais útil quando não casa.** Devolve os repos registrados mais próximos. Com a
+  tabela vazia, aponta a causa mais comum: o host com `CONNECT_HOME` diferente do Cowork.
+- **Correção — bootstrap quebrado em todos os hosts.** A extração de `lib/environment.mjs` tinha
+  removido o `import os` de `config-local.mjs`, mas o `homeLegado()` ainda usa `os.homedir()`. O
+  `iniciar_sessao` falhava com `os is not defined`. O teste de arquitetura pegou antes de sair.
+- **Testes de arquitetura do marketplace** (`tests/architecture/`). Um contrato declara, por pacote
+  e por host:
+  - manifesto, versão e MCP;
+  - o hook de SessionStart em exec form no Claude, executado de verdade em perfil descartável,
+    tanto local quanto na nuvem, e também pela linha real do host;
+  - o runtime portátil e o launcher do MCP;
+  - o acesso no ritmo do host, a extensão da OpenAI, as regras sempre ativas e a guarda de varredura;
+  - as skills canônicas e a variável de raiz do host.
+
+  Qualquer divergência em arquivo específico de harness falha o CI. Arquivo de host sem dono no
+  contrato também falha.
+- **Testes migrados para Vitest + CI** (Windows e Linux, macOS informativo). Os spikes foram para
+  `tests/integration/<domínio>/`, incluindo os da 0.39/0.40 (`instancia` e `sessao-nuvem`).
+- **Fim de linha normalizado para LF.** Alguns arquivos tinham entrado com CRLF antes do
+  `.gitattributes`, e o `build-plugin.sh` em CRLF não roda no bash.
+
 ## 0.40.0 — 2026-11-07
 
 **Sessão na nuvem: o hook orienta em vez de diagnosticar, e a carta volta a chegar.** Desde 06/10, nos
