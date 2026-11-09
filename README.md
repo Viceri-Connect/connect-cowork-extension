@@ -117,6 +117,11 @@ Instale a variante desejada a partir do diretório local (`agy plugin install ./
 ou `agy plugin install ./plugins/connect-http`) ou coloque-a em `.agents/plugins/`.
 Para validar, execute `agy plugin validate --strict` no diretório escolhido.
 
+O SessionStart do Antigravity roda uma vez por conversa, sem resume nem compact. Por isso
+as regras duras do Connect também vão como **regra sempre ativa** (`rules/AGENTS.md`),
+que entra em toda conversa com o plugin ligado. O arquivo é gerado de
+`lib/regras.mjs` por `npm run gerar:regras`; o teste de arquitetura falha se ele divergir.
+
 Todos os hosts (Cowork, Copilot, Codex e Antigravity) usam o mesmo `CONNECT_HOME`,
 padrão `~/Connect`: `repos`, `subVaults`, matriz e perfil do operador são por máquina
 e não por host. Um `PLUGIN_DATA` separado por host deixava o config sem `repos` e sem

@@ -17,6 +17,7 @@ import {
 } from './harness-contract.mjs';
 import { parseFrontmatter } from '../../plugins/connect/lib/frontmatter.mjs';
 import { MARCA_ACESSO_COMPLETO, MARCA_ACESSO_LEMBRETE } from '../../plugins/connect/lib/render.mjs';
+import { ARQUIVO_REGRAS_SEMPRE_ATIVAS, textoRegrasSempreAtivas } from '../../plugins/connect/lib/regras.mjs';
 
 const MARCA_ACESSO_COWORK = 'acesso de pasta (faca isto primeiro)';
 
@@ -470,6 +471,17 @@ export function checarExtensaoOpenAI(pacote, harness) {
   return v;
 }
 
+// FEATURE (Antigravity): regras duras como regra sempre ativa, em sincronia com lib/regras.mjs.
+export function checarRegrasSempreAtivas(pacote, harness) {
+  if (!HARNESSES[harness].regrasSempreAtivas) return [];
+  const alvo = resolverNoPacote(pacote, ARQUIVO_REGRAS_SEMPRE_ATIVAS);
+  if (!fs.existsSync(alvo)) return [`${pacote}/${harness}: ${ARQUIVO_REGRAS_SEMPRE_ATIVAS} ausente (npm run gerar:regras)`];
+  const norm = (t) => t.replace(/\r\n/g, '\n');
+  return norm(fs.readFileSync(alvo, 'utf8')) === norm(textoRegrasSempreAtivas())
+    ? []
+    : [`${pacote}/${harness}: ${ARQUIVO_REGRAS_SEMPRE_ATIVAS} diverge de lib/regras.mjs (npm run gerar:regras)`];
+}
+
 // PACOTE: o launcher do MCP sobe o servidor pelo runtime portatil e responde ao handshake.
 export function checarLauncherMcp(pacote) {
   const base = path.join(dirPacote(pacote), 'scripts', 'connect-mcp');
@@ -601,6 +613,7 @@ export const FEATURES = {
   'hook pelo runtime': checarHookPeloRuntime,
   'acesso no ritmo do host': checarAcessoPorHost,
   'extensao OpenAI': checarExtensaoOpenAI,
+  'regras sempre ativas': checarRegrasSempreAtivas,
   'artefato gerado': checarArtefatoGerado,
 };
 

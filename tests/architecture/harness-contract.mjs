@@ -60,6 +60,7 @@ export function ehSuperficieDeHost(relativo) {
   if (/^hooks\/[^/]+\.(json|mjs)$/.test(r)) return true; // hooks e seus entrypoints
   if (/^com\.github\.[^/]+\//.test(r)) return true; // overlays por fornecedor
   if (/^copilot\//.test(r)) return true;
+  if (/^rules\//.test(r)) return true; // regras sempre ativas (Antigravity)
   return false;
 }
 
@@ -140,7 +141,10 @@ export const HARNESSES = {
     manifesto: '.antigravity-plugin/plugin.json',
     exigeVersao: true,
     schema: 'https://antigravity.google/schemas/v1/plugin.json',
-    arquivos: ['.antigravity-plugin/plugin.json', 'mcp_config.json', 'hooks.json', 'hooks/session-start-antigravity.mjs'],
+    arquivos: ['.antigravity-plugin/plugin.json', 'mcp_config.json', 'hooks.json', 'hooks/session-start-antigravity.mjs', 'rules/AGENTS.md'],
+    // SessionStart do Antigravity roda uma vez por conversa (sem resume/compact): as regras
+    // duras tambem vao como regra sempre ativa, gerada de lib/regras.mjs.
+    regrasSempreAtivas: true,
     mcp: () => './mcp_config.json',
     hooks: () => './hooks.json',
     lerHooks: (j) => Object.values(j).flatMap((grupo) => (grupo?.SessionStart || []).map((h) => handler(h, h.matcher, porPrimeiroToken(linha(h))))),
