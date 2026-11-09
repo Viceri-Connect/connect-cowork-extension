@@ -1,0 +1,1674 @@
+# Changelog — connect
+
+## 0.40.0 — 2026-11-07
+
+**Sessão na nuvem: o hook orienta em vez de diagnosticar, e a carta volta a chegar.** Desde 06/10, nos
+planos Pro, Max e Ultra, a sessão do Cowork roda no servidor da Anthropic; o MCP do Connect continua no
+PC do operador e é chamado pela ponte do app desktop. Medido em 07/11, numa sessão real (instância
+pessoal, sub-vault `fernando` resolvido pela primeira vez), duas falhas que o desenho de máquina única
+escondia:
+
+- **Hook com diagnóstico falso.** O SessionStart roda no servidor, com um `CONNECT_HOME` vazio, e
+  injetava "matriz não configurada · perfil não provisionado · não prossiga com outra tarefa" — com o
+  operador plenamente configurado no PC. Novo `lib/ambiente.mjs` (`execucaoNaNuvem`: sinal
+  `CLAUDE_CODE_REMOTE=true`, override `CONNECT_EXECUCAO=local|nuvem`). Na nuvem **sem** configuração
+  local, o hook injeta `renderSessaoNuvem()`: não afirma nada sobre o estado, manda perguntar ao MCP pela
+  ponte (`estado_sessao` → `iniciar_sessao`), avisa que os atalhos são junctions do PC e que, sem tools
+  do Connect, o app desktop está fechado. Não cria scaffold nem baixa runtime no servidor
+  (`run-node.sh` usa o `node` do PATH quando `CLAUDE_CODE_REMOTE=true`). Na nuvem **com** configuração
+  local (Connect instalado de fato no servidor), segue o fluxo normal.
+- **Canal oposto ao do Cowork local.** A ponte entrega o `content[].text` e descarta o
+  `structuredContent` — o inverso do medido em 23/08 e 26/08 no Cowork local, que motivou a carta "só no
+  JSON" (0.33.x). É o modo de falha que o próprio `render.mjs` previa ("medição de um cliente só"): a
+  carta do sub-vault não chegou, e o vínculo do operador — que o `resolver` anexava só no JSON e o
+  `estado_operador` respondia com "ver structuredContent" — também não. Com dois clientes descartando
+  canais **opostos**, não há canal único seguro:
+  - `resolver`: a **primeira** entrega da carta e dos blocos de vínculo vai **nos dois** canais; o
+    vínculo antes da carta (`curadoria-pessoal-coletivo`). Da segunda em diante, o texto diz "já entregue
+    nesta sessão" (e manda abrir o arquivo se o contexto compactou) e o JSON leva o marcador do dedup — a
+    pergunta "já entregue?" é feita **antes** do `dedupInline`, que registra o bloco ao processá-lo.
+  - `estado_operador` com `coletivo`: o texto leva o vínculo inteiro (`renderVinculoOperador`).
+  - Custo: uma cópia da carta por vault por sessão, e só em cliente que entrega os dois canais.
+- `tests/spike-sessao-nuvem.mjs` (novo, 28 checagens): detecção de ambiente; hook na nuvem sem config
+  (orienta, não diagnostica, não cria estado), local (inalterado) e nuvem com config (fluxo normal);
+  render de carta já entregue e vínculo; e ponta a ponta no MCP — `resolver` duas vezes na mesma sessão,
+  carta nos dois canais na 1ª e em nenhum na 2ª. O caminho `cartaInline: false` sem "já entregue" segue
+  coberto pelo `spike-custo-contexto`.
+
+**Pendente para a nuvem (não nesta versão):** os blocos ainda citam atalhos (`./matriz`, `./{alias}`) que
+são junctions no PC — na nuvem a leitura é pelas pastas conectadas, e a concessão deveria virar pedido
+de acesso à pasta de origem; tarefas agendadas (briefing diário da `cnct-fabrica-operador`, SCHEDULE da
+`cnct-nucleo-audit`) rodam na nuvem e só alcançam o MCP com o app desktop aberto e a tarefa marcada como
+dependente do computador; e o shell da ponte não apaga arquivo sem permissão, então git rodado por skill
+deixa `.lock` (assinatura do `index.lock` órfão de 15/08 neste repositório).
+
+## 0.39.0 — 2026-10-27
+
+**Primeiro uso sem instalador: código de instância e hook que não depende de Git.** Até aqui o operador
+novo sincronizava a Matriz à mão no SharePoint (o passo em que mais se erra), o plugin não sabia qual era a
+instância antes de a Matriz estar no disco, e o hook de início de sessão só rodava com Git Bash — cuja
+instalação pede administrador. Um instalador externo provou o caminho e mostrou esse custo.
+
+**Código de instância (`CNCT1-…`).** É o bloco `origem` (GLOSSARIO: origem-na-nuvem) da Matriz publicado
+fora dela: prefixo de versão + base64url de um JSON compacto com site, título do site, pasta, os quatro ids,
+o domínio de e-mail da instância e, opcional, a quem pedir acesso. Não é segredo e não concede acesso — a
+permissão segue no SharePoint. Nenhum dado de instância entra no pacote (GLOSSARIO: produto-sem-instancia).
+
+- `lib/instancia.mjs`: `codificarCodigo`, `decodificarCodigo` (aceita o código no meio do pedido e
+  remonta o que a cópia de um PDF quebrou em linhas), `gerarCodigoInstancia`, `configurarPorCodigo`.
+- Tool **`configurar_por_codigo`**: valida sem efeito colateral; Matriz já no catálogo → só configura;
+  senão exige uma conta OneDrive do domínio do código (`userEmail` do link), dispara o sync, espera o
+  catálogo, confere `_cerebro/vault-config.md`, fixa no dispositivo e grava. Recusa conta de outro
+  domínio, nenhuma conta, código malformado ou de versão desconhecida, e não troca uma Matriz já
+  configurada sem `substituir`. Prazo esgotado = `aguardando` com a `governanca` do código — o mesmo
+  contrato do `sincronizar_subvault`: nunca registra caminho que o OneDrive não listou.
+- Tool **`gerar_codigo_instancia`**: para quem governa, a partir da Matriz configurada (origem lida do
+  catálogo). Recusa Matriz copiada (fora do catálogo) e Matriz dentro de pasta maior.
+- `cnct-nucleo-sessao` 0.9.0: no 1º uso, código no pedido → `configurar_por_codigo`; sem código →
+  catálogo (como antes); sem nada → pede o código, nunca o caminho. O bloco de estado zero diz o mesmo.
+- `tests/spike-instancia.mjs`: os seis critérios de aceite da US, com ids fictícios.
+- **macOS no mesmo fluxo.** `configurar_por_codigo` usa o leitor de catálogo, a leitura de conta e o
+  disparo do link que o `sincronizar_subvault` já tem para o Mac; a fixação no dispositivo devolve a
+  instrução para o operador marcar no Finder (não há caminho programático). Não medido num Mac real:
+  a tradução do caminho do catálogo e a leitura do e-mail seguem como hipótese até o diagnóstico.
+
+**Hook em exec form (pendência do hook sem Git Bash).** Shell form no Windows roda em Git Bash; sem ele,
+em PowerShell, que imprimia a linha `"…/run-node.bat" "…"` em vez de executá-la — o hook "passava" e a
+camada 0 sumia sem sinal.
+
+- `hooks.json` passa a ter duas entradas em **exec form** (`command` + `args`, sem shell):
+  `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run-node.ps1` no Windows e
+  `/bin/sh scripts/run-node.sh` fora dele. A do outro SO falha ao iniciar (ENOENT) e não roda nada —
+  nunca em dobro.
+- `scripts/run-node.ps1` só faz a ponte: delega ao `run-node.bat` (fonte única do runtime) por
+  `Start-Process -NoNewWindow`, sem redirecionar a saída — o filho escreve direto no stdout herdado,
+  e os acentos do bloco não passam pela página OEM do PowerShell 5.1. O stdin do hook (o `session_id`)
+  entra por arquivo temporário. ASCII puro.
+- Medido nesta máquina (Windows 11, Node 20): exec form com caminho com espaço, stdin e UTF-8 intactos.
+  **A medir:** numa máquina **sem** Git, no Cowork, se o app honra `args` no hook do plugin e se a
+  falha da entrada do outro SO aparece como ruído na sessão.
+- `spike-multiplataforma` e `spike-runtime-fora-do-pacote` passam a verificar a forma nova.
+
+## 0.38.5 — 2026-10-26
+
+**M5 só lê ponteiro nas seções que o contrato de navegação declara.** Uma auditoria achou um ponteiro
+morto em todos os vaults que herdam a mesma carta de processo. A causa era uma linha da tabela de
+histórico dessa carta, que citava uma casa entre crases para narrar uma mudança: desde a 0.38.4 toda
+linha de tabela conta como posição de destino, e essa não apontava para lugar nenhum. É o falso
+positivo de menção (0.38.4) reaberto pela regra de tabela.
+
+- A correção não ensina ao produto o nome da seção do vault. Inverte a regra: `caminhosCitados`, quando
+  chamado pela M5, só lê linha que está numa seção declarada em §3 do contrato — as cinco obrigatórias
+  e as opcionais. Histórico, guardas e narrativa são texto do vault, e o produto não precisa conhecê-los.
+- `SECOES_OPCIONAIS` e `secaoDoContrato` em `lib/navegacao.mjs`. As opcionais continuam não cobradas;
+  a lista existe só como vocabulário da M5. Elegível quando o H2 ou o H3 corrente é do contrato (vault
+  real aninha a tabela de gatilho sob um H2 guarda-chuva); texto antes do primeiro título não conta.
+- Medido nas sete cartas da instância de referência: o conjunto de ponteiros conferidos é o mesmo de
+  antes, menos a menção do histórico.
+- Testes em `spike-heranca`: seção fora do contrato, subseção dela, texto antes do primeiro título,
+  seção opcional lida, H3 do contrato sob H2 guarda-chuva. Suíte inteira verde.
+- Contrato de navegação: §3 marca as opcionais como vocabulário da M5; check 3 registra a regra e o
+  caminho para uma seção nova (entra primeiro no contrato).
+- Comentários do código, mensagens e este CHANGELOG deixam de citar identificadores de decisão
+  (citam a entrada do `GLOSSARIO.md`), pessoas, clientes e vaults da instância de referência.
+
+**O que é da instância sai do produto.**
+
+- **`cnct-fabrica-operador` 0.5.0.** Os caminhos de onde a matriz guarda a definição de papéis, o
+  conciliador, a herança de equipe e o template do briefing saíram do executor. Ele passa a lê-los do
+  knowledge desta skill na matriz (`_inteligencia/skills/cnct-fabrica-operador/cnct-fabrica-operador.md`);
+  ausente, anuncia a lacuna e segue com os padrões do briefing.
+- **`FRAMEWORK.md` §5.3** deixa de listar as skills de processo da empresa — a lista é do portfólio da
+  matriz. Uma skill já aposentada continuava listada aqui.
+- **Casa de formas canônicas** deixa de ser nomeada pelo produto (`contrato-tipos`, `cnct-fabrica`): é
+  a que a carta da matriz declara.
+- **Contrato de tipos** deixa de apontar para uma nota de acervo da organização (por um conceito já
+  aposentado). Exemplos de instância, IDs crus e caminhos de máquina nos `SKILL.md`, contratos,
+  `CONCEITOS.md` e `GLOSSARIO.md` viram exemplos neutros ou nome de entrada do glossário. A procedência
+  ("Impulsa / Viceri" como autor e programa) fica, pela regra de branding da 0.15.
+
+## 0.38.4 — 2026-10-20
+
+Duas correções do `cnct-nucleo-audit` e da `medir_navegacao` vindas do AUDIT de 19/10 e do REPAIR de
+20/10. Nenhuma muda formato de arquivo nem contrato de tool.
+
+**Check de cópia de conflito reconhece o sufixo de máquina corporativa.** Uma auditoria achou
+`{nota}-{HOSTNAME}.md` (máquina corporativa) ao lado da nota-fonte de um projeto, e nenhum
+padrão do `cnct-nucleo-audit` casava: eles vinham do incidente de 26/08, cuja máquina se chamava
+`DESKTOP-…`. O OneDrive anexa o hostname, qualquer que seja.
+
+- O check passa a casar também `{nome}-{HOSTNAME}.{ext}` quando existe o irmão `{nome}.{ext}` na
+  mesma pasta, mantendo os padrões anteriores.
+- `.obsidian/` fica fora: `workspace-{HOSTNAME}.json` é estado de interface por máquina, não conflito.
+
+**M5 deixa de contar menção em prosa como ponteiro.** Uma carta de processo explicava a própria
+topologia em prosa citando, entre crases, a casa que **não** usava — e a M5 reportou essa casa como
+ponteiro morto. O contorno foi reescrever a frase para agradar o detector.
+
+- `caminhosCitados` só lê caminho em **posição de destino**: linha de tabela, item de lista
+  (inclusive dentro de citação) ou linha com seta (`→`/`->`). Prosa corrida fica de fora.
+- Quatro testes novos em `spike-heranca` (prosa e citação não contam; tabela e lista seguem
+  detectando morto). Suíte inteira verde; nos quatro vaults da instância, M5 segue com zero morto.
+
+## 0.38.3 — 2026-10-14
+
+**Download do Node interrompido deixava sobra no macOS.** Medido no primeiro Mac em uso:
+24 MB em `~/.connect/bin/.node-download.3402/`. O `run-node.sh` só apagava a pasta temporária
+quando chegava ao fim. Se o processo morria no meio (estouro de tempo do hook, SIGKILL), ela ficava.
+E o caminho de fallback (`usar_path`) fazia `exec` com a pasta ainda lá.
+
+- **Varredura de sobras ao começar um download:** apaga `.node-download.{pid}` de processo que já
+  não existe. A de processo vivo fica, porque o hook e o MCP sobem juntos e podem baixar ao mesmo
+  tempo.
+- **`trap` em EXIT/INT/TERM/HUP** limpa a pasta da execução corrente. O `usar_path` limpa antes do
+  `exec`, que não dispara o trap. SIGKILL não é capturável, e para ele existe a varredura.
+- Conferido em `sh` e `dash`: as sobras de processo morto saem, a de processo vivo fica, o fallback
+  não deixa pasta e a interrupção por TERM limpa.
+
+## 0.38.2 — 2026-10-14
+
+**Primeiro retorno do Mac real: o catálogo do OneDrive não guarda caminho de disco, e a
+matriz não é fixada no dispositivo em lugar nenhum.**
+
+Medido no primeiro Mac em uso. O `catalogo_sync` devolveu `local: $Group.Container$/…` em vez
+do caminho que o Finder mostra (`~/Library/CloudStorage/OneDrive-BibliotecasCompartilhadas-…/`).
+Com isso o `sincronizar_subvault` nunca registraria caminho nenhum no Mac: a conferência de
+existência falhava e a resposta ficava em `aguardando` para sempre. E "Manter sempre neste
+dispositivo" não funcionou: o operador marcou à mão. O código só fixava sub-vault, e no Mac devolvia
+`nao-suportado` num aviso que o agente resumia.
+
+- **Tradução do `mountPoint` no Mac (`traduzirMountPoint`).** Hipótese, sem documentação da
+  Microsoft: o token aponta o Group Container do OneDrive, e `OneDrive.noindex/` sob ele é o
+  **store privado** do cliente File Provider. A pasta que o operador vê é o espelho em
+  `~/Library/CloudStorage/OneDrive-*`. O trecho depois da raiz do store é lido do catálogo e
+  reaproveitado. Só a raiz é traduzida, para a montagem de `CloudStorage` que **existe** com aquele
+  trecho dentro. O nome só desempata. Nunca devolve caminho dentro do `OneDrive.noindex`, porque
+  escrever ali corrompe o sync. Se não traduzir, devolve `null` com motivo. O bruto fica em
+  `mountPointBruto`.
+- **Novo status `caminho-nao-traduzido`** no `sincronizar_subvault`: a pasta já sincroniza, mas não
+  há caminho de disco. Não fica mais em `aguardando` para sempre: devolve o fluxo manual
+  (`registrar_subvault_local`). O `catalogo_sync` marca `sincronizadoSemCaminho` e
+  `localBruto`/`localMotivo`.
+- **Diagnóstico devolvível sem terminal (`lib/diagnostico.mjs`).** `catalogo_sync` (sempre no Mac)
+  e falhas de sync gravam `{CONNECT_HOME}/diagnostico/onedrive-*.json`, e a resposta traz
+  `diagnosticoArquivo`. O operador leigo só envia o arquivo. O conteúdo é só o que a tool já
+  devolve (nomes de pasta, contagens, status), com o home do usuário trocado por `~`. O
+  `diagnostico` passa a listar também as montagens de `CloudStorage`, os Group Containers do
+  OneDrive e cada tradução (bruto → caminho, ou motivo).
+- **Matriz fixada no dispositivo (`garantirRetencaoMatriz`, no `iniciar_sessao`).** Roda antes de
+  ler a carta e só se a matriz estiver em nuvem. No Windows, sem o atributo `P` na raiz, fixa a raiz
+  na hora e a árvore em segundo plano, para não segurar o hook. Já fixada, fica em silêncio. No
+  macOS **não existe fixação programática**: o OneDrive não usa o pin padrão do File Provider
+  (`contentPolicy` é somente-leitura para terceiros) e ignora o xattr
+  `com.apple.fileprovider.pinned`. Por isso a sessão confere arquivos-amostra (`blocks === 0` =
+  placeholder). Se a matriz estiver só na nuvem, o aviso traz a instrução do Finder para o agente
+  **repassar**.
+- **Fixação de sub-vault no Mac** devolve `instrucao`, e o aviso diz "REPASSE ao operador".
+- `cnct-nucleo-sessao` 0.8.0: tratamento de `caminho-nao-traduzido`, de `diagnosticoArquivo`, do
+  aviso de matriz só na nuvem, e da pasta `Matriz` sem caminho no 1º uso.
+- Testes: `spike-onedrive-macos` +24 (tradução com token, store privado nunca devolvido,
+  desempate, ambíguo, catálogo com token, sync sem caminho, arquivo de diagnóstico, retenção da
+  matriz nos dois sistemas, parse do `attrib`). **Não coberto:** o layout real abaixo do token, que
+  só o próximo `diagnosticoArquivo` do Mac confirma.
+
+## 0.38.1 — 2026-10-13
+
+**A `cnct-elicitacao` ainda mandava a captura passiva para `{projeto}/caso-zero/`.**
+
+O destino foi corrigido na matriz em 10/09: a lição de construção é do **coletivo** e vai direto ao
+banco da fábrica (`_inteligencia/skills/cnct-fabrica/`). A skill não acompanhou, e o "Modo passivo"
+contradizia a seção "Como volta para a fábrica" do próprio arquivo. Medido em 13/10: o encerramento
+gravou uma captura em `Connect/caso-zero/` seguindo a skill.
+
+- **`cnct-elicitacao` 0.2.0:** o Modo passivo escreve direto no banco do coletivo tocado, pela regra
+  de promoção, e mostra o diff antes de gravar. Capturas legadas em `caso-zero/` seguem como evidência
+  histórica, lidas pelo modo Destilar.
+
+## 0.38.0 — 2026-10-13
+
+**A camada 0 do operador quase nunca chegava ao agente, e o motivo era o `contexto-sessao.md`.**
+
+Medido em 13/10 nesta instância: o arquivo tinha 22 KB, com ~9 KB de protocolo, ~6,5 KB da carta da
+matriz, ~5,3 KB de camada 0 e ~1 KB de identidade e atalhos. Só a camada 0 era exclusiva dele. O
+resto já chegava por outro canal: as regras duras vêm no hook e no `CLAUDE.md` da matriz, a carta
+vem pela pasta conectada e o tratamento de cada `status` está nas skills. E o arquivo morava em
+`{CONNECT_HOME}/sessions/`, que pede concessão a cada sessão. Na prática o agente tentava ler, não
+conseguia e seguia sem a camada 0, sem sinal nenhum.
+
+- **Canal único: a camada 0 vai no stdout do hook.** O teto é o que a doc do Claude Code declara:
+  stdout acima de 10.000 caracteres vira arquivo + prévia de 2.000, e foi isso que truncou os 16 KB
+  de 24/08. `TETO_INJETADO` = 9.000. A camada 0 vai **por último**, porque se um dia estourar, a
+  prévia ainda leva o acionável e as regras duras. Comentário HTML sai antes de contar. Se a camada 0
+  passar do orçamento, vira **ponteiro declarado** (`./operador/CLAUDE.md`) com aviso para enxugar,
+  nunca um corte no meio. Medido com o perfil real: 9.084 caracteres no total.
+- **Carta e protocolo saem do canal injetado.** O hook aponta `_cerebro/camada-1.md` e manda chamar
+  a tool `iniciar_sessao` quando o contexto ficar distante. É a tool que entrega o completo. O
+  invariante continua: o bloco do hook não cresce com o tamanho do vault.
+- **`contexto-sessao.md` removido**, junto com `lib/contexto-arquivo.mjs` e o `recapAcionavel`.
+- **Marcador `CNCT-GOV-*` visível.** O `CLAUDE.md` de governança punha o marcador num comentário
+  HTML, e o harness descarta comentários ao carregar o arquivo. A auto-checagem "procure o marcador
+  no seu contexto" falhava **sempre**, inclusive com a pasta conectada (medido em 13/10 em duas
+  sessões). Agora ele vem numa linha de citação. O marcador antigo segue reconhecido como
+  procedência, e o arquivo antigo conta como desatualizado: **republique com `publicar_governanca`**
+  em cada vault.
+- **Migração do home legado só acontece uma vez.** O `MIGRADO.md` era gravado, mas ninguém o lia. Todo
+  home novo sem config (de teste, ou o real apagado para reconfigurar) recebia de volta a config e
+  o perfil de agosto, e o marcador era reescrito apontando para o destino da vez.
+- **`entrada` com caixa divergente devolve a caixa real do disco.** No Windows e no macOS o caminho
+  voltava com a caixa declarada, diferente do que o Linux e o wikilink veem.
+- `cnct-nucleo-sessao` atualizada (Passo 2b). Testes: `spike-presenca-contexto` reescrito para o
+  canal único (teto, camada 0 inteira, degradação declarada, prévia de 2.000), `spike-governanca`
+  com o marcador visível e o legado, `spike-entrega-contexto` com migração única. As três falhas
+  que só apareciam no Windows (efeito do home legado) foram corrigidas na raiz.
+
+## 0.37.0 — 2026-10-13
+
+**O plugin não subia no macOS, e no Windows baixava o Node de novo a cada sessão.**
+
+O arranque inteiro dependia de `cmd.exe`: o MCP subia por `cmd.exe /c launcher.bat` e o hook por
+`run-node.bat`, que só sabe baixar o Node `win-x64`. Sem o MCP não existe tool nenhuma, nem o fallback
+da `cnct-nucleo-sessao`. Bloqueava a instalação no primeiro operador em macOS. Agora
+um pacote só serve aos dois sistemas, sem comando por SO, porque nem `.mcp.json` nem `hooks.json`
+admitem isso.
+
+- **`.mcp.json` escolhe o interpretador pelo ambiente:** `command: "${ComSpec:-/bin/sh}"`, com args
+  `-c "set -f;IFS=;exec sh $1" /c <launcher>`. No Windows vira `cmd.exe`, que ignora o que vem antes do
+  `/c`. Fora dele vira `/bin/sh`, com `$1` = launcher. **Medido no Cowork Windows (13/10):**
+  `${VAR:-default}` é expandido, e variável sem valor chega como texto literal. **E medido no mesmo dia:**
+  o cmd procura `/x` até **dentro de um caminho**. Com o launcher como 1º argumento,
+  `.../Claude_pzs.../` virava `/C` e `/Users` virava `/U` (saída em UTF-16). Por isso nada com barra
+  vem antes do `/c`.
+- **`launcher.bat` e `run-node.bat` viraram poliglotas.** A linha 1 (`:; exec /bin/sh … #`) é rótulo
+  para o cmd e `exec` para o sh, e o `#` engole o CR do CRLF. O bloco batch não muda. O texto do
+  `hooks.json` também não: no macOS o `sh -c` executa o `.bat` direto, por isso os três scripts de
+  arranque estão com **modo 755 no git**.
+- **`scripts/run-node.sh`** (novo): espelho POSIX do `.bat`. Baixa o Node 20.11.1 `darwin`/`linux`
+  `arm64`/`x64` para `$CONNECT_HOME/bin` (padrão `~/.connect`), com download atômico e verificado e o
+  `node` do PATH como último recurso declarado.
+- **Corrigido no Windows: Node baixado por sessão.** O `.mcp.json` repassa `${CONNECT_HOME}`, que sem
+  valor chega literal. O `run-node.bat` o tratava como definido e baixava ~70 MB em
+  `{host-cwd}\${CONNECT_HOME}\bin`, uma cópia em cada sessão (medido no processo em execução). Texto
+  com `${` agora conta como ausente nos dois scripts.
+- **OneDrive no macOS (em validação):** o catálogo é procurado nas raízes candidatas sob `~/Library`, o
+  e-mail da conta vem do `defaults read`, o link abre por `open`, e a fixação no dispositivo devolve
+  `nao-suportado` com a instrução manual. `sincronizar_subvault` e `origemCapturavel` deixam de barrar o
+  darwin. **Nada disso foi medido num Mac:** tudo degrada declarado, e o fluxo manual
+  (`registrar_subvault_local`) segue valendo.
+- **`catalogo_sync` devolve `plataforma` e `diagnostico`:** onde procurou o catálogo e o que achou em
+  cada raiz (nomes e contagens, nunca conteúdo). É o insumo que calibra o macOS no primeiro Mac real.
+- `CONCEITOS.md` §5 corrigido (o padrão era descrito como `%LOCALAPPDATA%`, aposentado desde a 0.15.0)
+  e com o caminho do macOS. O exemplo de config ganhou `$exemploMacOS`.
+- Testes: `spike-multiplataforma`, que sobe o MCP pela linha de comando **exata** que o `.mcp.json`
+  produz nesta máquina (18 checagens no Windows, 17 no Linux), e `spike-onedrive-macos` (19
+  checagens). `spike-onedrive` segue com 59/59.
+
+## 0.36.0 — 2026-10-06
+
+**Entidade sem `origem` dependia de um curador lembrar de rodar o `catalogo_sync` na máquina certa.**
+
+O acervo de um cliente estava num site que o curador não alcança: só quem o usa tem a pasta
+sincronizada. Esperar que essa pessoa rode uma tool de curadoria é a classe de passo que se pula. Agora
+a captura acontece **no uso**: ao resolver a entidade, o mecanismo já sabe o caminho local e lê no
+catálogo do OneDrive de onde ele vem. Emenda à decisão da origem na nuvem (acervo do produto).
+
+- **`resolver` devolve `origemCapturavel`** quando a entidade resolvida não declara `origem`: o bloco
+  pronto (`yaml`), o manifesto a editar e se a captura é `exata` (o caminho é a própria pasta
+  sincronizada) ou não (o acervo fica **dentro** de uma pasta sincronizada maior, como `{acervo}`
+  dentro de `Obsidian`). O mecanismo **só propõe**: a `cnct-nucleo-sessao` oferece gravar uma vez, pelo
+  `cnct-nucleo-escrita`, e sem permissão ou com recusa vira issue no audit da matriz.
+- **`pasta` virou informativo — medido.** Uma pasta **não sincronizada** foi sincronizada com
+  `folderUrl` propositalmente errado, e o OneDrive a achou pelo `pasta-id`. O catálogo só guarda o nome
+  da pasta, e isso basta: a captura sai completa, sem API do SharePoint nem navegador.
+- **`site-titulo` (opcional) nomeia a pasta local.** O mesmo teste mostrou que o cliente cria
+  `{webTitle} - {pasta}`; derivado do slug, uma área nasceria `{slug-do-site} - {Área}`, o que
+  contradiz o guia de instalação. O link usa o título quando declarado, e a captura sempre o traz.
+- **`catalogo_sync`:** a `origemSugerida` sai completa, com `site-titulo` e o `yaml` pronto.
+- Contrato de manifesto §2.1, `cnct-nucleo-sessao`, `cnct-nucleo-audit` e descrições das tools
+  atualizados. Testes: `spike-onedrive` com 59 checagens (captura exata, aninhada e fora do OneDrive;
+  o `resolver` propondo e não propondo), e a captura conferida contra o catálogo real.
+
+## 0.35.2 — 2026-10-06
+
+**O 1º uso ainda pedia "cérebro pessoal", e o operador novo criava uma pasta que nenhum protocolo usa.**
+
+O mecanismo já decidia o contrário desde 17/08 (`CONCEITOS.md` §4/§5): a identidade vive no **perfil do
+operador**, gerido pelo Connect em `{CONNECT_HOME}/operador`, e o vault pessoal Obsidian é
+enriquecimento opcional. O código obedecia a decisão. Os textos que orientam o agente, não: a
+`cnct-nucleo-sessao` perguntava *"o cérebro pessoal (identidade), se houver"*, o gatilho da fábrica era
+*"não há `cerebro_pessoal`"* e a mensagem de 1º uso do `render` mandava perguntar por ele. Quem sofreu
+foi um operador de squad de cliente no onboarding dele, e um guia de área nasceu com o mesmo erro. A 0.33.2 tinha corrigido a fábrica e o briefing, mas não esses textos.
+
+- **`cnct-nucleo-sessao` — onboarding reescrito.** Passo 2: só a matriz é caminho a informar (proposta
+  pelo `catalogo_sync`). Passo 2a: o perfil nasce pela `cnct-fabrica-operador`, sem pasta a escolher.
+  Passo 2c, novo: acervos das frentes via `sincronizar_subvault`, ao menos uma alocação por coletivo e
+  oferta do **briefing diário** (Passo 5b da fábrica), criado no próprio projeto Cowork. É proibido
+  perguntar por "cérebro pessoal" ou "vault pessoal": só entra se o operador disser que tem um.
+- **`cnct-fabrica-operador`:** a descrição e o gatilho passam a ser **ausência de perfil do operador**,
+  não de `cerebro_pessoal`. A pergunta sobre o coletivo não pede mais o caminho da matriz, que já está
+  configurada no onboarding.
+- **`render`:** a mensagem de 1º uso e o aviso de perfil não provisionado deixam de citar o cérebro
+  pessoal. A seção da camada 0 se chama "Perfil do operador", e "Vault pessoal (opcional)" só quando
+  vem do fallback.
+- **Tool `configurar`:** `cerebro_pessoal` passa a ser descrito como opcional, nunca a identidade.
+- O papel do vault pessoal (uso modelo × legado declarado) segue como **questão aberta** no projeto.
+
+## 0.35.1 — 2026-10-06
+
+**A 0.35.0 entregou a tool, e a skill de sessão continuava mandando perguntar o caminho.**
+
+Achado ao escrever o guia de instalação do time de Vendas e Marketing: no `local-nao-configurado`
+a `cnct-nucleo-sessao` ainda instruía *"perguntar o diretório ao operador"*. Com isso, o agente
+nunca chamaria `sincronizar_subvault`, e o onboarding seguiria pedindo caminho a quem não é técnico.
+
+- **`cnct-nucleo-sessao`:** com `sincronizavel: true`, `local-nao-configurado` e `origem-ausente`
+  chamam `sincronizar_subvault`, sem perguntar nada. Cada status tem o tratamento em linguagem
+  simples (`aguardando` nomeia a `governanca` como quem concede o acesso).
+- **1º uso:** antes de perguntar o caminho da matriz, o agente chama `catalogo_sync` e **propõe** a
+  pasta `Matriz` que o OneDrive já sincroniza, para o operador só confirmar. A validação segue no
+  `configurar`.
+- Manifestos da matriz da instância de referência receberam `origem` (7 entidades). Um segue sem
+  `origem`, porque o acervo está num site que o curador não alcança.
+
+## 0.35.0 — 2026-10-06
+
+**O operador novo tinha de sincronizar cada biblioteca do SharePoint à mão e depois dizer ao Connect onde o OneDrive a pôs.**
+
+Medido no preparo do onboarding do time de Vendas e Marketing (Motor de Vendas): N passos manuais por
+sub-vault, para quem não é técnico. Na mesma sessão, duas medições na máquina do operador abriram o
+caminho: o botão *Sincronizar* é só um link `odopen://sync/`, que dispara por comando; e o cliente
+OneDrive grava num `.ini` local tudo o que sincroniza, com o UniqueId de cada pasta e onde a montou
+(conferido contra a API do SharePoint). Decisão da origem na nuvem (acervo do produto, `proposta`).
+
+- **Bloco `origem` no manifesto** (`config/contrato-manifesto.md` 0.3.0, §2.1): `provedor`, `site`,
+  `pasta` e quatro ids. O corte de 17/08 foi **reescrito, não revogado**: caminho local segue
+  proibido, e a origem na nuvem entra porque é igual para todo operador.
+- **`sincronizar_subvault`** (`lib/sincronizar.mjs`): catálogo primeiro (se a pasta já sincroniza, só
+  registra) → e-mail da conta OneDrive logada → link → espera a pasta aparecer **no catálogo** → fixa
+  no dispositivo se `classe: vault` (`attrib +P -U`) → grava o caminho. Nunca registra caminho que o
+  cliente não listou: prazo esgotado devolve `aguardando` com a `governanca`, porque sync lento e
+  falta de permissão não se distinguem daqui. Status próprios para OneDrive sem conta, mais de uma
+  conta (pergunta, nunca escolhe), origem malformada e fora do Windows (devolve o link).
+- **`catalogo_sync`**: o caminho inverso. Cruza o que o OneDrive sincroniza com o registro **por id**;
+  com `registrar: true` grava o caminho de tudo que achou; pasta sem manifesto vira `origemSugerida`
+  para o curador. Nome de pasta nunca registra nada.
+- **`resolver`**: `local-nao-configurado` e `origem-ausente` ganham `sincronizavel` e, quando há
+  `origem`, mandam chamar a tool em vez de perguntar o caminho.
+- ⚠️ **`userEmail` é obrigatório no link.** Sem ele o OneDrive **ignora o link em silêncio**: nem
+  janela, nem erro (três disparos medidos). Os títulos não importam.
+- **`cnct-nucleo-audit`**: checks de `origem` malformada (issue) e de `externo: true` sem `origem`
+  (aviso). O check de "path/URL no manifesto" passa a ser de caminho local.
+- Testes: `spike-onedrive` (46 checagens, IDs fictícios: o repositório é público) e ponta a ponta
+  contra o OneDrive real (Marketing como `diretorio`, sem fixar).
+
+## 0.34.0 — 2026-10-05
+
+**O `resolver` indexava como entidade qualquer nota com `tipo`, e a regra 3 mandava chamá-lo para projeto — que ele nunca acha.**
+
+Medido num AUDIT agendado contra a matriz da instância de referência: **100 notas** com `tipo` no frontmatter
+entravam no registro, e só ~20 eram entidade de fato — o resto usa `tipo` como tipo de **nota**
+(peça de conteúdo, template, papel, exigência). Para elas o `resolver` devolvia
+`sem-acervo-externo`, resposta que nunca acrescentou caminho nem casa. Na mesma sessão o operador
+apontou o efeito de uso: a regra 3 (*"ao nomear um conceito — projeto, cliente, área, tribo —
+chame `resolver` antes"*) fazia o agente resolver nome de projeto; projeto mora no sub-vault, fora
+das raízes do registro, então o passo nunca resolvia e o agente caía na carta de qualquer jeito.
+
+- **Registro restrito a casa fora** (`lib/resolver.mjs`, `temCasaFora`): só manifesto com
+  `externo: true` — sub-vault ou diretório de entrega. Contra a matriz real: 100 → **9** conceitos,
+  e os sub-vaults e os dois Delivery Hubs seguem resolvendo único (antes, dois
+  deles só por desempate de coletivo).
+- **`sem-acervo-externo` saiu.** Entidade inline devolve `nao-encontrado`, com aviso que manda
+  navegar pela carta e por wikilink. `pendente-criacao`, `local-nao-configurado`, desempate por
+  coletivo e `classe: diretorio` inalterados.
+- **Regra 3 reescrita** (`lib/regras.mjs`, `lib/render.mjs`, `config/protocolo-mecanismo.md`,
+  `cnct-nucleo-sessao`, `cnct-nucleo-conhecimento`, descrição da tool no MCP): `resolver` é para
+  conceito com casa fora; projeto e conteúdo da matriz ou de vault montado vão pela carta. Vault
+  do projeto não montado → resolve-se o **vault**, nunca o projeto.
+- **Contrato de manifesto e `cnct-nucleo-audit`:** o check de schema vale para manifesto
+  **consumido pelo mecanismo** (`externo: true` ou aresta `depende-de`). `tipo` sozinho é
+  vocabulário do coletivo e não abre issue. Não define o que é entidade para a instância.
+- ⚠️ **`CLAUDE.md` de raiz dos vaults** guarda a regra 3 antiga — é materializado uma vez por
+  `publicar_governanca`. Republicar depois de instalar a 0.34.0.
+- **`cnct-nucleo-audit` — cópia de conflito de sync vira check de mecanismo** (3a): roda em
+  todo vault tocado, prioridade Alta, REPAIR nunca apaga por nome. Era critério customizado só
+  da matriz e não alcançava os sub-vaults, onde metade do incidente de 26/08 aconteceu.
+- Testes: `spike-resolver` (entidade inline fora do registro, aviso de navegação) e
+  `spike-presenca-contexto` (texto novo da regra no bloco injetado).
+
+## 0.33.2 — 2026-09-30
+
+**A fábrica do operador mandava procurar uma skill que nunca existiu, e ninguém sabia criar o briefing.**
+
+Medido no onboarding de um operador novo: o Passo 5 da `cnct-fabrica-operador` delegava a
+"moldagem de papel" a uma `cnct-fabrica-papel` inexistente e mandava deixar isso como pendência. O
+operador recebeu o aviso de que a skill deveria existir, o que contradiz a `cnct-fabrica` como
+construtora única. Na mesma sessão ele pediu o briefing diário, e sem nenhuma skill que tratasse o
+pedido o agente improvisou um prompt que mandava a tarefa ler a pasta inteira, no lugar do gatilho
+fino que a forma do briefing declara.
+
+- **`cnct-fabrica-operador` 0.4.0 — Passo 5 reescrito.** A definição de papel é do processo, e a
+  ocupação é do coletivo. O perfil guarda só a sintonia pessoal (`_{papel}/rotina.md` e, com papéis
+  acumulados, `_{papel}/papeis-ativos.md`), ambas **opcionais**. Papel que o processo não define vai
+  para a `cnct-fabrica` genérica, e só se o operador pedir.
+- **Passo 5b novo — briefing diário**, que vale também para operador já provisionado. Confere os
+  pré-requisitos (`TASKS.md` na forma, vínculos com `## Alocações`), usa **verbatim** o prompt que a
+  forma do briefing publica na matriz e cria a tarefa na ferramenta de agendamento da plataforma,
+  dentro do projeto que tem as pastas do Connect. Se não puder criar, diz por quê e entrega o prompt
+  canônico. Nunca redige um prompt alternativo.
+- **Novos gatilhos na description:** "criar minha rotina" e "criar/agendar meu briefing diário".
+- **`tests/spike-release.mjs`:** falha quando a versão do `plugin.json` não é a primeira entrada
+  deste CHANGELOG. As duas já tinham divergido uma vez sem que nada apontasse.
+
+## 0.33.1 — 2026-09-29
+
+**O hub de uma casa abaixo do projeto resolvia `{projeto}` com o nome errado.**
+
+Medido no acervo de um cliente, no dia em que uma carta de processo ganhou uma casa abaixo do
+projeto (`projetos/{ciclo}/{projeto}/{casa}`, hub `{casa}-{projeto}.md`): o
+`medir_navegacao` procurava `.../{projeto-real}/{casa}/{casa}-{casa}.md`, reportava
+*hub-ausente*, quebrava a corrente de alcance e acusava o índice real como órfão na M1.
+
+- **Causa.** `expandirHub` (`lib/alcance.mjs`) substituía placeholder só por **posição**, com o
+  último segmento da casa como curinga para o último segmento do hub. Na casa do próprio projeto o
+  último segmento **é** o projeto, e por isso o defeito ficou invisível até existir casa abaixo dele.
+- **Correção.** O placeholder casa primeiro por **nome**, alinhando a casa declarada com a
+  instância real (`{projeto}` → o segmento que a casa declara como `{projeto}`). O posicional fica
+  como fallback para placeholder sem par na casa, e a forma irmã do hub de produto segue igual.
+- **Contorno no vault pode sair.** Enquanto esta versão não estava instalada, a carta de processo
+  podia declarar a casa como `*.md` listável, sem linha de hub. Com a 0.33.1 instalada a linha de hub
+  pode voltar.
+- Três testes novos no `spike-heranca`: as duas asserções da casa abaixo do projeto **falham na
+  0.33.0** e passam aqui, e a casa do próprio projeto segue resolvendo. Toda a suíte verde.
+
+## 0.33.0 — 2026-09-28
+
+**O resolver entregava o vínculo errado, e repetia o certo a cada chamada.**
+
+Medido na primeira execução do briefing diário sobre o vault, que resolve todos os vínculos do
+operador de uma vez. Dois defeitos no mesmo campo:
+
+- **Chave do vínculo.** O `resolver` escolhia o vínculo pelo coletivo que **escopa o ponteiro
+  local** e só depois pela entidade. Uma área registrada sob a matriz (ponteiro
+  `{matriz}/area-x`) recebia o `estado.md` do vínculo da **matriz**, com o aviso *"desempatado
+  pelo coletivo {matriz}"* como única pista. Escopo de ponteiro diz *onde o path foi
+  registrado*; vínculo diz *qual é a leitura do operador sobre esta entidade*. `lib/vinculo.mjs`
+  ganha `chaveDoVinculo`: vínculo próprio da entidade → vínculo do coletivo que a escopa (projeto
+  de um cliente cai no do cliente) → a entidade, com `ausente`.
+- **Dedup de sessão.** O comentário do `resolver` afirmava que o vínculo estava sujeito à mesma
+  deduplicação dos outros blocos longos — não estava. Quem resolvia várias frentes do mesmo
+  coletivo pagava `config.md` + `estado.md` (até 6 KB cada) a cada chamada. `lib/entrega.mjs`
+  passa a tratar `vinculo.blocos[].texto` como os demais: 1ª entrega inteira, depois marcador, com
+  o nome do arquivo preservado.
+- **`estado_operador` fica fora do dedup, de propósito.** É o pedido explícito do vínculo — quem o
+  chama está buscando o texto de novo (sessão longa, contexto compactado), e receber *"já
+  entregue"* ali seria beco sem saída.
+- Testes novos no `spike-ponteiro-escopado` (chave e dedup do vínculo); toda a suíte verde.
+
+## 0.32.0 — 2026-09-28
+
+**O kanban falava três dialetos, e o vínculo não dizia o que era do operador.**
+
+Ao reconstruir o briefing diário sobre o vault, duas lacunas apareceram juntas. O `TASKS.md` que a
+fábrica materializava (`A fazer / Fazendo / Feito`) não tinha as seções em que as skills escrevem
+(`## Active` / `## Waiting On`, a forma da skill de tarefas do `productivity`, de onde o kanban
+nasceu), e o template da matriz tinha traduzido para uma terceira forma. E o `resolver` entregava o
+hot cache do vínculo, mas não o `config.md` — o papel do operador naquele coletivo nunca chegava.
+
+- **`cnct-fabrica-operador` materializa o `TASKS.md` na forma do `productivity`**, literal e em
+  inglês; a forma do item e os deltas do Connect vivem no `Template-Briefing-Diario` da matriz.
+- **`config.md` do vínculo nasce com `## Alocações`**, vazia e **só com ponteiros** (lotação e frentes
+  → hub). Papel, cargo e peso se resolvem no coletivo, pela herança de equipe da matriz.
+- **`lib/vinculo.mjs` entrega o `config.md` primeiro**, antes do `estado.md`. Teste novo no
+  `spike-ponteiro-escopado`.
+
+## 0.31.0 — 2026-09-21
+
+**Um vault nasceu sem hooks, e o mecanismo chamou isso de normal.**
+
+Ao provisionar o primeiro acervo de uma área comercial, a `cnct-fabrica` materializou a camada 1
+que ela declara — e o vault nasceu sem `_inteligencia/skills/cnct-nucleo-encerramento/`. No
+encerramento, o Passo 7 leu o vault, não achou a seção `## Hooks Registrados` e reportou
+`zero hooks, caso normal`. Que é verdade para um coletivo que não registrou hook, e **falso** para
+um que nunca teve onde registrar.
+
+É a mesma indistinção que desligou a captura passiva entre 24 e 31/08 — *hook ausente e hook
+desligado são indistinguíveis quando nenhum dos dois está escrito* — reproduzida num vault nascido
+sete semanas depois. E quem detectou foi o operador perguntando *"me diz o motivo de não ter
+criado"*, não o mecanismo.
+
+- **A lista da camada 1 passa a existir num lugar só: `config/contrato-tipos.md` §5.1.1.**
+  Existiam duas — esta e uma cópia no `SKILL.md` da `cnct-fabrica` — e as duas estavam incompletas
+  do mesmo jeito. Duplicata não corrige duplicata: a cópia some e o `SKILL.md` aponta para o
+  contrato. Cada linha da lista declara **quem lê** e **o que acontece sem ela**, porque foi
+  justamente a consequência não declarada que deixou a ausência passar por normal.
+- **`cnct-nucleo-encerramento` entra na camada 1.** A fábrica passa a materializá-lo em todo
+  contexto novo, com a seção `## Hooks Registrados` — inclusive os hooks **inativos por decisão**,
+  que é o que torna a ausência distinguível do desligamento.
+- **Par `vault-audit` → `cnct-nucleo-audit` fechado, com fallback.** Ficou pendente em 08/09 quando
+  o rename de `vault-write` foi executado: o executor lia `{vault}/_inteligencia/skills/vault-audit/`
+  hardcoded, então renomear quebrava a auditoria em todos os vaults de uma vez — dependência
+  circular. O `cnct-nucleo-audit` passa a ler a **casa canônica** e a cair na **legada** quando
+  preciso, **reportando a migração pendente** no relatório. Vault novo nasce certo; vault existente
+  segue funcionando e sabe que está atrasado. O stub também passa a nascer na casa canônica.
+  ⚠️ **Não remover o fallback** antes de confirmar que nenhum vault usa a casa legada.
+- **`_automacoes/vault-audit/` fica como está, de propósito.** Não é knowledge de skill — é a casa
+  de automação do vault (issues, log, critérios), referenciada por dezenas de notas de acervo.
+  Renomear por simetria de nome seria confundir duas coisas distintas que compartilham a palavra.
+
+> **Item menor, declarado:** o arquivo de template interno segue `templates/vault-audit.template.md`
+> (o conteúdo que ele gera já nasce com o nome novo). Renomeá-lo não foi possível na sessão — o
+> repositório estava com `index.lock` de outro processo — e é cosmético: nenhum executor o alcança
+> por nome de fora da skill.
+
+## 0.30.0 — 2026-09-17
+
+**O mecanismo publicou um vault inteiro dentro de outro, na nuvem, e ficou 8 dias assim.**
+
+Achado por acaso ao olhar a raiz da matriz: duas junctions de sub-vault e um
+`.connect/heranca.json` dentro da biblioteca SharePoint sincronizada da matriz, todos de
+09/09/2026 20:11-20:12. A sessão `014ae10a` daquele horário tem os mesmos aliases montados
+corretamente no próprio scaffold — os artefatos da matriz caem exatamente **entre** os dois
+eventos. Diagnóstico: uma resolução de herança rodou com `workspaceDir` = raiz da matriz.
+
+O que ninguém previu: **o cliente OneDrive seguiu as junctions** e materializou a árvore
+inteira dos vaults de origem dentro da biblioteca da matriz. Não foi sujeira local por
+máquina — foi duplicata publicada na nuvem, indexada pela busca do SharePoint, aberta a
+edição na cópia errada. Que é, nome por nome, o modo de falha que o caso-zero já tinha
+catalogado em `entregas-presas-em-copia-de-conflito` (26/08).
+
+- **`lib/sincronizado.mjs` (novo) — a trava.** `detectarSincronizacao(dir)` sobe a árvore
+  procurando três classes de sinal: o marcador de sync root do OneDrive/SharePoint (arquivo
+  oculto `.{GUID}` na raiz de cada biblioteca — o sinal mais confiável, independe de tenant,
+  de nome de pasta e de variável de ambiente), marcadores de outros provedores, e segmentos
+  de caminho conhecidos. `ehRaizDeVault(dir)` é a segunda rede, para vault fora de nuvem:
+  `_cerebro/` presente. `assertDestinoDeMountSeguro()` lança com mensagem que nomeia a causa
+  e aponta o lugar certo.
+- **`mount()` passa a recusar.** Antes validava só o alias (sem `..`, sem separador, link
+  dentro do workspace) — o `workspaceDir` entrava sem nenhuma checagem. A recusa acontece
+  antes de qualquer escrita: nada é criado no destino.
+- **O registro de herança também.** `heranca.mjs` dizia em comentário "mora no workspace da
+  sessão (nunca em vault)". Intenção escrita, invariante não imposta — e o incidente é a
+  prova de que comentário não é trava. `marcarInjetado()` recusa, e `resolverHeranca()`
+  devolve a recusa como aviso ruidoso em vez de engolir.
+- **`tests/spike-guarda-sync.mjs` — 24 checagens**, incluindo as duas que importam: o caso
+  bom continua montando, e a recusa não deixa rastro no destino. Validado também contra a
+  instância real: montar na raiz da matriz é recusado citando o marcador de sync root.
+
+Higiene do incidente: junctions e `.connect/heranca.json` removidos da matriz (só os links;
+origens íntegras — 180 e 20 arquivos). As cópias na nuvem foram para a lixeira do site pela
+própria sincronização e **não devem ser restauradas**. Evidência datada no caso-zero do
+Connect (acervo da tribo que governa o produto).
+
+## 0.29.1 — 2026-09-08
+
+**O primeiro uso real do Delivery Hub achou dois defeitos que 52 checagens sintéticas não acharam.**
+Resolvendo o Hub de um coletivo de verdade, pela primeira vez:
+
+- **O mecanismo devolveu `resolvido` apontando para o VAULT do coletivo, não para o Hub — em
+  silêncio.** Causa: na etapa de caminho local, o termo já é o conceito **canônico** casado no
+  registro de manifestos (`{coletivo}-delivery-hub`), e o fuzzy bidirecional casava a entrada do
+  vault porque o nome do coletivo é substring do conceito. O cenário exato importa: o defeito só
+  aparece no **primeiro** uso, com o Hub ainda sem caminho nesta máquina — que é precisamente quando
+  o mecanismo deveria **perguntar**. Correção: `estrito` na resolução de caminho. Fuzzy serve para
+  adivinhar o que o humano quis dizer; quando a chave já é canônica, adivinhar só pode errar, e a
+  resposta certa para "não está na tabela" é `local-nao-configurado`.
+- **Defeito irmão: o desempate por coletivo não existia no registro de manifestos**, só na tabela
+  local. Dois coletivos com Hub declarado devolveriam `ambigua` e o parâmetro `coletivo` da skill não
+  teria como desfazer o empate. Agora `casarMuitos` filtra pelo campo `escopo` do manifesto — campo
+  que o acervo já declarava, sem inventar nada novo.
+- Ambos viraram regressão no spike (52 checagens). Suíte de 15 spikes verde.
+
+> A lição é a mesma da assimetria de repositório, um andar acima — e é a segunda vez no mesmo dia que
+> o casamento frouxo entrega o vizinho errado em vez de admitir que não sabe.
+
+## 0.29.0 — 2026-09-08
+
+**A classe do artefato passa a ser DECLARADA, não adivinhada — e o Delivery Hub vira conceito do
+processo.** Emendas à decisão do ponteiro local escopado por coletivo, no mesmo dia, disparadas por duas observações do operador.
+
+- **O produto não pode conhecer vocabulário de coletivo — e o repositório é público.** A 0.28.0
+  decidia a classe do artefato por uma lista de `tipo` dentro do próprio `resolver`
+  (`diretorio-entrega`, `delivery-hub`, …). Duas coisas erradas nisso: o `contrato-manifesto.md` §2
+  já dizia que sobre `tipo` *"a empresa declara; o produto não prescreve o conjunto"*, e a lista
+  obrigaria todo coletivo novo a batizar o Hub exatamente como o produto adivinhou. Agora são **dois
+  campos, porque são duas perguntas**: `tipo` (o que a entidade é — ilimitado, do coletivo) e
+  **`classe`** (o que o mecanismo faz com ela — conjunto fechado: `vault` | `diretorio`). Ausência de
+  `classe` resolve para `vault`: **nenhum manifesto em campo precisa ser tocado**.
+- **Delivery Hub declarado na carta de processo.** Ele não é conceito do produto nem de um
+  cliente: é do **processo**. A carta passa a descrever o que é (diretório de saída, não vault, não
+  fonte para nada), que varia por coletivo e pode variar por squad, onde mora cada metade (URL
+  canônica no coletivo, caminho local só na config), e **o que o operador precisa saber no momento em
+  que o mecanismo pergunta o caminho** — a raiz da pasta do projeto, a cópia sincronizada, e o que
+  fazer quando ele não tem acesso a ela. A **convenção de pastas numeradas é delta do coletivo**: o
+  processo garante que existe *um* lugar de saída resolvível; a estrutura interna cada coletivo
+  declara na própria carta. Fecha o sub-item **(b)** da pendência do Delivery Hub, que a 0.28.0 deixara como herdeiro em
+  aberto, e dá à `cnct-fabrica` o que cobrar ao provisionar um contexto SDD novo.
+- **Higiene de repositório público.** Nomes de cliente reais foram removidos do código, das
+  descrições de tool (a superfície mais pública do produto) e do spike, substituídos por placeholders
+  obviamente fictícios (`cliente-alfa`, `pagamentos-api`). Exemplo com nome de cliente não é só
+  vazamento: é uma afirmação errada sobre o que o mecanismo conhece.
+- `tests/spike-ponteiro-escopado.mjs` cobre a regressão: **nome de tipo do coletivo não vira classe
+  por adivinhação**. 45 checagens, suíte de 15 spikes verde.
+
+## 0.28.0 — 2026-09-08
+
+**Um só conceito de "onde isso mora nesta máquina" — e o leitor que faltava para o vínculo do
+operador.** Ratificada pela decisão do ponteiro local escopado por coletivo (12 situações de simulação, 2 quebras e 1 encaixe torto, os três
+corrigidos na decisão).
+
+- **Delivery Hub deixa de ser instrução morta.** Cinco skills instaladas (`discovery-doc`,
+  `discovery-intake`, `planning-sdd`, `tasks-sync`, `elicitacao-captura`) mandavam resolver o Hub por
+  `resolver_repo` — que só conhece repositório git e devolveria `sem-git`, status que nenhuma delas
+  trata. A instrução existia em cinco lugares e não executava em nenhum: o operador informava o path
+  na mão, sessão após sessão (pendência aberta em 31/08 no dogfooding com um coletivo real). O `resolver` ganhou
+  **classe de artefato**: `diretorio` monta, devolve a concessão e **sai antes** de `montarL1` — não
+  cobra carta de navegação nem herança de processo de uma pasta que, por definição, nunca terá
+  nenhuma das duas. Custo medido: **~80 tok contra os ~5.958 do sub-vault**.
+- **Ponteiro local escopado por coletivo.** A tabela era plana (`conceito → path`), logo dois clientes
+  com repositório homônimo colidiam por construção. O operador já compensava à mão — o `repos.md`
+  legado de um operador trazia `⚠️ não confundir com <o outro de nome parecido>` escrito à mão na
+  coluna de notas.
+  A chave passa a ser `{coletivo}[/{escopo}]/{conceito}`, e o desempate é **parâmetro, nunca
+  adivinhação de estado da sessão** — com três coletivos montados, "usa o que está montado" não tem
+  critério. Ambiguidade vem **qualificada** (`{coletivo}/{repo}`, não dois nomes iguais).
+- **Retrocompatibilidade sem tocar em config de ninguém.** O shim lê `chave: "caminho"` e
+  `chave: {caminho}`. Nenhuma config gravada em campo precisa mudar — e não há validador de schema no
+  produto, então mudança de shape só apareceria na sessão do operador. `listar_repos` passa a marcar
+  as entradas ainda sem coletivo, que são as que podem colidir.
+- **`resolver_repo` continua estrito, e agora está escrito por quê.** A varredura de drift da decisão do ponteiro local
+  reencontrou o rationale de `lib/repos.mjs`: o casamento bidirecional já existiu ali e foi removido
+  na revisão da 0.12.0 porque `resolverRepo('connect-web-api')` (não registrado) devolvia o caminho de
+  `connect-web` como `resolvido`. O item 6 da ADR chegou a propor bidirecional em todas as classes e
+  **foi emendado no mesmo dia**. Repositório é superfície de escrita: termo mais longo que a chave
+  significa entrada **ausente**, não parecida.
+- **`resolver('tribo-x')` passa a resolver.** O casamento era unidirecional
+  (`conceito.includes(termo)`), então termo mais específico que a chave nunca casava — medido em
+  sessão real: `tribo-x` deu `nao-encontrado` e `x` resolveu, duas chamadas para uma
+  resolução. Agora é bidirecional **nas classes de leitura**, e por isso a ambiguidade também passa a
+  ser recusada aqui: `casar('tribo')` casa três tribos e o código devolvia a primeira da varredura em
+  silêncio.
+- **O vínculo do operador ganhou leitor.** `vinculos` tinha **zero** ocorrências em
+  `lib/`, `mcp/`, `hooks/` e `config/`: `daily-ingest`, `discovery-intake` e `tasks-sync` escreviam em
+  `operador/_cerebro/vinculos/{coletivo}/estado.md` e nada jamais leu. A decisão de `curadoria-pessoal-coletivo` (18/08) já
+  tinha decidido que esse registro vale **antes** da carta de navegação do coletivo — faltava a
+  implementação, parada desde então. O `resolver` passa a entregar o recorte junto, deduplicado por
+  sessão; markdown segue sendo a casa, o MCP passa a ser o carteiro. Tool nova `estado_operador` para
+  quem precisa do vínculo sem resolver o coletivo.
+- **2.180 tokens por chamada de `resolver`, sem leitor do outro lado.** `carta.inline` e `carta.corpo`
+  são o mesmo arquivo (o segundo sem frontmatter e sem `## Alcance`) e sempre viajaram juntos no
+  `structuredContent`; `render.mjs` e `metricas.mjs` leem `corpo ?? inline` e rodam **dentro** do
+  servidor, antes da serialização. A carta de **processo** escapava inteira do dedup nos dois campos —
+  o segundo sub-vault que declarasse o mesmo processo pagava a carta de novo, que é a escala linear que
+  a herança existe para eliminar. Medido contra um vault real: **1ª entrega 41% menor, 2ª 85% menor**,
+  com a carta íntegra na primeira (o `carregamento-lazy` nunca pediu economia na primeira entrega).
+- **`nao-encontrado` deixa de devolver o catálogo.** Eram ~155 conceitos, ~900 tok, para dizer "não
+  achei". Passa a devolver os 12 mais próximos e o total.
+- **`tests/spike-ponteiro-escopado.mjs`** — 41 checagens, uma por situação da simulação da decisão do ponteiro local.
+  Suíte existente (11 spikes) verde, sem regressão.
+
+## 0.27.0 — 2026-09-02
+
+**A varredura de liberação: nove bloqueantes que a padronização da topologia criou, e um defeito de
+mecanismo que engolia declaração em silêncio.**
+
+Auditoria de prontidão para dois operadores novos, disparada pela pergunta certa do operador — *"há
+pendência antes de eu liberar?"*. O achado central: **padronizar a topologia canônica quebrou tudo
+que a declarava**, e nada disso apareceria antes de o primeiro operador novo criar um projeto.
+
+- **Declaração de alcance perdida em silêncio — defeito de mecanismo.** Uma linha de tabela separada
+  do próprio cabeçalho (por um blockquote, um parágrafo) era lida como **cabeçalho novo** e a
+  declaração descartada sem aviso. Aconteceu numa carta de processo real: **10 declarações viraram 9**
+  e a de `squads/{squad}` sumiu — só apareceu porque alguém foi contar. O parser passou a **denunciar**
+  a linha órfã, e M1 reporta como corrente quebrada. Declaração engolida sem aviso é a mesma classe
+  de defeito que estas métricas existem para combater, um andar acima.
+- **Identidade do operador falhando em silêncio.** `lerIdentidade` exigia o valor
+  na mesma linha; lista YAML de bloco (a forma que o operador escreve naturalmente, e que o próprio
+  template sugere ao pedir *"e-mail(s)"*) produzia `papeis: []` e `emails: []` **com a sessão subindo
+  sem aviso**. Agora o parser de frontmatter entra como segunda fonte e **campo presente e vazio é
+  declarado** — antes era indistinguível de perfil ausente.
+- **`camada-1.template.md` alinhado à v0.6.0.** Não tinha `## Alcance`, `processo:` nem `topologia:`:
+  todo vault criado pela `cnct-fabrica-navegacao` nascia com M1 em falha e **todo arquivo reportado
+  como órfã**. A fábrica entregava o artefato da v0.5.0 num produto v0.6.0.
+- **`cnct-fabrica-navegacao` parou de validar o teto que o contrato riscou** (≤250 linhas) e passou a
+  **chamar `medir_navegacao`** no Passo 4. Antes declarava "carta verificada" pelo critério que o
+  próprio produto mediu como inoperante, sem rodar a métrica que reprovaria o artefato — "ok" falso é
+  pior que nenhuma verificação.
+- **`{vault}/CLAUDE.md` deixou de ser órfã falsa.** Vive na raiz, logo não era coberto por
+  `CASAS_MECANISMO` (que olha o primeiro segmento): a M1 reportava 1 órfã em cada vault, e o check 7
+  **exige** o arquivo. O produto cobrando do coletivo a declaração de algo que o produto impõe.
+- **O template de `cnct-nucleo-escrita` parou de prescrever topologia.** Declarava
+  `projetos/{projeto}/adr/` literalmente, e o defeito não era o caminho estar velho — era o produto
+  prescrever forma, contra `vault-declara-produto-nao-prescreve`. Agora aponta para a carta de
+  processo do coletivo.
+- **`contrato-manifesto.md`** — `entrada` passa a ser **caminho relativo**, não nome de nota;
+  contradizia `contrato-navegacao.md` §4 desde a v0.5.0 dele.
+- **`contrato-tipos.md`** — `estrutura mínima` → **topologia**, e o check 6 (*"recusar destino sem
+  estrutura"*) foi **retirado**: implementá-lo como escrito faria a escrita ser recusada num vault
+  recém-provisionado, porque ele não tem `adr/`.
+- **Gatilho de sessão roubado, mitigado** — `cnct-nucleo-conhecimento` deixou de reivindicar *"iniciar sessão"*, *"restaurar
+  contexto"*, *"montar"*: é knowledge, não executor, e roteá-la no primeiro contato entregava teoria
+  sobre junctions em vez de perguntar onde fica a matriz — a sessão nunca montava.
+- **`cnct-fabrica-operador`** — `demand-intake` (renomeada há versões) → `discovery-intake`, e
+  `SKILL-END` sincronizado com `metadata.version`.
+
+## 0.26.0 — 2026-09-02
+
+**A declaração de alcance vira corrente, e a conformidade de herança para de reprovar o nascimento.**
+
+Correção da 0.25.0 no mesmo dia, e as duas metades vieram de crítica do operador sobre o resultado
+medido — não de revisão de código.
+
+- **`lib/alcance.mjs` — a corrente `carta → hub da casa → nível`.** A 0.25.0 pôs uma entrada por
+  **nível** na carta, e isso violava o critério que o alcance implementa: a §7 arbitra risco de
+  varredura, depois **massa no caminho**, depois saltos, e declara que *mais saltos costuma ser
+  melhor*. Concentrar a declaração na carta maximiza a massa cobrada de **todos** que passam para
+  economizar saltos, que só quem vai paga. Agora a carta declara **casa + quem a governa** e o hub
+  declara o nível dele. Cobertura transitiva, e cada sessão paga só as casas em que entra.
+- **Classe de defeito nova, que a forma anterior não tinha como detectar:** casa delegada cujo hub
+  **não existe** — a corrente quebra ali e o nível abaixo fica sem cobertura, com a carta parecendo
+  completa. Hub que existe e **não declara** `## Alcance` **não** é defeito: exigir a seção de todo
+  hub obrigaria as 17 notas de projeto de um acervo de cliente a repetir a forma do processo, que é
+  *deltas, não cópias* violado um andar abaixo. Quem cobra o resultado é a M1, nomeando a órfã.
+- **Declaração em tabela `## Alcance`, não em frontmatter.** Array de objeto em YAML não é editável
+  na view de Properties do Obsidian, e estes vaults são operados no Obsidian — forma do produto que
+  atrita com a ferramenta em que o produto vive é defeito de dogfooding. A seção é recortada da
+  injeção, como já era o frontmatter. A forma legada segue sendo lida.
+- **M7 deixa de exigir existência de pasta.** Passa a verificar **compatibilidade topológica**:
+  o processo declara `topologia:`, o vault declara qual usa. A versão anterior reprovava todo vault
+  recém-nascido — vault que a fábrica acabou de provisionar não tem projeto, logo não tem casa de
+  ADR, de backlog nem de RNF, e essas nascem no refinamento. Reprovar o estado normal de nascimento
+  contrariava *ausência é gatilho de nascimento, não erro*.
+- **Filtro de topologia na herança.** A carta de processo declara uma linha por topologia; sem
+  filtrar pela do vault, a topologia não usada casa com os diretórios internos dele — medido:
+  `projetos/{ciclo}/{projeto}` casou com `projetos/ativos/Connect/adr`, `.../backlog` e `.../historico`, e
+  o medidor passou a exigir hubs que nunca deveriam existir. Três defeitos inventados pelo próprio
+  medidor.
+- **M5 ganha mais duas classes**, pelo mesmo motivo de sempre (falso positivo treina a ignorar o
+  relatório): caminho que existe no **governante** e não aqui é ponteiro cross-vault a tipar, não
+  morto; e padrão de nomenclatura declarado na tabela nunca é ponteiro.
+- **`config/contrato-navegacao.md` → v0.6.0** — §0 com a tabela das duas correções, §8.0 reescrita
+  (a corrente, a tabela, a raiz explícita como `.`), §8.0.1 nova (o corte entre declarar na carta e
+  delegar ao hub, e por que hub sem alcance não é defeito), §9.3 e §9.4 com `topologia:`.
+- **`tests/spike-heranca.mjs` — 58 testes** (era 43), cobrindo a corrente, as três classes de
+  delegação, e o que a M7 **deixou** de reprovar: vault sem projeto e projeto sem casa de ADR passam,
+  e o relatório diz **por que** passou em vez de passar calado.
+
+## 0.25.0 — 2026-09-02
+
+**A herança de processo deixa de ser norma escrita e passa a ser mecanismo.**
+
+O `contrato-navegacao.md` v0.4.0 declarava as §§7–9 sob o cabeçalho *norma declarada, mecanismo
+pendente* e dizia na cara: `processo:` não era lido em runtime, a carta de processo não existia como
+artefato, as sete métricas não rodavam. Consequência medida: um vault que violasse as §§7–9 montava
+e navegava normalmente, sem aviso — e a carta podada à mão em 26/08 voltou **26% maior em cinco
+dias**, acima de onde estava antes da poda. Redução sem teto mecânico não persiste.
+
+- **`lib/heranca.mjs` — herança de processo.** O vault declara `processo:` no frontmatter da própria
+  `_cerebro/camada-1.md` e herda a carta daquele processo, em `_cerebro/processos/{processo}.md` no
+  vault que governa o processo. O mecanismo a injeta **uma vez por sessão, não uma vez por vault** —
+  registro em `.connect/heranca.json` no workspace da sessão (arquivo e não variável de módulo: o
+  servidor MCP é longo-vivo, atende várias sessões e pode reiniciar no meio de uma). É o fim da
+  escala linear do piso: N vaults do mesmo processo passam a pagar uma carta de processo + N deltas.
+  **Ausência de `processo:` não é lacuna** — degrada para o comportamento anterior sem quebrar.
+  `processo:` declarado **sem** carta correspondente é lacuna ruidosa, porque o vault podado não tem
+  de onde herdar o que foi removido dele.
+- **`lib/metricas.mjs` — M1 a M7 implementadas**, expostas pela tool **`medir_navegacao`** e
+  chamadas pelo modo AUDIT do `cnct-nucleo-audit` (Passo 2b). M1 torna o **check 6** (nota órfã)
+  computável pela primeira vez; M3 substitui o check 4 e mede **tokens**, não linhas; M5 fecha o
+  check 3 e M6 o check 5. A precondição dura da M1 é obedecida no código: resolver a herança é o
+  passo 1, porque medir cobertura sem ela produz órfã falsa por arquivo herdado.
+- **`lib/frontmatter.mjs` — parser mínimo, zero dependência.** Suporta o subconjunto que os
+  contratos usam, incluindo **lista de objetos**, que é o que a declaração de `alcance:` exige.
+  Recusa o que não entende em vez de adivinhar.
+- **O frontmatter da carta deixa de ser injetado.** `processo:` e `alcance:` são declaração para o
+  mecanismo; ao contexto do agente vai só o **corpo**. Sem isso, declarar bem custaria tokens em
+  toda sessão e o teto da M3 puniria justamente o vault que cumpre o contrato — incentivo invertido.
+- **M5 classifica em quatro naturezas em vez de uma.** Fundi-las produziu 16 falsos positivos na
+  primeira execução real: *morto* (falha) · *ambíguo* (existe, não a partir da raiz) · *fora do
+  vault* (arquivo do produto ou de outro vault — é ponteiro que deveria ser tipado) · *herdado sem
+  casa* (domínio da M7, não duplicado). Falso positivo em métrica de ponteiro é pior que métrica
+  ausente: treina a ignorar o relatório.
+- **Orçamentos de M3 e M4 fixados** (delta local ≤ 1.400 tok · carta de processo ≤ 2.000 ·
+  caminho de entrada ≤ 4.000), calibrados **depois** da primeira carta de processo publicada, como a
+  v0.4.0 previu. O teto do delta é o delta honesto do vault mais complexo já podado (~1.265 tok) com
+  ~10% de folga: escolhido para morder quando a carta reabsorve mecanismo, não para caber.
+- **`config/contrato-navegacao.md` → v0.5.0.** §0 reescrita (não há mais metade sem mecanismo) ·
+  §8.0 nova, declarando a forma legível por máquina do `alcance:` · §9.3 declara a casa canônica da
+  carta de processo e o registro de injeção · §5 com os checks 3, 4, 5 e 6 promovidos a mecanismo ·
+  §9.4 com orçamentos e o rationale da calibração.
+- **`config/protocolo-mecanismo.md`** ganha *"O que a carta de um vault NÃO repete"* — a lista do que
+  é mecanismo e entra uma vez por sessão. Sem esse destino declarado, a poda das cartas não teria
+  para onde mandar o que sai delas.
+
+## 0.24.0 — 2026-09-01
+
+**A mente construtora existe, e ganha o par que a faz melhorar sozinha.**
+
+- **`skills/cnct-fabrica/` — o executor genérico que faltava.** Uma fábrica, não uma por tipo: o
+  construtor é genérico, o tipo vem do coletivo alvo e o modo se deduz da família, nunca se
+  pergunta ao operador. Implementa o `contrato-tipos.md` de ponta a ponta — pré-condições
+  verificadas na abertura (não descobertas no fim), busca da casa que já governa antes de criar,
+  leitura da forma declarada, elicitação a partir do banco do coletivo, materialização sem
+  sobrescrever, **handshake obrigatório** e verificação real (`resolver → resolvido` com zero
+  avisos; artefato com linha de gatilho na carta). Inclui **modo migração** — contexto que já
+  existe fora do produto entra por inventário e diff, nunca por recriação.
+- **`skills/cnct-elicitacao/` — captura passiva promovida a mecanismo.** Era `elicitacao-captura`,
+  fora do plugin, com `eixo: dogfooding` e disparo só em sessão de estruturação. Agora é núcleo,
+  observa **qualquer sessão de trabalho do coletivo**, e o que ela destila tem destino declarado:
+  o banco de elicitação por tipo que a `cnct-fabrica` lê. Captura o **viés de arquitetura** da
+  casa — que aparece nas correções de enquadramento do operador, não nas afirmações dele — para
+  que o produto passe a oferecer opções concretas em vez de perguntas abertas. Regra de promoção
+  assimétrica declarada: pergunta sobe com 2 ocorrências, armadilha sobe com 1, estrutura mínima
+  **nunca sobe sozinha** (é governança, vai como proposta ao operador). Nunca cruza coletivo.
+- **A skill antiga não é desinstalada por esta versão.** Gatilhos sobrepostos produzem seleção
+  não-determinística; enquanto o entregador de skill não existir, a remoção é ato manual do
+  operador — decisão registrada em vault não alcança inventário instalado.
+
+> **O que esta versão deliberadamente NÃO entrega:** a garantia mecânica dos seis checks do
+> `contrato-tipos.md` §7. Um `SKILL.md` é prompt, não código — `mcp/` e `lib/` não mudaram. Os
+> seis seguem dependendo de disciplina, e a distinção *mecanismo × pendente* é do próprio contrato:
+> quem ler "a fábrica existe" e esperar gate vai receber boa vontade.
+
+## 0.23.0 — 2026-09-01
+
+**Fecha a limpeza de identificador cru que a 0.22.0 começou, e ocupa o slot de maior precedência do
+contexto com governança em vez de deixá-lo vazio.**
+
+- **Identificador cru extinto de todo texto operante** — `Dxx`/`Pxx`/`ADR-N`/`CAx` saíram de
+  `config/protocolo-mecanismo.md` (injetado em toda sessão), dos **8** `SKILL.md` de `cnct-*`, dos três
+  contratos (`contrato-navegacao`, `contrato-manifesto`, `contrato-tipos`), do `FRAMEWORK.md` e do
+  `CONCEITOS.md`. Onde a frase perdia o apoio ao perder o código, entrou o **nome** da entrada do
+  `GLOSSARIO.md`; onde o código só decorava uma afirmação já escrita por extenso, foi apagado.
+  Quem instala o Connect sem o vault interno do time do produto não lê mais referência a nada.
+- **`GLOSSARIO.md` — 10 entradas novas**: `vault-declara-produto-nao-prescreve`, `manifesto-e-acervo`,
+  `grafo-nao-arvore`, `path-por-maquina`, `bloqueio-reporta-nunca-contorna`, `carregamento-lazy`,
+  `canal-injetado-governado`, `curadoria-pessoal-coletivo`, `preparar-e-parar`. Cada uma no formato
+  da lista: regra em uma frase → por que importa em uma frase.
+- **Strings emitidas para o agente também limpas** — as regras duras (`lib/regras.mjs`), os avisos de
+  `lib/render.mjs`/`navegacao.mjs`/`resolver.mjs`/`session.mjs`/`config-local.mjs`, o texto do arquivo
+  de governança (`lib/governanca.mjs`) e as **descrições das tools MCP** (`mcp/connect-mcp.mjs`), que
+  entram no contexto do agente como schema. **Comentários de código foram deixados como estão**: são
+  arqueologia de engenharia, lidos por quem mantém o plugin, não por quem navega o vault.
+- **`contrato-manifesto.md` §2** — removida a coluna `Fonte` da tabela de schema: as células eram
+  exclusivamente códigos de decisão, e a coluna existia só para hospedá-los.
+
+> ⚠️ **Reflexo a executar depois de instalar esta versão:** os `CLAUDE.md` de governança já publicados
+> (os três vaults da instância de referência) foram gerados pelo código anterior e ainda carregam
+> ` (`bloqueio-reporta-nunca-contorna`)` na regra dura 2. `publicar_governanca` é *write-once por conteúdo* — republicar depois
+> da instalação regenera os três. Sem reinstalar, republicar não muda nada: o servidor MCP em execução
+> ainda é o código velho.
+
+## 0.22.0 — 2026-09-01
+
+**Audit "in loco" (dogfooding do Connect na instância de referência) achou identificador órfão empacotado no
+mecanismo, e um defeito de schema retido num template — nenhum dos dois visível sem alguém de fora
+tentar instalar do zero.**
+
+- **`GLOSSARIO.md`** (novo, raiz do plugin) — glossário de comportamento do produto: nome descritivo →
+  regra em uma frase → por que importa, sem citar `Dxx`/`ADR-N`/`Pxx`. O log de ADR (data, incidente,
+  quem decidiu) continua só no vault interno do time do produto — não precisa ser resolvido por quem apenas
+  instala o Connect. Texto operante deve citar o nome da entrada, nunca o código cru, a partir de agora.
+- **`cnct-fabrica-operador/templates/CLAUDE.template.md`** — tirado o ` (`espinha-e-mecanismo`)` cru, trocado por
+  ponteiro ao glossário.
+- **`cnct-fabrica-operador/templates/meu-config.template.md`** (v1.1→v1.2) — **defeito real**, achado
+  por uma operadora em onboarding: o template ainda materializava a seção
+  `_cerebro/clientes/` inteira, schema que o próprio `SKILL.md` desta fábrica já proíbe em maiúsculas
+  ("Nunca materializar `_cerebro/clientes/`"). Corrigido para `_cerebro/vinculos/` (`vinculos-v1`).
+  Todo operador provisionado entre a introdução do schema `vinculos-v1` e esta correção nasceu com o
+  perfil no schema aposentado — candidato a item de audit/repair, não migração automática.
+- **`cnct-nucleo-escrita/templates/cnct-nucleo-escrita.template.md`** — quatro códigos de decisão
+  crus trocados por ponteiro ao glossário.
+
+> ⚠️ **Achado de auditoria, não corrigido aqui:** o bump `b98381d "bump version"` (0.20.0→0.21.0) não
+> tem entrada de changelog — é a mesma classe de deslize que a 0.19.0 já registrou duas vezes (0.16.0
+> e a própria 0.19.0). Não reconstruí essa entrada por não ter certeza do que motivou o bump; fica
+> nomeado para quem tiver o contexto completar.
+
+## 0.20.0 — 2026-08-27
+
+**Três cortes no custo de contexto, todos nascidos de medição em sessão real (26/08, 8ª
+sessão) e não de hipótese.** O operador pediu uma informação que obrigasse o agente a
+navegar de verdade — *"o que é o Connect"* — **e** a medição de cada camada na mesma ordem.
+Instrumentar pergunta sintética mede o instrumento; instrumentar pergunta real mede o produto.
+
+O resultado que enquadra tudo: a abertura custou ~74,8k tokens, dos quais **84% são piso do
+harness** e só 15% são Connect — e a carta de navegação **economizou ~18.100 tokens numa
+pergunta só** (`Connect.md` tem 66,5 KB; foram lidos 3 KB). O produto se paga no primeiro
+salto para dentro de uma nota grande; o que sobrava para cortar era repetição, não conteúdo.
+
+- **Bloco acionável não é mais pago duas vezes** (−1.230 B por sessão). `blocoAcionavel`
+  chegava pelo canal injetado **e** de novo dentro do `contexto-sessao.md`. `renderContexto`
+  ganha `{ acionavel }`: o arquivo recebe um **recap nomeado** no lugar do texto inteiro.
+  Não é remoção — o arquivo existe para ser **relido** quando o contexto fica distante, e é
+  exatamente aí que um aviso de governança apagado faria falta. **A degradação segue
+  intacta:** quando a escrita do arquivo falha e o stdout volta a ser canal único, o bloco
+  vai inteiro (default `true` — quem esquecer a flag paga token, não perde aviso).
+- **`vaultConfigInline` deixa de atravessar o payload** (−1.259 B). Nenhum renderizador o
+  consumia: a seção de identidade sempre saiu de `identidadeVault`, o mesmo frontmatter já
+  parseado. Passa a ser **ponteiro sempre**, não marcador de dedup — o corte é na borda
+  (`entrega.mjs`), não na origem, para não tirar o dado de quem precise dele em runtime.
+- **A carta do sub-vault viaja por um canal só** (−6.742 B no canal de texto). Medido no
+  Cowork: o `content[].text` do `resolver` **não chegou ao agente** — chegou o
+  `structuredContent` e mais nada. É a reincidência do que a 0.13.0 registrou para o
+  `iniciar_sessao` (*"esse bloco de texto NAO alcanca o cliente Cowork"*), nunca estendida às
+  demais tools. `renderResolucao` ganha `{ cartaInline }`; o texto passa a levar ponteiro.
+  ⚠️ **Medição de um cliente só** — por isso o texto diz *onde a carta deveria estar*: se
+  algum cliente descartar o `structuredContent`, a falha aparece nomeada em vez de silenciosa.
+  Aberto como pendência no acervo do produto.
+- **Correção de comentário que mentia, e ela é a lição.** O comentário em `connect-mcp.mjs`
+  afirmava que o texto levava a carta e que o `inline` ia elidido do JSON — **as duas metades
+  falsas**, porque `dedupInline` elide a partir da *segunda* entrega, nunca na primeira, que
+  é a de toda sessão nova. Foi esse comentário que fez a duplicação sobreviver três sessões de
+  dogfooding sem ser vista: quem lê o código confia nele e não mede. *Comentário que descreve
+  intenção em vez de comportamento é pior que ausência de comentário.*
+- **`tests/spike-custo-contexto.mjs`** (novo, 24 asserts) — a resposta direta ao item acima:
+  o comportamento passa a ser afirmado por teste, não por prosa. Verificado por mutação:
+  contra o código anterior falha em 11 asserts (os três cortes) e passa nos 13 restantes,
+  que são as **invariantes** — governança preservada na degradação, carta íntegra no canal
+  que chega, lacuna de carta e carta incompleta ainda denunciadas com o inline desligado.
+  Economia que apaga aviso não é economia, é regressão silenciosa.
+
+> **Contrapartida declarada, porque a conta líquida é menor do que os cortes sugerem:** a
+> carta da matriz **cresceu** +1.311 B nesta rodada (núcleo de normas de agente, no vault, não
+> no plugin). Líquido por sessão: **−337 tokens** sem resolver sub-vault, **−124** resolvendo.
+> O corte do canal de texto não entra nessa conta no Cowork — lá ele já era descartado.
+
+## 0.19.0 — 2026-08-26
+
+> ⚠️ **Entrada reconstituída em 27/08 a partir do diff do commit `c1f16bd`.** A versão foi
+> bumpada em `plugin.json` e commitada **sem entrada no changelog**; o texto abaixo descreve o
+> que o diff mostra, não o que o autor pretendia. É a terceira ocorrência desta classe de
+> deslize no projeto (a v0.16.0 foi commitada sob o número da 0.15.0) — registrada aqui como
+> lacuna preenchida, não como histórico de primeira mão.
+
+**`canal-injetado-governado`, fases 4–6: publicação de governança, setup do canal e audit.**
+
+- **`publicar_governanca`** — nova tool MCP: materializa `{vault}/CLAUDE.md`, o arquivo que o
+  harness carrega sozinho da raiz de pasta conectada e rotula como *override*. Write-once, com
+  marcador `CNCT-GOV-*`; **recusa sobrescrever** `CLAUDE.md` sem marcador do Connect — pode ser
+  Camada 0 de operador, sonda ou conteúdo de terceiro.
+- **`blocoCanalInjetado`** (`render.mjs`) — a metade do `canal-injetado-governado` que o mecanismo não consegue
+  verificar sozinho: se o vault está conectado como pasta do projeto. O hook não tem como
+  saber (escreve antes de o agente existir), então quem verifica é o **agente**, procurando o
+  marcador no próprio contexto.
+- Skills `cnct-fabrica-navegacao`, `cnct-nucleo-audit` e `cnct-nucleo-sessao` atualizadas para
+  o fluxo novo; `tests/spike-governanca.mjs` estendido.
+
+## 0.18.0 — 2026-08-26
+
+**Nasce `cnct-nucleo-audit` — a auditoria de saúde materializada como skill do produto.**
+Antes vivia só como conhecimento solto em cada vault (`vault-audit`, provisionado
+manualmente por cliente). Agora o executor é mecanismo do plugin, no mesmo padrão das
+demais `cnct-nucleo-*`: roda em TODO vault tocado na sessão (matriz + sub-vaults
+resolvidos, `list_mounts` — mesmo princípio do `cnct-nucleo-encerramento`), nunca assume
+vault único.
+
+- **Dois níveis de conhecimento, nunca misturados.** Checks de **mecanismo** (novo, sempre
+  ativos, qualquer vault): schema de manifesto, ausência de registro autorado, path/URL fora
+  do manifesto, lar do cliente, consistência bidirecional do grafo, acervo pendente há muito
+  tempo (`config/contrato-manifesto.md` §5) — mais nota órfã achada por varredura forçada e
+  carta de navegação incompleta (`config/protocolo-mecanismo.md`). Checks de **cliente**
+  continuam vivendo em `{vault}/_inteligencia/skills/vault-audit/vault-audit.md` — nome do
+  artefato por-vault mantido (convive com o executor novo, mesmo padrão do `vault-write`
+  convivendo com `cnct-nucleo-escrita`). Vault sem conhecimento próprio ainda: a skill
+  materializa um stub a partir de `templates/vault-audit.template.md` — nunca sobrescreve.
+- **Capa separada de histórico e log.** `issues.md` vira só as issues pendentes; issues
+  resolvidas migram para `issues-historico.md` (novo); `log.md` e o histórico só são lidos
+  sob demanda, não no fluxo padrão — custo de contexto plano por run.
+- **Issue nomeada de verdade.** Cada issue carrega Gerado por (operador), Data (primeira
+  detecção) e Responsável pelo repair (preenchido por delegação, nunca em AUDIT).
+- **REPAIR com filtro por operador.** Padrão: só issues do próprio operador. Alternativa
+  sempre oferecida: ver todas as pendentes do escopo, inclusive de outros operadores —
+  reparo proativo. Ação `"delega: {nome}"` atribui sem executar. Toda ação — inclusive
+  delegação — é logada, sem exceção.
+- **Modo SCHEDULE — tarefa agendada real, por operador.** Substitui o modelo manual de
+  copiar/colar (`audit-schedule-template.md`): a skill cria a tarefa de verdade, com
+  escopo/critérios daquele operador embutidos num prompt autocontido (cada disparo agendado
+  é uma sessão nova, sem memória da atual). Mais de um operador pode ter sua própria tarefa,
+  com seus próprios critérios. **REPAIR nunca é agendado.**
+- **`criterios-override` por operador — só em escopo pessoal.** Decisão explícita (26/08):
+  verificação de escopo coletivo sempre usa o critério único do `vault-config` do vault —
+  nunca sobrescrita por operador, para não gerar abre/fecha divergente no backlog
+  compartilhado quando operadores divergem de threshold.
+
+Instância de referência já rodando com o formato novo: o coletivo interno da matriz — `vault-audit.md` v1.1, capa/histórico separados, provisionado antes desta
+mudança e compatível com o executor novo sem migração.
+
+## 0.17.0 — 2026-08-25
+
+**Nasce `config/contrato-tipos.md` — o terceiro contrato do produto, e o que fecha o handshake da
+fábrica.** Nenhuma mudança de runtime: é contrato. A `convencao-skills` da matriz já declarava
+`tipos` como conceito do produto *"com contrato próprio em `config/`"*, ao lado de `operador` e
+`navegacao`, que **têm** o seu. O terceiro nunca existiu — e sem ele a decisão do contrato de tipos entregava a metade
+do coletivo (estrutura mínima e herança, no `modelo-roteamento`) e deixava a metade do produto sem
+casa.
+
+- **O schema de tipo — 6 campos.** nome · **família** · estrutura mínima · semântica de descida ·
+  forma canônica (ponteiro, nunca molde) · handshake. Ausência de qualquer um = tipo **não
+  construível**: a fábrica recusa e nomeia o campo, jamais supre.
+- **O modo se deduz da família, nunca se pergunta**. Perguntar ao operador *"isto é artefato
+  ou contexto?"* transfere a ele uma classificação do mecanismo — é a pergunta que ninguém de fora
+  do produto sabe responder.
+- **§5 — o handshake de materialização, o primitivo que faltava.** *A fábrica não termina quando
+  escreve o último arquivo; termina quando o mecanismo resolve o que ela criou.* Para **contexto**:
+  manifesto + `registrar_subvault_local` + carta, com `resolver → resolvido` e zero avisos como
+  **gate de fechamento**. Para **artefato**: estrutura mínima + **linha de gatilho na carta do
+  vault** — este segundo passo é o que nada declarava, e sem ele a fábrica **produz nota órfã por
+  construção**, que é o defeito que o contrato de navegação §5 check 6 reporta depois.
+- **Estado zero vira regra com teste**: tipo cujo nascimento precede qualquer coletivo é
+  declarado em `config/tipos/`, e o teste é objetivo — *precisa ler declaração do coletivo?* Hoje
+  qualifica **um**: `operador`.
+- **A lista de tipos nunca mora no plugin.** O produto declara a exigência; o coletivo declara os
+  tipos, no `modelo-roteamento` da sua matriz. Catálogo próprio permitiria à fábrica ignorar o que a
+  matriz já declara — que é exatamente o viés medido do construtor.
+
+> ⚠️ **Dívida declarada, não silenciada:** o `FRAMEWORK.md` §3 ainda descreve o desenho plural
+> (L2 "uma fábrica por tipo", L3 `cnct-fabrica-tipos`) que a decisão da fábrica genérica fechou. Este contrato o
+> substitui — "criar um tipo novo" deixa de ser skill meta e vira preencher as células do schema no
+> roteamento do coletivo. A §3 está em dívida de atualização.
+>
+> ⚠️ **Face de verificação com 6 checks e nenhum mecanismo** — estado honesto, não omissão. Este
+> contrato é a *especificação*; o executor é uma pendência que ele desbloqueia. A distância entre
+> contrato e garantia é a família *a norma existe, o executor não*;
+> declará-la é o que impede a sétima ocorrência em silêncio.
+
+## 0.16.0 — 2026-08-25
+
+> ⚠️ **Defeito de release, registrado porque tem consequência.** O conteúdo desta versão foi
+> commitado em 25/08 (`772a818 "upgrade"`), mas o `plugin.json` **não foi incrementado no commit**:
+> saiu ainda como `0.15.0`. Instalada e canônica ficaram indistinguíveis pelo número, e por isso a
+> atualização não aterrissou na máquina do operador. Bump aplicado depois, em 25/08.
+> **É a mesma classe da pendência de versionamento de skill** — o comparador de frescor da decisão de versionamento depende do número
+> ser verdade, e aqui o número mentiu na origem, não no transporte.
+
+**O catálogo ganha dono declarado, e dois executores param de degradar em silêncio.** Nenhuma
+mudança de runtime: é catálogo, contrato e protocolo de skill. Origem: auditoria das 6 skills do
+plugin, que achou 10 defeitos.
+
+- **`cnct-nucleo-encerramento` 0.2.0 → 0.3.0 — nasce o Passo 4b.** O executor persistia
+  `TASKS.md` e `meu-config.md` do operador e **nunca** `vinculos/{coletivo}/estado.md`, que é a
+  casa declarada pela emenda do épico de identidade do operador desde 18/08. Consequência medida: o
+  `estado.md` de um vínculo real **nasceu vazio e ficou vazio** enquanto o cérebro pessoal legado
+  tinha a tabela cheia e fresca — ninguém escrevia ali. O Passo 4b torna a atualização obrigatória
+  por vínculo tocado e traz a forma junto (uma frase por célula, substitui, fonte de verdade é a
+  nota do projeto, `a reconciliar` em vez de suposição).
+- **`cnct-fabrica-operador` 0.1.0 → 0.2.0 — sai do schema aposentado.** Materializava
+  `_cerebro/clientes/.gitkeep` e `clientes/{slug}/config.md`; passa a materializar
+  `_cerebro/vinculos/{coletivo}/{config,estado}.md` no schema `vinculos-v1`, sem `repos.md` (o
+  registro de repo virou `resolver_repo`) e sem path no vault (`path-por-maquina`). **Todo operador novo
+  nascia errado**, e ela é a implementação de referência do padrão.
+  - **Novo Passo 6 — migrar com inventário e diff.** A fábrica declarava *"nasce, não migra à
+    força"*, e o caso do operador existente ficava fora de escopo. Foi assim que **4 convenções com
+    gatilho** se perderam na migração da Camada 0 — uma delas declarada *"genuinamente pessoal, sem
+    equivalente no coletivo"*, ou seja, irrecuperável se a fonte fosse podada antes de alguém notar.
+  - `fabrica-papel` → **`cnct-fabrica-papel`**: o nome citado não existia **e** violava a convenção
+    do próprio framework, dentro do arquivo de referência.
+- **`metadata.eixo` em todas as 6 skills, e `metadata` em `cnct-fabrica-navegacao`** — ela não
+  declarava metadata nenhum, portanto **não tinha versão**: o comparador de frescor da decisão de versionamento não
+  tinha o que comparar. Conformidade passa a ser exigência do `contrato-skill.md` (a escrever).
+- **`FRAMEWORK.md` 0.1.0 → 0.2.0** — nasce a **§3.2 (namespace de origem)**: `cnct-` é reservado ao
+  produto, fábrica cujo contrato é do coletivo não leva o prefixo, e **nenhuma fábrica emite nome no
+  namespace do produto**. Era a lacuna que a L3 (explodir processo em skill) tornava bloqueante.
+  §3/§5/§5.4/§6 atualizadas; `elicitacao-captura` deixa de ser "candidata a split" e passa ao eixo
+  `dogfooding`. Decisão registrada no acervo do produto (`proposta`).
+- **`cnct-nucleo-conhecimento` marcada `status: a reclassificar`** — texto declarativo sem protocolo
+  executável, e com gatilhos que colidem palavra por palavra com `cnct-nucleo-sessao`. Mesma classe
+  da pendência de catálogo, dentro do plugin. Candidata a virar `config/`, não skill.
+
+> ⚠️ **Não entrou, e é o que fecha o ciclo:** o **entregador de skill** (comparar versão instalada ×
+> canônica, empacotar, entregar). A decisão de versionamento de skill decidiu isso em 04/08 e a implementação virou prosa
+> replicada no Passo 1 de 11 das 14 skills instaladas. É por isso que uma decisão declarou uma skill
+> desabilitada e **nada mudou na máquina do operador**.
+
+## 0.15.0 — 2026-08-24
+
+**O runtime sai do pacote.** Uma correção só, e ela é de bloqueio de release: até a
+0.14.0 o plugin **não podia ser atualizado enquanto rodava** — que é exatamente quando
+alguém atualiza.
+
+- **A atualização do plugin destruía a instalação.** Medido em 24/08, por cronologia de
+  arquivo: às 00:02 o pacote estava sadio (`bin/node.exe`, 70.027.928 bytes, íntegro);
+  às 09:31 o instalador reescreveu o diretório, **não conseguiu tocar em `bin/`** (o
+  único arquivo em uso pelo servidor MCP em execução) e abortou — deixando um
+  `plugin.json` de 23 bytes (`{"name":"connect"}`), sem `lib/`, sem `skills/`, sem
+  `mcpServers`. Windows não substitui `.exe` com processo ativo. Sintoma para o
+  operador: *"a extensão está com falha, não consigo atualizar"* — e não há o que
+  atualizar, porque não sobrou pacote válido.
+  - **Consequência direta do commit `e7ff9c1`** ("embutir o node na instalação"): antes
+    dele nenhum binário morava no pacote, então nada travava. O produto ganhou *"não
+    exige Node instalado"* e pagou com *"não pode ser atualizado em uso"* — o
+    custo nunca foi declarado.
+  - **É o defeito de atualização-sem-recarga por outro ângulo, e pior.** Ela já dizia que atualizar não recarrega o
+    servidor MCP em memória; agora sabemos que **corrompe a instalação**.
+  - **`scripts/run-node.bat`**: o runtime passa a viver em `%CONNECT_HOME%\bin`, fora do
+    pacote. Não é contorno — é a casa certa: `CONCEITOS.md` §5 declara o `CONNECT_HOME`
+    como a pasta de estado/runtime da máquina, e `node.exe` é runtime. Estava na pasta
+    errada pela própria taxonomia do produto.
+  - Efeitos colaterais bons: o download de ~70 MB **deixa de se repetir a cada versão**
+    (o runtime sobrevive à atualização) e quem já tem o plugin instalado **migra do
+    legado por cópia local**, sem rebaixar nada.
+  - Endurecimentos que entraram junto, todos de defeito real no script anterior:
+    `curl -f` (sem ele, um HTTP 404 era gravado como `node.exe` com exit 0, e o
+    `if exist` das execuções seguintes nunca mais tentava baixar — binário corrompido
+    permanente, mesma classe do `.git/index.lock` órfão); download **atômico**
+    (`.tmp` + `move`); verificação de que o binário **executa** (`node -v`), não só de
+    que existe; e degradação para o `node` do PATH **avisada em stderr**, nunca
+    silenciosa — que é o modo de falha que a garantia de Node embutido fechou.
+  - `tests/spike-runtime-fora-do-pacote.mjs` (11 casos). **Declarado no próprio spike:**
+    ele cobre o *contrato textual* do `.bat`, não a execução em Windows. A validação real
+    é atualizar o plugin com sessão aberta e a instalação sobreviver — teste que nenhum
+    spike faz.
+
+- **`SERVER_INFO.version` deixa de ser hardcoded** (`connect-mcp.mjs`). Estava fixo em
+  `'0.13.0'` e ficou para trás no bump da 0.14.0 — literalmente o defeito de atualização-sem-recarga
+  descreve: o servidor não sabe a versão do disco e o operador não tem como saber que a
+  sessão serve outra versão. Passa a derivar do `plugin.json`; se a leitura falhar,
+  `'desconhecida'` — resposta honesta, ao contrário de um número errado. Fecha a metade
+  estrutural desse defeito.
+
+- **`.gitattributes` nasce.** Um commit de duas correções apareceu com 598 linhas
+  alteradas num arquivo de 299 — LF→CRLF, zero mudança de código. EOL normalizado para
+  LF, com `.bat`/`.ps1` em CRLF (requisito do `cmd.exe`, não preferência) e binários
+  nunca normalizados. Gotcha já conhecido do projeto; agora travado no repositório.
+
+## 0.14.0 — 2026-08-24
+
+**Presença em vez de entrega única.** Duas correções, ambas de medição na própria
+sessão de dogfooding, e ambas revisando conclusões da 0.13.0 — não porque a 0.13.0
+errou o método, mas porque o escopo do que ela mediu era menor do que ela concluiu.
+
+- **O bloco de contexto não era injetado — era truncado.** Medido em 24/08: o hook
+  emitiu **15,7 KB** e o cliente Cowork não injetou. Truncou, salvou num log de hook
+  e entregou ao agente um preview de 2 KB. O agente teve de abrir o arquivo à mão
+  para ter camada 0 e camada 1 — ou seja, **reversão prática da `espinha-e-mecanismo`** (*"a garantia
+  é estrutural: não depende de o agente escolher ler um arquivo"*).
+  **A correção da elisão produziu o defeito seguinte:** ela fez a primeira entrega ir
+  inteira, o bloco cresceu, e o crescimento estourou o canal.
+  - Nasce **`lib/contexto-arquivo.mjs`**: `materializarContexto()` grava o bloco
+    completo como `contexto-sessao.md` **no workspace da sessão**, atomicamente
+    (tmp + rename — bloco pela metade é pior que bloco ausente, porque o agente não
+    tem como saber que falta pedaço). Só é possível desde a decisão que tirou o
+    `CONNECT_HOME` da pasta de aplicativo: antes, o workspace era inalcançável.
+  - **`lib/render.mjs`**: nasce `renderContextoCurto()` — o canal injetado carrega só
+    o **mínimo acionável** (concessão, estado zero, identidade, atalhos, regras duras,
+    ponteiro). O peso (protocolo do mecanismo, carta verbatim, camada 0 do operador)
+    vive no arquivo. `blocoAcionavel()` extraído para os dois renders compartilharem
+    as seções de precondição sem duplicar texto.
+  - **Invariante nova, com teste:** o bloco injetado é **O(1) no tamanho do acervo**.
+    Era exatamente isso que o bloco único não era. `tests/spike-presenca-contexto.mjs`
+    trava um teto de 4 KB e falha se o bloco variar quando a carta cresce 5×.
+    Medição depois da mudança: **15,7 KB → 3,4 KB** no canal injetado (−78%), com o
+    peso preservado e agora **relível** — que é a propriedade que o stdout nunca teve.
+  - **Emenda à `espinha-e-mecanismo`, não violação.** A garantia deixa de ser *"injetar tudo"* e passa
+    a ser *"injetar o mínimo acionável e materializar o resto onde o harness relê"*. O
+    `espinha-e-mecanismo` já dependia de leitura de arquivo na prática — só que de um arquivo de log
+    que o produto não controla, sem instrução e sem ponteiro.
+  - Degradação declarada: se a escrita falhar, o hook emite o bloco inteiro no stdout
+    (comportamento ≤ 0.13.0) e avisa em stderr; e o bloco curto anuncia a ausência em
+    vez de apontar uma leitura impossível.
+
+- **A promessa de "uma concessão só" foi retirada — a decisão anterior concluiu além do que mediu.**
+  A 0.13.0 afirmou que junction com destino no perfil do usuário ou no OneDrive é lida
+  *"inclusive sem conceder a origem separadamente"*. Medido em 24/08, em sessão real:
+  conceder o `CONNECT_HOME` **não** alcançou `./matriz` nem o sub-vault resolvido — as
+  três origens (duas no OneDrive) tiveram de ser concedidas uma a uma. A causa não é o
+  momento do mount (pré-montar não resolveria): o harness aplica política sobre o
+  **destino real**, e destino sincronizado por OneDrive exige concessão própria.
+  **4ª ocorrência da família de concessão de acesso.**
+  - **`lib/session.mjs`**: `concessao` ganha `origens[]` — cada alias com o caminho
+    real da sua origem.
+  - **`lib/resolver.mjs`**: todo `resolvido` devolve `concessao` com a origem daquele
+    acervo. Motivo: a alternativa a declarar é o agente descobrir por tentativa, e a
+    alternativa à tentativa é o contorno (`bloqueio-reporta-nunca-contorna`) — que é o que estamos extinguindo.
+  - **`lib/render.mjs`**: o bloco de acesso lista as origens e diz, sem eufemismo, que
+    uma concessão pode não bastar. Custo conhecido é melhor que surpresa.
+
+> Nota de método: as duas correções acima revisam a 0.13.0, que revisou a 0.12.x. O
+> padrão já é estável o bastante para ser previsto — **conclusão tirada de spike vale
+> só no caminho que o spike percorreu.** Uma decisão mediu as origens montadas no início da
+> sessão e concluiu sobre todas; a seguinte mediu a elisão e concluiu sobre a entrega.
+
+## 0.13.0 — 2026-08-23
+Quatro correções, todas de **medição em sessão real** (dogfooding do dia), não de
+hipótese. As três primeiras são a mesma família de defeito, vista de ângulos
+diferentes: **o mecanismo monta, e o harness não alcança** — junction não é
+permissão, e injetar não é entregar.
+
+- **`CONNECT_HOME` sai da pasta de aplicativo** (`%LOCALAPPDATA%\Connect` →
+  `%USERPROFILE%\Connect`; POSIX: `~/.connect`). **Causa isolada por spike:** o
+  Cowork resolve o **destino real** de uma junction e aplica política de acesso
+  sobre ele, não sobre o link. Junction cujo destino está no perfil do usuário ou
+  no OneDrive é lida normalmente — **inclusive sem conceder a origem
+  separadamente**; junction cujo destino está em `AppData` é recusada mesmo com a
+  pasta concedida. Consequências que isso fecha: `./operador` era inalcançável
+  pelas file tools, travando o Passo 4 do `cnct-nucleo-encerramento`; e cada
+  origem montada exigia concessão manual própria, porque o workspace da
+  sessão também morava em `AppData` e não servia de porta única.
+  - **`lib/config-local.mjs`**: `defaultConnectHome()` reescrita; nasce
+    `homeLegado()` e `migrarHomeLegado()` — migra `connect.config.json` +
+    `operador/`, **não** migra `sessions/` (scaffolds descartáveis, cheios de
+    junctions que virariam links mortos), preserva o home antigo intacto e deixa
+    um `MIGRADO.md`. Idempotente.
+  - **`lib/session.mjs`**: a migração roda como passo **0**, antes de
+    `resolveConfig()`. Se rodasse depois, quem já estava configurado leria um home
+    novo e vazio e seria tratado como 1º uso.
+- **Entrega de contexto: elidir passa a ser por sessão, não por chamada** — fecha
+  o lado B do defeito de atualização-sem-recarga. O desenho anterior (`elidirInline`) elidia o bloco verbatim do
+  `structuredContent` **sempre**, apostando que o `content.text` da mesma resposta
+  entregaria o texto. Medido duas vezes em 23/08, em sessão recém-iniciada (processo
+  novo, sem release no meio): **esse bloco de texto não alcança o cliente Cowork**.
+  O agente recebia só o marcador `<injetado verbatim no texto desta resposta>` — e
+  a carta de navegação tinha de ser aberta à mão em toda sessão, devolvendo ao
+  agente exatamente o trabalho que `vault-declara-produto-nao-prescreve` tirou dele e deu ao vault.
+  - Novo **`lib/entrega.mjs`**: `criarEntrega()` mantém um registro por sessão com
+    hash SHA-1 do conteúdo. Primeira entrega de cada bloco vai **inteira**;
+    repetição vira marcador. A economia do `carregamento-lazy` é preservada — o que ela nunca
+    pediu foi economizar a **primeira** entrega.
+  - A regra saiu do `mcp/connect-mcp.mjs` para o `lib/` de propósito: regra em
+    servidor não é testável isoladamente.
+- **Camada 0 do operador finalmente é injetada** (os dois defeitos de uma vez).
+  - **Divergência de contrato:** `montarL1Pessoal` lia `_cerebro/CLAUDE.md`
+    e a `cnct-fabrica-operador` grava `CLAUDE.md` na **raiz**. Quem rodasse a
+    fábrica ao pé da letra nascia com uma Camada 0 que o mecanismo nunca injetava —
+    e um `./operador` que *parece* vazio sem estar. A raiz vira a casa canônica;
+    `_cerebro/CLAUDE.md` continua sendo lido como **legado**, com aviso (é o mesmo
+    nome da carta legada do contrato de navegação, e a colisão originou a divergência).
+  - **Fallback inalcançável:** o gate era `fs.existsSync(perfilOperador)`,
+    mas o passo 3c faz `ensureDir()` nessa mesma pasta — sempre verdadeiro a partir
+    da 1ª sessão, `else if` morto, operador com vault legado perdia a Camada 0 em
+    silêncio. O gate passa a ser a presença de **conteúdo** de Camada 0.
+  - Removido o ponteiro `30-Áreas` hardcoded em `matriz.mjs` — nome de pasta do
+    vault pessoal de **um** operador vazando para dentro do mecanismo, contra `vault-declara-produto-nao-prescreve`.
+- **Concessão de acesso e estado zero do operador viram estrutura, não prosa.**
+  - `iniciarSessao()` devolve `concessao {necessaria, caminho, motivo, alcanca[]}` e
+    `operadorProvisionado` (bool). O `render` abre o bloco com a seção **"Connect —
+    acesso de pasta (faça isto primeiro)"**, antes até do estado zero da matriz —
+    é precondição de qualquer leitura — e proíbe explicitamente o contorno por
+    varredura/`grep`/automação de SO. Motivo: a exigência vivia só no texto da
+    skill e **três agentes independentes a contornaram** (`bloqueio-reporta-nunca-contorna`).
+  - O estado zero do **operador** ganha seção dedicada, simétrica à que a 0.12.1 deu
+    à matriz — pela mesma razão, e corrigindo a assimetria que ficou.
+- **Node do hook.** Nasce `scripts/run-node.bat` como fonte única da resolução do
+  runtime; `mcp/launcher.bat` delega a ele e `hooks/hooks.json` passa a usá-lo em vez
+  de `node` do PATH. Até aqui o node embarcado valia só para o MCP: em máquina sem
+  Node instalado o `SessionStart` falhava **em silêncio** e o produto degradava para
+  o fallback por skill, enquanto o README já anunciava "não exige Node instalado".
+  Meia-garantia é o defeito que a `espinha-e-mecanismo` nomeou.
+- **`tests/spike-entrega-contexto.mjs`** — 35 checks cobrindo as quatro correções.
+  Suíte completa: 8 spikes, todos verdes.
+- **Drift de versão corrigido:** `plugin.json`, `SERVER_INFO` e este CHANGELOG
+  estavam em três valores diferentes (0.12.2 / 0.12.1 / 0.12.1) — a 0.12.2 (node
+  embarcado) nunca ganhou entrada. Os três agora em **0.13.0**.
+
+## 0.12.1 — 2026-08-19
+- **Bug real corrigido: 1º uso não perguntava o caminho da matriz.** Achado no
+  dogfooding com a Helena (primeira interação dela com o Cowork + Connect): o
+  hook `SessionStart` rodava, mas quando `CONNECT_VAULT_MATRIZ` não estava
+  configurado o aviso ficava **solto no fim** do bloco de contexto (seção
+  "Avisos", depois de identidade/protocolo/atalhos, todos vazios) — não bastava
+  pra fazer o agente parar e perguntar o caminho antes de seguir. Pior ainda
+  quando o operador clicava em "Personalizar" no plugin recém-instalado, sem
+  mencionar projeto/tarefa: a skill `cnct-nucleo-sessao` (fallback do hook) só
+  disparava por menção a trabalho, e essa interação não casava com nenhum
+  gatilho descrito.
+  - **`lib/session.mjs`**: `iniciarSessao()` agora devolve `matrizConfigurada`
+    (bool) — fonte única de verdade sobre o estado zero, calculada uma vez.
+  - **`lib/render.mjs`**: quando `matrizConfigurada = false`, o bloco abre com
+    uma seção dedicada — "Connect — configuração necessária (1º uso nesta
+    máquina)" — **antes** de qualquer outra coisa, instruindo explicitamente a
+    perguntar o caminho da matriz (e do cérebro pessoal) e chamar `configurar`.
+    O aviso antigo deixou de se repetir no fim do bloco quando esta seção já
+    cobre o mesmo caso.
+  - **`skills/cnct-nucleo-sessao/SKILL.md`** (v0.7.0): gatilhos ampliados para
+    cobrir explicitamente o clique em "Personalizar"/"Customizar" logo após a
+    instalação e pedidos de setup ("configurar o Connect", "conectar minha
+    matriz", "sou novo aqui") — mesmo sem menção a projeto/tarefa. Reforça que
+    checar `estado_sessao` cedo demais não tem custo nem efeito colateral.
+  - Sem mudança de comportamento quando já configurado (`matrizConfigurada =
+    true`): bloco de sessão idêntico ao 0.12.0.
+
+## 0.12.0 — 2026-08-18
+- **Contrato de NAVEGACAO (`config/contrato-navegacao.md`) — o par que faltava do contrato de
+  manifesto.** O manifesto resolvia a **fronteira** ("existe, quem governa, tem acervo externo?");
+  o instante seguinte ao mount era cego, e o vazio **forcava o contorno** (`grep`) que a espinha
+  proibe. Tres defeitos concretos, achados no dogfooding com o acervo real da tribo:
+  1. **`entrada` era nome de nota, nao caminho.** `resolver` devolvia `entrada: "Connect"` e pousar
+     nela exigia varrer o diretorio. Uma decisao fechou a *intencao* de outra, nao o mecanismo. Agora
+     `entrada` e caminho relativo ao acervo, resolvido por `resolverEntrada()` — e nome puro
+     (legado) resolve por convencao/busca **deixando marca** (aviso), porque a busca e sintoma de
+     manifesto incompleto.
+  2. **A camada 1 era prescrita pelo produto.** `montarL1()` emitia ponteiros fixos
+     (`modelo-roteamento`, `organizacao`, `projetos/`…) — o produto decidindo os eixos do vault,
+     contradicao direta com `vault-declara-produto-nao-prescreve`; em sub-vault que nao segue esses nomes, o resultado era
+     `ponteiros: []` (acervo montado sem nenhuma orientacao — foi exatamente o que aconteceu com
+     o primeiro sub-vault real). Agora a camada 1 e **declarada pelo vault** em `_cerebro/camada-1.md`,
+     injetada **verbatim**; ausencia devolve **lacuna** + fabrica oferecida (`gatilho-de-nascimento`), nunca ponteiro
+     inventado.
+  3. **Assimetria coletivo x pessoal.** O hot cache pessoal era injetado verbatim e o coletivo
+     entrava como lista de links (`vaultConfigInline` era calculado e **descartado** pelo render —
+     codigo morto). Corrigida **do lado coletivo**: todo vault de conhecimento montado agora fala
+     por si. O lado do **operador** (`montarL1Pessoal`) segue emitindo ponteiros prescritos pelo
+     produto — e isso e legitimo, porque o perfil do operador e artefato **gerido pelo produto**, nao vault da empresa. Se um dia virar vault declarante, entra no mesmo contrato.
+- **Ordem de resolucao canonica na espinha** (`config/protocolo-mecanismo.md`, secao nova):
+  conceito -> `resolver` -> carta -> ponto de pouso -> salto so por ponteiro declarado ->
+  fronteira volta ao `resolver`. **Varredura e ultimo recurso e DEIXA MARCA:** nota que so o grep
+  acha e, por definicao, **nota orfa** — o achado e defeito do vault (issue), nunca "encontrei".
+  E o que faz "sem notas soltas" deixar de ser boa intencao e virar verificavel.
+- **Compatibilidade de leitura com o hot cache legado.** Coletivo que ja navegava bem **antes** do
+  Connect (`_cerebro/CLAUDE.md` curado a mao) e lido como **carta legada**: injetado igual, marcado
+  como `origem: 'legado'`, com aviso de migracao pendente — **nenhum arquivo alterado**. Foi o
+  molde: rodado contra o coletivo maduro real, o mecanismo confirmou 3 das 5 secoes e acusou as
+  duas lacunas verdadeiras (ordem de entrada, fronteiras) — nem o melhor vault da casa declarava
+  ponto de pouso nem fronteira.
+- **`cnct-fabrica-navegacao` (L2, nova)** — materializa ou completa a carta por elicitacao, uma
+  pergunta por vez, banco de perguntas destilado do coletivo que funciona. Modo delta: nunca
+  sobrescreve carta existente, nunca toca o `CLAUDE.md` legado sem decisao do operador.
+- **Primitivo de repositorio de codigo** — `lib/repos.mjs` + tools
+  `resolver_repo` / `registrar_repo_local` / `listar_repos`. A espinha prometia "resolver o
+  repositorio e conecta-lo direto" e a promessa era cumprida com `grep` no `repos.md` do vault
+  pessoal — path de maquina dentro de conteudo coletivo, o que `path-por-maquina` proibe. Agora path de repo mora
+  so em `connect.config.json` (tabela `repos`), por-maquina. Repo **nao** e montado como junction
+  (junction de arvore de trabalho confunde git/IDE): o primitivo devolve o caminho real.
+- **`lib/config-local.mjs` (novo)** — escrita das tabelas locais do config num lugar so
+  (`subVaults`, `repos`). `registrarSubVaultLocal` passou a delegar; a terceira copia da mesma
+  funcao de gravacao deixou de nascer.
+- **Bloco de sessao corrigido** — o bloco de sessao renderizado ainda dizia que o registro deriva de
+  `tipo`+**`fonte`**, campo removido na 0.11.0: texto errado injetado em **toda** sessao desde
+  ontem. Corrigido, e o passo 4 do protocolo da sessao agora aponta a ordem canonica.
+- **Skills L1 realinhadas** (passo 4 do realinhamento): `cnct-nucleo-sessao` ganhou o Passo 3b (ler a carta /
+  tratar a lacuna) e o status `resolvido` agora manda pousar em `entradaResolvida`;
+  `cnct-nucleo-conhecimento` ganhou os principios 4 e 5 (camada 1 e do vault; ordem canonica).
+- **Rodada de revisao critica (Opus, mesma sessao) — 1 bloqueador + 7 itens corrigidos antes de
+  fechar a versao.** Vale registrar porque quase todos eram do mesmo genero: *frouxidao que
+  resolve silenciosamente pro alvo errado.*
+  - **BLOQUEADOR — `resolverRepo` resolvia o repo errado sem avisar.** O casamento era
+    bidirecional (`k.includes(chave) || chave.includes(k)`), sem deteccao de ambiguidade:
+    `resolverRepo('connect-web-api')`, **nao registrado**, devolvia `status:'resolvido'` com o
+    caminho de `connect-web`. Repo e superficie de **escrita** — o agente commitaria no lugar
+    errado. Agora: exato vence, fuzzy so numa direcao com piso de 3 caracteres, e **ambiguidade
+    devolve `ambigua`** (mesma disciplina do lado do conhecimento).
+  - **Path traversal em `resolverEntrada`.** `entrada: ../secret/senhas.md` resolvia como
+    'declarado', sem aviso, para fora do acervo — e o valor vem de frontmatter sincronizado.
+    Novo status `recusada` (`..` ou caminho absoluto). Mesmo cinto que `mount.mjs` ja tinha.
+  - **Busca de fallback ignorava o diretorio declarado.** `entrada: clientes/acme/estado.md` com
+    a pasta trocada pousava em `clientes/outro/estado.md` — nota do cliente errado. Agora o hit
+    tem de **terminar** com o caminho declarado; efeito colateral bom: caixa divergente resolve
+    igual em Linux e Windows.
+  - **`validarCarta` dava falso positivo.** `t.includes(s)` deixava "## Infraestrutura" satisfazer
+    'estrutura' e "## Gatilhos de escrita" satisfazer 'quando carregar' — carta com **zero** das 5
+    respostas passava calada, minando a face de verificacao inteira. Agora casa por igualdade ou
+    **prefixo**, com variantes apos separador ("Processo — Quando Carregar" continua valendo).
+  - **Chave de `subVaults` gravada sem normalizar.** Manifesto com `conceito: Alpha-Tribo` gravava
+    `"Alpha-Tribo"` e o `resolver` (sempre lowercase) devolvia `local-nao-configurado` **para
+    sempre** — loop de handshake, o operador informando o diretorio a cada sessao. Pre-existente,
+    ficou visivel porque as duas tabelas passaram a dividir `gravarChaveLocal`.
+  - **Ponteiros do operador com alias errado.** `montarL1Pessoal(perfilOperador, ALIAS_PESSOAL)`
+    emitia `./pessoal/TASKS.md` para conteudo montado em `./operador` — ponteiro morto ou, pior,
+    apontando para o arquivo homonimo do vault Obsidian do operador.
+  - **Gravacao do config nao era atomica e podia apagar tudo.** `writeFileSync` direto, e config
+    ilegivel era tratada como `{}` — a gravacao seguinte apagaria matriz/pessoal/subVaults/repos
+    em silencio. Agora: tmp + rename, e status novo `config-ilegivel` que **recusa** sobrescrever.
+  - **Payload duplicado.** `iniciar_sessao`/`resolver` mandavam a carta e o protocolo no texto
+    **e** no `structuredContent` — pagando o mesmo texto duas vezes em token, contra o `carregamento-lazy` que
+    justifica o desenho. Novo `elidirInline`.
+  - Cosmeticos: `bloccoCarta` -> `blocoCarta`; `clean`/`defaultConnectHome` deixaram de ter copia
+    em `session.mjs`; §5 do contrato agora declara **quais checks sao mecanismo e quais sao
+    pendentes** (3, 5 e 6 dependem do `vault-audit`, que vive no coletivo) em vez de prometer seis.
+- **Testes:** `spike-navegacao.mjs` (39 checagens) e `spike-repos.mjs` (20) novos, incluindo
+  regressao explicita para cada item da revisao acima;
+  `spike-mecanismo.mjs` realinhado ao contrato novo (carta em vez de ponteiros prescritos).
+  Suite: **7 arquivos, todos verdes** (30 -> 39 e 15 -> 20 apos as regressoes).
+
+## 0.11.0 — 2026-08-17
+- **Corte de raiz no manifesto (2ª rodada de dogfooding, mesma sessão): manifesto nunca mais
+  guarda path/url — nem relativo.** O fix da 0.10.2 (varrer o corpo inteiro por
+  `onedrive-rel`) tratava o sintoma; o operador cortou a causa: path é sempre por-operador,
+  por-máquina (`path-por-maquina`), nunca conteúdo coletivo. Frontmatter agora é puro:
+  - `fonte`/`url` **removidos inteiros** do contrato de manifesto. Campos novos: `escopo`
+    (chave estável, nunca inferida do nome do arquivo), `externo` (bool — tem acervo fora da
+    matriz?), `criado-por`/`criado-em` (já foi materializado, ou é só intenção declarada?),
+    `entrada` (nota-hub dentro do acervo, pra pousar direto sem tatear).
+  - `lib/resolver.mjs` reescrito: `onedriveRoot()`/`resolverFonte()` removidos por completo
+    (zero aritmética de path). Path local mora só em `connect.config.json` (`subVaults:
+    {escopo: caminho}`), nova tabela em `lib/session.mjs` (`resolveConfig`) + primitivo
+    novo `registrarSubVaultLocal()`.
+  - Status novos do `resolver`: `sem-acervo-externo` (entidade sem `externo:true` — conteúdo
+    inline na matriz), `pendente-criacao` (declarada, acervo ainda não nasceu — aciona
+    fábrica), `local-nao-configurado` (escopo sem path nesta máquina — pergunta ao operador).
+    `resolvido` agora devolve `entrada` pra pousar na nota certa sem tatear diretório.
+  - Novo MCP tool `registrar_subvault_local` — grava o path local de um escopo; nunca no
+    vault.
+  - `config/protocolo-mecanismo.md` ganhou a seção "Camada 2 em detalhe — resolve-on-touch":
+    disciplina explícita (nunca grep como primeira tentativa, status dita a ação, alias
+    resolvido vale pro resto da sessão) — antes vivia só como entendimento implícito.
+  - `contrato-manifesto.md` (v0.2.0) e as skills `cnct-nucleo-sessao`/`cnct-nucleo-conhecimento`
+    realinhadas ao schema novo.
+  - Aresta `depende-de` área↔tribo (herança de processo) fica **fora de escopo desta rodada**
+    — deferida pelo operador.
+
+## 0.10.2 — 2026-08-17
+- **Bug real corrigido: `resolver()` não achava `onedrive-rel` em vault-config.md real.**
+  `onedriveRoot()` (`lib/resolver.mjs`) restringia a busca a `extrairFrontmatter()` (só o
+  bloco YAML entre os primeiros `---`), mas `onedrive-rel` mora no **corpo** do arquivo
+  (seção `## Sincronização`) em todo `vault-config.md` real (matriz e primeiro sub-vault) —
+  mesma convenção que `montarL1`/`parseKeyValues` (`matriz.mjs`) já respeitavam lendo o
+  arquivo inteiro. Sem o fix, `resolver()` falhava com `origem-nao-resolvida` para
+  **qualquer** sub-vault com fonte relativa — não era específico de um vault, era sistêmico.
+  - Fix: busca no conteúdo inteiro do arquivo, não só no frontmatter.
+  - Teste de regressão adicionado em `spike-resolver.mjs` (formato real, campo no corpo) —
+    suíte agora 20/20 (era 19/19).
+  - Achado e diagnosticado no dogfooding desta sessão (dia 17/08), tentando resolver o
+    primeiro sub-vault real pela primeira vez.
+
+## 0.10.1 — 2026-08-17
+- **Correção de território sobre a 0.10.0 (mesma sessão).** `cnct-fabrica-matriz` (skill +
+  `templates/vault-config.template.md`) **removida** — misturava dois territórios distintos:
+  (a) Connect↔Matriz, o plugin garantindo que a matriz cresça com a forma pra guardar
+  contexto global (empresa/áreas/clientes/processos/normas) — maior, ainda não desenhado,
+  não é uma fábrica-de-nascimento-única; (b) o stub de **conhecimento de uma skill do
+  plugin** na matriz (ex.: `cnct-nucleo-escrita.md`) — esse sim é o padrão certo, só que
+  pertence à própria skill que o consome, não a uma fábrica separada.
+  - `templates/cnct-nucleo-escrita.template.md` **movido** para dentro da skill que o usa:
+    `skills/cnct-nucleo-escrita/templates/`.
+  - `cnct-nucleo-escrita` (v0.3.0) ganhou o **Passo 2a**: se a matriz não tiver o contrato
+    ainda, materializa o stub do próprio template e avisa o operador que o índice de vaults
+    precisa ser personalizado — nunca sobrescreve se já existir.
+  - Território Matriz↔Sub-vaults (como um processo maduro, ex. SDD, desce com deltas e vira
+    skill customizada tipo `discovery-intake`) **não é mecanismo do plugin** — nasce no
+    vault, usa o empacotamento `.skill` já existente (`convencao-skills.md`). Fora de escopo
+    do Connect possuir essa skill.
+
+## 0.10.0 — 2026-08-17
+- **Realinhamento, correção de rumo.** `cnct-nucleo-escrita`/`cnct-nucleo-encerramento`
+  tinham dois defeitos apontados pelo operador: (1) linguagem de "convive/coexiste com o
+  executor antigo" no próprio executor — mecanismo não precisa saber da "moda antiga" nem
+  contornar; (2) o executor **hardcoded** a convenção de onde a taxonomia de um sub-vault
+  mora — deveria ser só o contrato da matriz quem diz isso. Ambos corrigidos: executores
+  reescritos sem menção ao modelo antigo; Passo 3 de `cnct-nucleo-escrita` agora só segue o
+  que o contrato da matriz indicar, nunca deduz.
+- **Matriz e primeiro sub-vault alinhados de verdade** (os dois vaults reais desta instância, não
+  só o mecanismo abstrato):
+  - `_inteligencia/skills/cnct-nucleo-escrita/cnct-nucleo-escrita.md` da matriz reescrito
+    como **índice real** dos vaults da instância de referência (matriz e dois sub-vaults) +
+    regras universais de escrita elevadas de conteúdo duplicado (histórico, Casa da
+    ADR/RNF, despromoção — já "equalizadas" entre coletivos, portanto mecanismo de fato).
+  - **O sub-vault ganhou seu `_inteligencia/skills/vault-write/vault-write.md`** (não
+    existia) — taxonomia própria (`projetos/`, `squads/`), sem duplicar as regras
+    universais (aponta pro contrato da matriz).
+- **`cnct-fabrica-matriz` (L2, nova)** — provisiona matriz do zero por elicitação (empresa,
+  contexto, ponto focal, âncora `onedrive-rel` — perguntada já na elicitação, não descoberta
+  só quando um `resolver` falhar, achado do dogfooding desta sessão). Templates próprios
+  (`vault-config.template.md`, `cnct-nucleo-escrita.template.md`) fecham o ciclo: a matriz
+  real desta instância já reflete a mesma forma que o template gera.
+- Suíte de testes confirmada verde (nenhuma mudança de código, só knowledge/skills/templates).
+
+## 0.9.0 — 2026-08-17
+- **Realinhamento de protocolos, Passo 2/6 — primitivos de escrita/encerramento
+  multi-vault.** Duas skills novas no plugin, família `nucleo` (L1), **sem alterar** os
+  executores `vault-write`/`session-close` existentes (convivem — coletivo ainda não
+  migrado continua usando o antigo sem mudança nenhuma):
+  - **`cnct-nucleo-escrita`** — escrita governada em duas camadas: contrato universal na
+    matriz (`_inteligencia/skills/cnct-nucleo-escrita/cnct-nucleo-escrita.md`, novo,
+    mecanismo) + taxonomia específica do vault alvo (`_inteligencia/skills/vault-write/
+    vault-write.md`, existente, intocado — reaproveitado como conteúdo). Sem taxonomia no
+    vault alvo, reporta a lacuna — nunca herda de outro vault nem inventa.
+  - **`cnct-nucleo-encerramento`** — assume o papel operacional do `session-close`, mas
+    generalizado para **multi-vault**: enumera todos os aliases montados na sessão
+    (`list_mounts`), atribui cada item capturado ao vault a que pertence, e delega a
+    escrita a `cnct-nucleo-escrita` por vault — nunca assume "1 coletivo ativo".
+  - **`lib/session.mjs`: `./operador` passa a ser montado sempre** (novo `ALIAS_OPERADOR`),
+    expondo `{CONNECT_HOME}/operador/` como superfície de escrita do estado do operador
+    (`TASKS.md`, delta de identidade) — decisão desta sessão: TASKS.md do operador
+    centraliza no CONNECT_HOME por ora (não depende do vault pessoal Obsidian opcional);
+    segregar/conviver com vault separado fica como evolução futura. Mesma exigência de
+    acesso do Cowork que qualquer outro mount (não concede leitura por si só).
+  - Suíte de testes (5 arquivos) confirmada verde após a mudança de mount — nenhum spike
+    quebrou.
+
+## 0.8.2 — 2026-08-17
+- **Realinhamento de protocolos, Passo 1/6 (roteiro de realinhamento de protocolos).** A espinha
+  injetada (`render.mjs` § "Protocolo desta sessao") ainda descrevia o `resolver` como **"em
+  construcao"** — defasado desde 17/08, que já fechou o realinhamento do `resolver` ao
+  índice derivado de manifestos. Texto atualizado para refletir o modelo real (deriva do
+  `contrato-manifesto.md`, casa por slug/gatilho).
+  - **`plugin.json`:** description trocava "(roadmap) resolver conceitos" — mesma classe de drift,
+    corrigida.
+  - **`mcp/connect-mcp.mjs`:** description da tool `resolver` ainda citava o `_cerebro/sub-vaults.json`
+    removido (achado durante dogfooding desta sessão); `SERVER_INFO.version` estava travado em `0.4.0`
+    desde o 0.4.0, sem acompanhar os bumps do CHANGELOG — ambos corrigidos/sincronizados em `0.8.2`.
+  - `config/protocolo-mecanismo.md` conferido contra as decisões de manifesto e acervo — já usa a linguagem "manifesto + acervo"
+    corretamente; nenhuma mudança necessária ali.
+
+## 0.8.1 — 2026-08-17
+- **Passe de agnosticismo (produto ≠ matriz do MVP).** Remove vazamento do contexto de
+  dogfooding do código e das docs normativas, mantendo só a **proveniência** (author
+  "Impulsa / Viceri", marketplace `impulsa`) — regra: branding ≠ contexto forçado.
+  - **Código:** `lib/matriz.mjs` lê identidade por campo **genérico** (`emails`/`email`),
+    não mais `email-{empresa}` (campo específico de empresa). Alinha com o template `meu-config`.
+  - **Docs de produto** com exemplos **100% genéricos** (Empresa X, tribo-a, cliente-a):
+    `contrato-manifesto.md`, `CONCEITOS.md`, `FRAMEWORK.md` (§5 marcada como "exemplo —
+    instância de dogfooding", não catálogo do produto).
+  - **Config/comentários:** `connect.config.example.json`, comentários de `resolver.mjs` e
+    `spike-junction.ps1` genéricos; `docs/POC-NOTES.md` com disclaimer de dogfooding.
+  - Testes atualizados ao campo genérico; suíte 5/5 verde.
+
+## 0.8.0 — 2026-08-17
+- **Taxonomia canônica (`CONCEITOS.md`).** Documenta sem ambiguidade: **instância** (uma mente
+  = 1 matriz + N sub-vaults; "mais de uma matriz" = mais de uma instância), **matriz** (a
+  espinha dorsal, define o que é filho — 1 por instância), **sub-vault** (contexto-filho; **um
+  cliente é sub-vault, NÃO matriz**), **vault pessoal** (opcional) e **CONNECT_HOME** (estado do
+  Connect: config + perfil + sessões).
+- **Vault pessoal deixa de ser obrigatório; perfil do operador vive no CONNECT_HOME.** O
+  `iniciarSessao` restaura a identidade de `{CONNECT_HOME}/operador` (perfil gerido pelo
+  produto), com fallback para o vault pessoal (back-compat). Sem perfil e sem vault → aviso que
+  delega à `cnct-fabrica-operador` (estado zero). O vault Obsidian próprio do usuário passa a
+  ser **enriquecimento** montado como `./pessoal`, nunca condição do mecanismo — os dois
+  coexistem. Removido o aviso duro "CONNECT_CEREBRO_PESSOAL não definido".
+- **`cnct-fabrica-operador` aponta o destino para `{CONNECT_HOME}/operador`** (Passos 1 e 4);
+  o perfil é auto-descoberto pelo mecanismo, sem `configurar` para o perfil. Novo teste
+  `spike-perfil-operador.mjs` (7 checks: identidade sem vault pessoal + delegação no estado
+  zero). Suíte: 5 arquivos verdes.
+
+## 0.7.0 — 2026-08-17
+- **Contrato de manifesto de entidade (`config/contrato-manifesto.md`).** Materializa o
+  contrato mínimo que até agora vivia só como decisão (`gatilho-de-nascimento`): o schema de
+  frontmatter de todo manifesto — `tipo`, `papel`, `governanca`, `fonte[]`, `depende-de` — as
+  invariantes (registro autorado proibido, índice **derivado em runtime**, cliente fora da
+  árvore, acervo nunca expandido no render, ponteiro tipado resolve-on-touch), o **grafo de
+  dependências com arestas bidirecionais** (`grafo-nao-arvore`) e a **face de verificação** que o
+  `vault-audit` passa a checar. É a exigência que o realinhamento do `resolver`
+  vai consumir no lugar do `sub-vaults.json`.
+- **`resolver` realinhado ao índice derivado ** `lib/resolver.mjs` deixa de ler
+  o registro autorado `_cerebro/sub-vaults.json` (**removido** — proibido pelo contrato §3) e
+  passa a **derivar o índice dos manifestos** em runtime: varre o frontmatter (`tipo` + `fonte`),
+  casa o conceito por slug/`tags`, e resolve a `fonte` (relativa ao OneDrive) para caminho
+  absoluto via `onedrive-rel` do `vault-config` da matriz (âncora por-máquina, `path-por-maquina`). Novos
+  helpers exportados: `parseManifesto`, `onedriveRoot`. Novo status: `origem-nao-resolvida`.
+  Teste `spike-resolver.mjs` reescrito para o modelo derivado (19 checks); suíte verde.
+- **Notas de estado das skills `cnct-nucleo-*` atualizadas** — de "resolver ainda lê
+  sub-vaults.json" para "índice derivado".
+
+## 0.6.0 — 2026-08-15
+- **Framework do catálogo de skills (`FRAMEWORK.md`).** Padrão único ao qual toda skill do
+  Connect adere: anatomia executor × knowledge (`corte-mecanismo-conteudo`), três camadas do catálogo
+  (L1 primitivos · L2 fábricas por tipo · L3 meta), o padrão `cnct-fabrica-<tipo>`, a
+  **convenção de nomes `cnct-<família>-<objeto>`** (§3.1) e a **classificação do catálogo
+  atual** (varredura pelo `corte-mecanismo-conteudo`, com os casos de split marcados).
+- **Convenção de nomes aplicada — renomeação do catálogo de mecanismo.** As skills do plugin
+  passam a seguir `cnct-<família>-<objeto>`: `connect-bootstrap` → **`cnct-nucleo-sessao`**,
+  `connect-knowledge-mount` → **`cnct-nucleo-conhecimento`**, `fabrica-operador` →
+  **`cnct-fabrica-operador`**. Skills de conteúdo (família SDD) mantêm o nome de domínio.
+- **Skill `cnct-fabrica-operador` (L2, referência).** Provisiona um vault de operador do zero
+  por elicitação, **self-contained** (roda no estado zero, sem coletivo montado). Materializa
+  só o **delta** (a espinha vem do `protocolo-mecanismo.md`, `espinha-e-mecanismo`); templates genéricos em
+  `skills/cnct-fabrica-operador/templates/` (`meu-config.template.md`, `CLAUDE.template.md`).
+  Supersede o `Template-Onboarding-Vault-Individual` do coletivo.
+- **`cnct-nucleo-sessao` (era connect-bootstrap) — delegação + modelo de grafo.** (1) Ausência
+  de vault de operador deixa de ser erro: detecta a pasta em branco / `cerebro_pessoal`
+  ausente e **delega à `cnct-fabrica-operador`** (`gatilho-de-nascimento`). (2) Passo 4
+  reescrito para o modelo canônico de **grafo de manifestos** (`grafo-nao-arvore`): casamento na skill,
+  índice derivado (`path-por-maquina`), MCP só com o primitivo de mount — com nota do estado do código
+  (`resolver` v0.4.0 ainda lê `sub-vaults.json`; realinhamento pendente).
+- **`cnct-nucleo-conhecimento` (era connect-knowledge-mount) — alinhada ao modelo remodelado.**
+  Seção de sub-vault reescrita para grafo/manifesto derivado (`grafo-nao-arvore`); o `sub-vaults.json`
+  passa de contrato a **nota de estado do código** (comportamento vigente até o realinhamento).
+
+## 0.5.0 — 2026-08-15
+- **Garantia de protocolo executado (`espinha-e-mecanismo`).** A espinha dorsal do dois-cérebros
+  (resolução lazy em camadas, regra de escrita/wikilinks, calibração "identificador
+  nunca vem sozinho", check de atualizações) deixa de depender do `CLAUDE.md` do
+  operador e passa a ser **entregue pelo produto**: novo `config/protocolo-mecanismo.md`,
+  lido por `lerProtocoloMecanismo()` e **injetado verbatim no bloco de sessão** pelo
+  `render.mjs`. Como é arquivo do plugin (pasta de mecanismo, `corte-mecanismo-conteudo`), a garantia é
+  estrutural — não há "esquecer de ler" nem deletar do lado do usuário.
+- **Handshake do vault pessoal (`espinha-e-mecanismo`).** `iniciarSessao` passa a carregar a **Camada 0
+  pessoal** via `montarL1Pessoal()` (hot cache `_cerebro/CLAUDE.md` inline + ponteiros
+  lazy para `CLAUDE.md` raiz, `_cerebro/memory`, `30-Áreas`, `TASKS.md`). Antes o
+  cérebro pessoal entrava só como mount + identidade (`meu-config.md`); o delta pessoal
+  nunca disparava.
+- `render.mjs`: duas seções novas no bloco de sessão — "Protocolo do mecanismo
+  (garantido pelo Connect)" e "Cerebro pessoal — camada 0". Testes existentes
+  (`spike-mecanismo`, `handshake-mcp`, `spike-resolver`, `spike-config-guiada`) seguem
+  verdes; comportamento novo verificado contra os vaults reais.
+
+## 0.4.0 — 2026-08-15
+- **`resolver(conceito)` implementado** (era roadmap): entrega um sub-vault por
+  CONCEITO como atalho flat no workspace. Lê um **registro declarativo**
+  (`_cerebro/sub-vaults.json`) no cérebro pessoal e/ou na matriz (pessoal vence),
+  casa o conceito por nome ou gatilho, monta a junction/symlink da origem e carrega
+  a camada 1 do sub-vault (quando ele tem forma de vault). Novo `lib/resolver.mjs`
+  (zero-dep) e tool MCP `resolver` (`conceito`, `workspace_dir`, `alias?`, `replace?`).
+- Registro declarativo `_cerebro/sub-vaults.json`: lista de
+  `{ conceito, origem, alias?, gatilhos?[], nota? }` — o "ponteiro declarativo" que
+  deixa a próxima sessão saber o caminho de cada contexto.
+- Teste `spike-resolver` (casar por conceito/gatilho/substring, montar, ler através
+  do atalho, origem intacta, L1, idempotência, não-encontrado).
+
+## 0.3.0 — 2026-08-14
+- Repo tratado como **marketplace** (`impulsa`) instalável no Cowork pela **URL do
+  repo git**; `.plugin` de um clique mantido como caminho secundário
+  (`scripts/build-plugin.sh`). CLI do Claude Code rebaixada a dev-only.
+- **Configuração guiada do 1º uso**: tool `configurar` grava os caminhos em
+  `connect.config.json` (atualização parcial, valida existência, reporta inválidos).
+- Tool `estado_sessao`: checagem leve (configurado? montado nesta sessão?) sem efeito colateral.
+- Skill **connect-bootstrap**: fallback do hook — dispara em qualquer menção a
+  trabalho e restaura o contexto coletivo (identidade + matriz + camada 1); conduz
+  a config guiada; aprofunda sob demanda. Mesmo mecanismo do hook, gatilho por skill.
+
+## 0.2.0 — 2026-08-14
+- Reconcebida a superfície do MCP (decisão 2026-08-14): **sem entidade "cliente"**.
+  Adicionada a tool `iniciar_sessao` (bootstrap da sessão); primitivos de mount
+  (`mount_junction`/`unmount_junction`/`list_mounts`) mantidos como base do futuro
+  `resolver`.
+- `iniciar_sessao`: cria o scaffold da sessão fora do OneDrive, monta a **matriz**
+  como `./matriz`, restaura a **identidade** do operador (cérebro pessoal) e carrega
+  o **contexto lazy da camada 1** da matriz (inline curto + ponteiros).
+- Núcleo reorganizado em `lib/` (mount, matriz, session, render), zero-dep.
+- Hook `SessionStart` (`type: command`, matcher `startup|resume|fork`) chama o mesmo
+  núcleo do `iniciar_sessao`.
+- Repositório reestruturado no padrão marketplace + `plugins/connect/` (PACKAGING §3).
+- Testes: `spike-mecanismo` (15 checagens, ponta a ponta) e `handshake-mcp`.
+
+## 0.1.0 — 2026-08-13 (banco de provas, lab)
+- Primitivo de mount provado na máquina real: junction NTFS (mount/read/unmount,
+  origem intacta), MCP handshake, hook SessionStart montando aliases de config,
+  travas de segurança.

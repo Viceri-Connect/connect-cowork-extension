@@ -1,0 +1,17 @@
+{
+  "description": "Connect session bootstrap hook.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|fork",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.mjs\"",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  }
+}

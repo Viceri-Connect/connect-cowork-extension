@@ -1,0 +1,14 @@
+{
+  "extraKnownMarketplaces": [
+    {
+      "name": "impulsa",
+      "source": {
+        "source": "github",
+        "repo": "Viceri-Connect/connect-cowork-extension"
+      }
+    }
+  ],
+  "enabledPlugins": [
+    "connect@impulsa"
+  ]
+}

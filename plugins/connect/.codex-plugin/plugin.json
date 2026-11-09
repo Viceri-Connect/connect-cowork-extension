@@ -1,0 +1,4 @@
+{
+  "name": "connect",
+  "hooks": "./hooks/codex-hooks.json"
+}

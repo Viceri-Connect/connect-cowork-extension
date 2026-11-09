@@ -1,0 +1,12 @@
+{
+  "$schema": "https://antigravity.google/schemas/v1/plugin.json",
+  "name": "connect-http",
+  "displayName": "Connect HTTP (Local)",
+  "version": "0.40.0",
+  "description": "Connect knowledge, session, and governance workflows through local HTTP MCP.",
+  "suggestedPrompts": [
+    "Start a Connect session and restore my workspace context",
+    "Resolve this concept using the collective knowledge base",
+    "Audit the health of the connected vaults"
+  ]
+}

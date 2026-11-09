@@ -1,0 +1,9 @@
+{
+  "name": "connect-http",
+  "version": "0.40.0",
+  "description": "Connect knowledge, session, and governance tools through a local HTTP MCP server.",
+  "author": {
+    "name": "Impulsa / Viceri"
+  },
+  "mcpServers": "./.mcp.json"
+}

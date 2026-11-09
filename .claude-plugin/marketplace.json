@@ -12,6 +12,13 @@
       "author": { "name": "Impulsa / Viceri" },
       "category": "knowledge",
       "source": "./plugins/connect"
+    },
+    {
+      "name": "connect-http",
+      "description": "Connect over a loopback-only Streamable HTTP MCP endpoint when the host cannot launch stdio.",
+      "author": { "name": "Impulsa / Viceri" },
+      "category": "knowledge",
+      "source": "./plugins/connect-http"
     }
   ]
 }

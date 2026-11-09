@@ -1,0 +1,19 @@
+{
+  "description": "Restore Connect context when a Codex session starts or resumes.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact|fork",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/hooks/session-start-codex.mjs\"",
+            "statusMessage": "Loading Connect session context",
+            "timeout": 30,
+            "additionalContextLimit": 5000
+          }
+        ]
+      }
+    ]
+  }
+}
