@@ -17,6 +17,11 @@
 export const SERVIDOR_MCP = 'connect';
 export const ENTRADA_MCP = 'mcp/connect-mcp.mjs';
 export const MARCADOR_BOOTSTRAP = 'Connect — sessao iniciada';
+// Sessao na nuvem sem configuracao local (0.40.0, lib/bootstrap.mjs): todo hook orienta
+// em vez de diagnosticar "1o uso". CONNECT_EXECUCAO=nuvem forca o caso sem depender do
+// sinal do servidor.
+export const MARCADOR_NUVEM = 'Connect — sessao na nuvem';
+export const ENV_NUVEM = { CONNECT_EXECUCAO: 'nuvem' };
 
 // Versao canonica: o manifesto Claude (amarrado ao CHANGELOG por tests/unit/release.test.mjs).
 export const FONTE_VERSAO = 'plugins/connect/.claude-plugin/plugin.json';
@@ -74,7 +79,10 @@ export const HARNESSES = {
     arquivos: ['.claude-plugin/plugin.json', '.mcp.json', 'hooks/hooks.json'],
     mcp: (m) => m.mcpServers,
     hooks: () => './hooks/hooks.json',
-    lerHooks: (j) => (j.hooks?.SessionStart || []).flatMap((g) => (g.hooks || []).map((h) => ({ matcher: g.matcher, command: linha(h) }))),
+    lerHooks: (j) => (j.hooks?.SessionStart || []).flatMap((g) => (g.hooks || []).map((h) => ({ matcher: g.matcher, command: linha(h), execForm: Array.isArray(h.args) }))),
+    // 0.39.0: shell form no Windows sem Git Bash cai no PowerShell, que imprime a linha
+    // em vez de executar — o hook "passa" sem injetar nada. Todo hook Claude e exec form.
+    exigeExecForm: true,
     // Forma HTTP que o Claude aceita.
     mcpHttp: (url) => ({ type: 'http', url }),
     payload: () => ({ session_id: SESSION_ID('claude') }),

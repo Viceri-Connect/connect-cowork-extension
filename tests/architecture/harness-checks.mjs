@@ -11,7 +11,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
-  ENTRADA_MCP, EVENTOS_OBRIGATORIOS, FONTE_SKILLS, FONTE_VERSAO, HARNESSES, MARCADOR_BOOTSTRAP,
+  ENTRADA_MCP, ENV_NUVEM, EVENTOS_OBRIGATORIOS, FONTE_SKILLS, FONTE_VERSAO, HARNESSES, MARCADOR_BOOTSTRAP, MARCADOR_NUVEM,
   MARKETPLACES, COPILOT_SETTINGS, NUCLEO_COMPARTILHADO, PACOTES, SERVIDOR_MCP, SESSION_ID, VARIANTES,
   ehSuperficieDeHost,
 } from './harness-contract.mjs';
@@ -169,6 +169,9 @@ export function checarHookDeclarado(pacote, harness) {
   for (const hk of hooks) {
     if (!hk.command) { v.push(`${pacote}/${harness}: hook de SessionStart sem command`); continue; }
     if (!hk.command.match(/\.mjs\b/)) v.push(`${pacote}/${harness}: hook nao executa um entrypoint .mjs (${hk.command})`);
+    if (HARNESSES[harness].exigeExecForm && !hk.execForm) {
+      v.push(`${pacote}/${harness}: hook em shell form (${hk.command}) — este host exige exec form (command + args)`);
+    }
     if (hk.matcher !== undefined) {
       const eventos = String(hk.matcher).split('|');
       for (const e of EVENTOS_OBRIGATORIOS) {
@@ -234,7 +237,9 @@ export function entrypointDoHook(pacote, harness) {
   return refs.length ? resolverNoPacote(pacote, refs[refs.length - 1]) : null;
 }
 
-export function checarBootstrap(pacote, harness, { base = path.join(RAIZ, '.test-tmp') } = {}) {
+// Roda o entrypoint do hook do host num perfil descartavel e devolve o contexto injetado.
+// `verificar(contexto, env)` roda antes de o perfil ser apagado e devolve violacoes.
+function rodarHook(pacote, harness, { envExtra = {}, verificar, base = path.join(RAIZ, '.test-tmp') }) {
   const v = [];
   const h = HARNESSES[harness];
   const script = entrypointDoHook(pacote, harness);
@@ -247,8 +252,10 @@ export function checarBootstrap(pacote, harness, { base = path.join(RAIZ, '.test
   try {
     const home = path.join(raiz, 'home');
     fs.mkdirSync(home, { recursive: true });
-    const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith('CONNECT_')));
-    Object.assign(env, { HOME: home, USERPROFILE: home, CONNECT_HOME: path.join(home, 'Connect'), NO_COLOR: '1' });
+    // Nada do CONNECT_* nem do sinal de nuvem da maquina que roda o teste.
+    const env = Object.fromEntries(Object.entries(process.env)
+      .filter(([k]) => !k.startsWith('CONNECT_') && k !== 'CLAUDE_CODE_REMOTE'));
+    Object.assign(env, { HOME: home, USERPROFILE: home, CONNECT_HOME: path.join(home, 'Connect'), NO_COLOR: '1' }, envExtra);
 
     const r = spawnSync(process.execPath, [script], {
       cwd: dirPacote(pacote),
@@ -261,7 +268,7 @@ export function checarBootstrap(pacote, harness, { base = path.join(RAIZ, '.test
     if (r.status !== 0) return [`${pacote}/${harness}: hook saiu com ${r.status} — ${r.stderr || r.error?.message}`];
     // Os hooks engolem a excecao (exit 0) para nao derrubar a sessao do host; a marca
     // da falha fica no stderr com estas mensagens (ver hooks/*.mjs e copilot/*.mjs).
-    if (/falha no iniciar_sessao|bootstrap failed/i.test(r.stderr || ''))v.push(`${pacote}/${harness}: hook reportou falha no stderr — ${r.stderr.trim()}`);
+    if (/falha no iniciar_sessao|bootstrap failed/i.test(r.stderr || '')) v.push(`${pacote}/${harness}: hook reportou falha no stderr — ${r.stderr.trim()}`);
 
     let contexto;
     try {
@@ -269,16 +276,39 @@ export function checarBootstrap(pacote, harness, { base = path.join(RAIZ, '.test
     } catch (e) {
       return [...v, `${pacote}/${harness}: saida do hook fora do formato do host — ${e.message}; stdout=${r.stdout.slice(0, 200)}`];
     }
-    if (typeof contexto !== 'string' || !contexto.includes(MARCADOR_BOOTSTRAP)) {
-      v.push(`${pacote}/${harness}: hook nao injetou o bootstrap ("${MARCADOR_BOOTSTRAP}" ausente)`);
-    }
-    if (!fs.existsSync(path.join(env.CONNECT_HOME, 'sessions', SESSION_ID(harness)))) {
-      v.push(`${pacote}/${harness}: o session id do payload do host nao chegou ao iniciar_sessao`);
-    }
+    v.push(...verificar(typeof contexto === 'string' ? contexto : '', env));
   } finally {
     fs.rmSync(raiz, { recursive: true, force: true, maxRetries: 3 });
   }
   return v;
+}
+
+export function checarBootstrap(pacote, harness) {
+  return rodarHook(pacote, harness, {
+    verificar: (contexto, env) => {
+      const v = [];
+      if (!contexto.includes(MARCADOR_BOOTSTRAP)) v.push(`${pacote}/${harness}: hook nao injetou o bootstrap ("${MARCADOR_BOOTSTRAP}" ausente)`);
+      if (!fs.existsSync(path.join(env.CONNECT_HOME, 'sessions', SESSION_ID(harness)))) {
+        v.push(`${pacote}/${harness}: o session id do payload do host nao chegou ao iniciar_sessao`);
+      }
+      return v;
+    },
+  });
+}
+
+// FEATURE: sessao na nuvem sem configuracao local — o hook orienta, nunca diagnostica
+// "1o uso" (0.40.0). Todos os hosts passam pelo mesmo lib/bootstrap.mjs.
+export function checarBootstrapNuvem(pacote, harness) {
+  return rodarHook(pacote, harness, {
+    envExtra: ENV_NUVEM,
+    verificar: (contexto, env) => {
+      const v = [];
+      if (!contexto.includes(MARCADOR_NUVEM)) v.push(`${pacote}/${harness}: na nuvem sem configuracao local o hook nao orientou ("${MARCADOR_NUVEM}" ausente)`);
+      if (contexto.includes(MARCADOR_BOOTSTRAP)) v.push(`${pacote}/${harness}: na nuvem o hook diagnosticou a sessao local em vez de orientar`);
+      if (fs.existsSync(path.join(env.CONNECT_HOME, 'sessions'))) v.push(`${pacote}/${harness}: na nuvem o hook criou sessao no CONNECT_HOME do servidor`);
+      return v;
+    },
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -376,6 +406,7 @@ export const FEATURES = {
   referencias: checarReferencias,
   isolamento: checarIsolamento,
   bootstrap: checarBootstrap,
+  'bootstrap na nuvem': checarBootstrapNuvem,
   'artefato gerado': checarArtefatoGerado,
 };
 

@@ -15,9 +15,7 @@
 // num caminho que pede concessao a cada sessao — o agente nao abria, e a camada 0
 // sumia sem sinal. Releitura sob demanda = tool `iniciar_sessao`.
 
-import { iniciarSessao, estadoSessao } from '../lib/session.mjs';
-import { renderContextoCurto, renderSessaoNuvem } from '../lib/render.mjs';
-import { execucaoNaNuvem } from '../lib/ambiente.mjs';
+import { contextoDeInicio } from '../lib/bootstrap.mjs';
 
 function lerStdin() {
   return new Promise((resolve) => {
@@ -43,27 +41,17 @@ async function main() {
     }
   } catch { /* sem payload utilizavel; segue com env/gerado */ }
 
-  // 0.40.0 — Sessao na nuvem sem configuracao local: o estado do operador esta no PC
-  // dele, fora do alcance deste processo. Orientar, nunca diagnosticar (lib/ambiente.mjs).
-  // Com configuracao presente aqui (Connect instalado de fato no servidor), segue o normal.
-  if (execucaoNaNuvem()) {
-    let configurado = false;
-    try { configurado = estadoSessao({}).configurado; } catch { /* sem config legivel = nao configurado */ }
-    if (!configurado) {
-      process.stdout.write(renderSessaoNuvem());
-      process.exit(0);
-    }
-  }
-
-  let report;
+  // Sessao na nuvem sem configuracao local orienta em vez de diagnosticar — a regra
+  // (0.40.0) mora em lib/bootstrap.mjs, compartilhada com os hooks dos outros hosts.
+  let texto;
   try {
-    report = iniciarSessao({ sessionId });
+    texto = contextoDeInicio({ sessionId }).texto;
   } catch (e) {
     process.stderr.write(`[connect] falha no iniciar_sessao: ${e.message}\n`);
     process.exit(0);
   }
 
-  process.stdout.write(renderContextoCurto(report));
+  process.stdout.write(texto);
   process.exit(0);
 }
 

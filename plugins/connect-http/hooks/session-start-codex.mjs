@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
-import { iniciarSessao } from '../lib/session.mjs';
-import { renderContextoCurto } from '../lib/render.mjs';
+import { contextoDeInicio } from '../lib/bootstrap.mjs';
 
 let payload = {};
 try {
@@ -10,7 +9,7 @@ try {
 
 try {
   const sessionId = payload.session_id || payload.sessionId;
-  const context = renderContextoCurto(iniciarSessao({ sessionId }));
+  const context = contextoDeInicio({ sessionId }).texto;
   const output = context.trim()
     ? { hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: context } }
     : {};

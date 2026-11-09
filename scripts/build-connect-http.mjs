@@ -83,9 +83,12 @@ fs.writeFileSync(path.join(output, 'hooks', 'hooks.json'), `${JSON.stringify({
   hooks: {
     SessionStart: [{
       matcher: 'startup|resume|fork',
+      // Exec form (command + args), como o hook do pacote stdio desde a 0.39.0: shell form
+      // no Windows sem Git Bash cai no PowerShell, que imprime a linha em vez de executar.
       hooks: [{
         type: 'command',
-        command: 'node "${CLAUDE_PLUGIN_ROOT}/hooks/session-start.mjs"',
+        command: 'node',
+        args: ['${CLAUDE_PLUGIN_ROOT}/hooks/session-start.mjs'],
         timeout: 20,
       }],
     }],
