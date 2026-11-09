@@ -27,7 +27,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { resolveConfig } from './session.mjs';
 import { gravarChaveLocal } from './config-local.mjs';
-import { lerTabela, casarPonteiro, montarChave, resumirCandidatos } from './ponteiro.mjs';
+import { lerTabela, casarPonteiro, montarChave, resumirCandidatos, vizinhos } from './ponteiro.mjs';
 
 const norm = (s) => String(s || '').toLowerCase().trim();
 
@@ -99,11 +99,22 @@ export function resolverRepo({ conceito, coletivo = null, escopo = null, ...over
   }
 
   if (m.status === 'nenhum') {
+    // Sugestao NAO e resolucao: repo e superficie de escrita, quem confirma e o operador.
+    const parecidos = vizinhos(disponiveis, chave, 5);
+    const avisos = disponiveis.length
+      ? [
+          `"${chave}" nao casa com nenhum repo registrado. Registrados mais proximos: ${parecidos.join(', ')} — se o operador se refere a um deles, confirme e repita com o nome registrado (e \`coletivo\`); se nao, pergunte o diretorio (ou ofereca clonar) e grave com registrar_repo_local. Nunca procure por conta propria.`,
+        ]
+      : [
+          `a tabela de repos esta VAZIA em ${cfg._configPath || path.join(cfg.home, 'connect.config.json')}. Antes de perguntar ao operador, confirme que este host usa o mesmo CONNECT_HOME do Cowork (tool ambiente_connect): home separado por host e a causa mais comum de repo "sumido". Se o home esta certo, pergunte o diretorio (ou ofereca clonar) e grave com registrar_repo_local, informando \`coletivo\`. Nunca procure por conta propria.`,
+        ];
     return {
       status: 'local-nao-configurado',
       conceito: chave,
       disponiveis,
-      avisos: [`esta maquina ainda nao sabe onde o repo "${chave}" mora — pergunte o diretorio ao operador (ou ofereca clonar) e grave com registrar_repo_local, informando \`coletivo\`. Nunca procure por conta propria.`],
+      parecidos,
+      home: cfg.home,
+      avisos,
     };
   }
 
