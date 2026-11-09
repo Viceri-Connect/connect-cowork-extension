@@ -17,7 +17,7 @@ try {
 let context = '';
 try {
   const sessionId = payload.conversationId || payload.sessionId || payload.session_id;
-  context = contextoDeInicio({ sessionId }).texto.trim();
+  context = contextoDeInicio({ sessionId, host: 'antigravity' }).texto.trim();
 } catch (error) {
   process.stderr.write(`[connect] falha no iniciar_sessao: ${error.message}\n`);
 }

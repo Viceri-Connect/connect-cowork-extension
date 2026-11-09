@@ -102,6 +102,9 @@ export const HARNESSES = {
     // Como o host executa a linha de cada SO (para o teste rodar igual): exec form.
     shell: { posix: 'exec', windows: 'exec' },
     cwdDoHook: 'sessao',
+    // O Cowork concede pasta por sessao: o pedido de acesso vai inteiro sempre. Os outros
+    // hosts guardam a permissao (padrao 'memoriza': inteiro so na 1a sessao do host).
+    acesso: 'por-sessao',
     // Forma HTTP que o Claude aceita.
     mcpHttp: (url) => ({ type: 'http', url }),
     payload: () => ({ session_id: SESSION_ID('claude') }),

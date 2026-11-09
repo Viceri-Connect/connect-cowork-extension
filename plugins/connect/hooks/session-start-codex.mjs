@@ -10,7 +10,7 @@ try {
 
 try {
   const sessionId = payload.session_id || payload.sessionId;
-  const context = contextoDeInicio({ sessionId }).texto;
+  const context = contextoDeInicio({ sessionId, host: 'codex' }).texto;
   const output = context.trim()
     ? { hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: context } }
     : {};

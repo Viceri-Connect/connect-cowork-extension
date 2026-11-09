@@ -10,7 +10,7 @@ try {
 
 try {
   const sessionId = payload.session_id || payload.sessionId;
-  const context = contextoDeInicio({ sessionId }).texto;
+  const context = contextoDeInicio({ sessionId, host: 'copilot' }).texto;
   process.stdout.write(jsonAscii(context.trim() ? { additionalContext: context } : {}));
 } catch (error) {
   process.stderr.write(`[connect] session bootstrap failed: ${error.message}\n`);

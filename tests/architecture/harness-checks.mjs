@@ -16,6 +16,9 @@ import {
   ehSuperficieDeHost,
 } from './harness-contract.mjs';
 import { parseFrontmatter } from '../../plugins/connect/lib/frontmatter.mjs';
+import { MARCA_ACESSO_COMPLETO, MARCA_ACESSO_LEMBRETE } from '../../plugins/connect/lib/render.mjs';
+
+const MARCA_ACESSO_COWORK = 'acesso de pasta (faca isto primeiro)';
 
 export const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -416,6 +419,35 @@ export function checarHookPeloRuntime(pacote, harness) {
   }
 }
 
+// FEATURE: pedido de acesso no ritmo do host (0.41.0). Cowork concede por sessao: o bloco
+// vai inteiro sempre. Os outros guardam a permissao: inteiro na 1a sessao do host,
+// lembrete de uma linha depois — nunca sumir (a regra "pede, nao contorna" fica).
+export function checarAcessoPorHost(pacote, harness) {
+  const h = HARNESSES[harness];
+  const script = entrypointDoHook(pacote, harness);
+  if (!script || !fs.existsSync(script)) return [`${pacote}/${harness}: hook sem entrypoint`];
+  const sb = sandboxComRuntime(`arch-acesso-${pacote}-${harness}-`);
+  try {
+    const rodar = () => {
+      const r = spawnSync(process.execPath, [script], { cwd: dirPacote(pacote), env: sb.env, input: JSON.stringify(h.payload()), encoding: 'utf8', timeout: 30_000, windowsHide: true });
+      try { return h.lerSaida(r.stdout) || ''; } catch { return ''; }
+    };
+    const [primeira, segunda] = [rodar(), rodar()];
+    const v = [];
+    if (h.acesso === 'por-sessao') {
+      if (!primeira.includes(MARCA_ACESSO_COWORK) || !segunda.includes(MARCA_ACESSO_COWORK)) v.push(`${pacote}/${harness}: o pedido de acesso tem de ir inteiro em toda sessao`);
+      return v;
+    }
+    if (!primeira.includes(MARCA_ACESSO_COMPLETO)) v.push(`${pacote}/${harness}: 1a sessao no host sem o pedido de acesso completo`);
+    if (!segunda.includes(MARCA_ACESSO_LEMBRETE)) v.push(`${pacote}/${harness}: 2a sessao sem o lembrete de acesso (o pedido nao pode sumir)`);
+    if (segunda.includes(MARCA_ACESSO_COMPLETO)) v.push(`${pacote}/${harness}: 2a sessao repetiu o pedido completo — o operador ja liberou`);
+    if (primeira.includes(MARCA_ACESSO_COWORK)) v.push(`${pacote}/${harness}: instrucao de concessao do Cowork vazou para outro host`);
+    return v;
+  } finally {
+    sb.limpar();
+  }
+}
+
 // PACOTE: o launcher do MCP sobe o servidor pelo runtime portatil e responde ao handshake.
 export function checarLauncherMcp(pacote) {
   const base = path.join(dirPacote(pacote), 'scripts', 'connect-mcp');
@@ -545,6 +577,7 @@ export const FEATURES = {
   'bootstrap na nuvem': checarBootstrapNuvem,
   'runtime portatil': checarRuntimePortatil,
   'hook pelo runtime': checarHookPeloRuntime,
+  'acesso no ritmo do host': checarAcessoPorHost,
   'artefato gerado': checarArtefatoGerado,
 };
 

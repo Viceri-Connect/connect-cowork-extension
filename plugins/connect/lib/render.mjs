@@ -326,7 +326,62 @@ export function renderResolucao(res, { cartaInline = true, cartaJaEntregue = fal
 // Extraido de renderContexto para ser reusado pelo bloco curto (M1) sem duplicar
 // texto: as tres secoes abaixo sao precondicao ou acao obrigatoria, nunca leitura.
 // ---------------------------------------------------------------------------
-function blocoAcionavel(report) {
+// ---------------------------------------------------------------------------
+// Pedido de acesso FORA do Cowork (0.41.0).
+//
+// No Cowork a concessao e por sessao e o bloco vai inteiro toda vez (abaixo). Codex,
+// Copilot e Antigravity guardam a permissao do operador: pedir de novo a cada sessao e
+// ruido que ensina o operador a ignorar o pedido. Entao o bloco inteiro vai na 1a sessao
+// do host e sempre que as pastas mudam (lib/bootstrap.mjs decide e registra); nas outras,
+// uma linha de lembrete que mantem a regra "pede, nunca contorna".
+// ---------------------------------------------------------------------------
+const HOSTS_FORA_DO_COWORK = {
+  codex: {
+    rotulo: 'Codex',
+    dica: 'aprove quando o Codex pedir permissao, ou inclua as pastas nas raizes gravaveis do sandbox da sessao',
+  },
+  copilot: {
+    rotulo: 'Copilot',
+    dica: 'aprove quando o Copilot pedir; com o sandbox da sessao ligado, inclua as pastas em `sandbox.userPolicy` nas configuracoes do Copilot',
+  },
+  antigravity: {
+    rotulo: 'Antigravity',
+    dica: 'peca pela ferramenta `ask_permission` do Antigravity, com cada pasta como alvo',
+  },
+};
+
+export const MARCA_ACESSO_COMPLETO = 'acesso de pasta (1a sessao neste host)';
+export const MARCA_ACESSO_LEMBRETE = 'acesso ja orientado neste host';
+
+function blocoAcessoForaDoCowork(report, host, acesso) {
+  const L = [];
+  const h = HOSTS_FORA_DO_COWORK[host];
+  const c = report.concessao;
+  const pastas = [c.caminho, ...(c.origens || []).map((o) => o.caminho)];
+  if (acesso === 'lembrete') {
+    L.push(`## Connect — ${MARCA_ACESSO_LEMBRETE}`);
+    L.push('');
+    L.push(`🔑 Se uma pasta do Connect nao abrir no ${h.rotulo}, peca ao operador para liberar a pasta exata — ${pastas.map((p) => `\`${p}\``).join(', ')}. Nao contorne por varredura.`);
+    L.push('');
+    return L;
+  }
+  L.push(`## Connect — ${MARCA_ACESSO_COMPLETO}`);
+  L.push('');
+  L.push(`🔑 O Connect le e escreve nestas pastas. Se o ${h.rotulo} bloquear o acesso a elas, peca ao`);
+  L.push(`operador para libera-las UMA VEZ — ${h.dica}:`);
+  for (const p of pastas) L.push(`- \`${p}\``);
+  L.push('');
+  L.push('Nas proximas sessoes neste host este bloco vira um lembrete de uma linha; ele volta inteiro');
+  L.push('se as pastas mudarem. Pergunte ao operador antes de assumir que ja esta liberado.');
+  L.push('');
+  L.push('**Se um caminho declarado nao abrir, reporte a lacuna — nao contorne.** Varredura de');
+  L.push('sistema de arquivos e `grep` exploratorio para ler vault sao contorno: produzem resposta');
+  L.push('errada a partir de nota que so o grep acha — que e, por definicao, nota orfa.');
+  L.push('');
+  return L;
+}
+
+function blocoAcionavel(report, { host = 'claude', acesso = 'completo' } = {}) {
   const L = [];
 
   // Conteudo nao governado no slot de maior precedencia (`canal-injetado-governado`) — vai antes
@@ -344,7 +399,9 @@ function blocoAcionavel(report) {
   // zero da matriz, porque e a precondicao de qualquer leitura: sem ela o agente
   // monta e nao alcanca. Ate a 0.12.2 a exigencia vivia so em prosa dentro da
   // skill, e tres agentes independentes a contornaram (`bloqueio-reporta-nunca-contorna`).
-  if (report.concessao?.necessaria) {
+  if (report.concessao?.necessaria && HOSTS_FORA_DO_COWORK[host]) {
+    L.push(...blocoAcessoForaDoCowork(report, host, acesso));
+  } else if (report.concessao?.necessaria) {
     L.push('## Connect — acesso de pasta (faca isto primeiro)');
     L.push('');
     L.push(`🔑 Solicite ao operador acesso a **uma** pasta: \`${report.concessao.caminho}\``);
@@ -448,13 +505,18 @@ export function camadaZeroInjetavel(texto) {
     .trim();
 }
 
-export function renderContextoCurto(report, { teto = TETO_INJETADO } = {}) {
+export function renderContextoCurto(report, { teto = TETO_INJETADO, host = 'claude', acesso = 'completo' } = {}) {
   const L = [];
-  L.push(...blocoAcionavel(report));
+  L.push(...blocoAcionavel(report, { host, acesso }));
 
   L.push('## Connect — sessao iniciada');
   L.push('');
   L.push(`Workspace da sessao: \`${report.workspace}\``);
+  // Fora do Cowork o diretorio de trabalho e o do projeto, nao o workspace da sessao:
+  // `./matriz` relativo ao cwd nao existe ali.
+  if (HOSTS_FORA_DO_COWORK[host]) {
+    L.push(`Neste host o diretorio de trabalho e o do projeto: os atalhos abaixo ficam dentro do workspace da sessao (ex.: \`${report.workspace}/matriz\`).`);
+  }
   L.push('');
 
   const id = report.identidade;
