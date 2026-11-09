@@ -53,6 +53,16 @@ cada host e quando as pastas mudam; nas demais, vira um lembrete de uma linha. A
 MCP declaram `annotations` de leitura e escrita, e os hosts pedem confirmação só para o que
 sobrescreve ou remove.
 
+**Guarda de varredura (regra dura 4).** No Codex e no Antigravity, um hook `PreToolUse`
+confere toda busca recursiva (`grep`, `rg`, `find`, `Get-ChildItem -Recurse` e as
+ferramentas `grep_search`/`find_by_name`). Se o alvo está dentro de um vault do Connect
+(matriz, cérebro pessoal, sub-vaults ou o workspace de sessão), a busca deixa marca em
+`CONNECT_HOME/logs/varredura.jsonl`. O Antigravity pede confirmação ao operador. O Codex
+não suporta "perguntar" nesse hook: a busca segue, o agente recebe a regra com a ordem de
+reportar e o operador vê o aviso. Fora do vault, nada muda. No Antigravity a guarda olha as
+ferramentas de busca nativas, e não todo `run_command`, para não pagar a subida do runtime
+a cada comando de shell.
+
 ## GitHub Copilot (VS Code e Copilot CLI)
 
 O adaptador do Copilot usa o mesmo MCP e as mesmas skills, com um hook `sessionStart`

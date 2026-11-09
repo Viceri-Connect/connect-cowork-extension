@@ -482,6 +482,58 @@ export function checarRegrasSempreAtivas(pacote, harness) {
     : [`${pacote}/${harness}: ${ARQUIVO_REGRAS_SEMPRE_ATIVAS} diverge de lib/regras.mjs (npm run gerar:regras)`];
 }
 
+// FEATURE: guarda de varredura (regra dura 4) nos hosts que tem PreToolUse. Busca dentro
+// de um vault do Connect deixa marca em {CONNECT_HOME}/logs/varredura.jsonl e devolve a
+// decisao do host; fora do vault, nada muda.
+export function checarGuardaVarredura(pacote, harness) {
+  const h = HARNESSES[harness];
+  if (!h.guarda) return [];
+  const v = [];
+  const g = h.guarda;
+  const rel = h.hooks(lerManifesto(pacote, harness, []) || {});
+  const json = tentarJson(resolverNoPacote(pacote, rel), v, `${pacote}/${harness} hooks`);
+  if (!json) return v;
+  const handlers = g.lerHooks(json);
+  if (!handlers.length) return [`${pacote}/${harness}: sem hook PreToolUse da guarda de varredura`];
+  for (const ferramenta of g.ferramentas) {
+    if (!handlers.some((hk) => new RegExp(hk.matcher || '.*').test(ferramenta))) v.push(`${pacote}/${harness}: matcher da guarda nao cobre "${ferramenta}"`);
+  }
+  for (const so of SOS) {
+    const linhas = handlers.map((hk) => hk.linhas?.[so]).filter(Boolean);
+    if (!linhas.some((l) => RUNTIME.test(l) && l.includes('guarda-varredura.mjs') && l.trim().endsWith(g.argumento))) {
+      v.push(`${pacote}/${harness}: guarda sem entrada ${so} pelo runtime portatil (guarda-varredura.mjs ${g.argumento})`);
+    }
+  }
+  if (v.length) return v;
+
+  const sb = sandboxComRuntime(`arch-guarda-${pacote}-${harness}-`);
+  try {
+    const matriz = path.join(sb.raiz, 'matriz');
+    const fora = path.join(sb.raiz, 'projeto');
+    fs.mkdirSync(matriz, { recursive: true });
+    fs.mkdirSync(fora, { recursive: true });
+    fs.writeFileSync(path.join(sb.env.CONNECT_HOME, 'connect.config.json'), JSON.stringify({ vaultMatriz: matriz }));
+    const log = path.join(sb.env.CONNECT_HOME, 'logs', 'varredura.jsonl');
+    const linhasDoLog = () => (fs.existsSync(log) ? fs.readFileSync(log, 'utf8').trim().split('\n').filter(Boolean).length : 0);
+    const hk = handlers.find((x) => x.linhas?.[SO_ATUAL]);
+    const raizPlugin = dirPacote(pacote);
+    const rodar = (payload) => executarComoHost(harness, hk, {
+      raizPlugin, cwd: h.cwdDoHook === 'plugin' ? raizPlugin : fora, env: sb.env, input: JSON.stringify(payload),
+    });
+
+    const comum = rodar(g.payloadComum(fora));
+    try { if (!g.semDecisao(comum.stdout)) v.push(`${pacote}/${harness}: guarda decidiu algo fora do vault — ${comum.stdout}`); } catch { v.push(`${pacote}/${harness}: guarda respondeu fora do formato do host — ${comum.stdout} ${comum.stderr}`); }
+    if (linhasDoLog() !== 0) v.push(`${pacote}/${harness}: guarda marcou varredura fora do vault`);
+
+    const busca = rodar(g.payload(matriz));
+    try { if (!g.marcou(busca.stdout)) v.push(`${pacote}/${harness}: busca no vault sem a decisao da regra 4 — ${busca.stdout} ${busca.stderr}`); } catch { v.push(`${pacote}/${harness}: guarda respondeu fora do formato do host — ${busca.stdout} ${busca.stderr}`); }
+    if (linhasDoLog() !== 1) v.push(`${pacote}/${harness}: busca no vault nao deixou marca em logs/varredura.jsonl`);
+  } finally {
+    sb.limpar();
+  }
+  return v;
+}
+
 // PACOTE: o launcher do MCP sobe o servidor pelo runtime portatil e responde ao handshake.
 export function checarLauncherMcp(pacote) {
   const base = path.join(dirPacote(pacote), 'scripts', 'connect-mcp');
@@ -614,6 +666,7 @@ export const FEATURES = {
   'acesso no ritmo do host': checarAcessoPorHost,
   'extensao OpenAI': checarExtensaoOpenAI,
   'regras sempre ativas': checarRegrasSempreAtivas,
+  'guarda de varredura': checarGuardaVarredura,
   'artefato gerado': checarArtefatoGerado,
 };
 

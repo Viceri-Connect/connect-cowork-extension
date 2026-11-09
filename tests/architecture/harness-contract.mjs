@@ -51,7 +51,7 @@ export const COPILOT_SETTINGS = '.github/copilot/settings.json';
 
 // Arquivos do pacote que sao de TODOS os harnesses (nucleo). Qualquer outro arquivo de
 // "superficie de host" (ver ehSuperficieDeHost) precisa ter dono em HARNESSES.
-export const NUCLEO_COMPARTILHADO = ['hooks/session-start.mjs'];
+export const NUCLEO_COMPARTILHADO = ['hooks/session-start.mjs', 'hooks/guarda-varredura.mjs'];
 
 export function ehSuperficieDeHost(relativo) {
   const r = relativo.replaceAll('\\', '/');
@@ -126,6 +126,17 @@ export const HARNESSES = {
     lerHooks: (j) => (j.hooks?.SessionStart || []).flatMap((g) => (g.hooks || []).map((h) => handler(h, g.matcher, { posix: h.command, windows: h.commandWindows || h.command }))),
     // codex-rs/hooks: `$SHELL -lc <linha>` fora do Windows; `%COMSPEC% /C "<linha>"` nele.
     shell: { posix: 'sh', windows: 'cmd' },
+    // Guarda de varredura (regra dura 4) no PreToolUse. O Codex nao suporta "ask" ali: a
+    // ferramenta segue, o agente recebe a regra e a marca fica registrada.
+    guarda: {
+      lerHooks: (j) => (j.hooks?.PreToolUse || []).flatMap((g) => (g.hooks || []).map((h) => handler(h, g.matcher, { posix: h.command, windows: h.commandWindows || h.command }))),
+      ferramentas: ['Bash'],
+      argumento: 'codex',
+      payload: (pasta) => ({ tool_name: 'Bash', tool_input: { command: `rg -n "pendencia" "${pasta}"` }, cwd: pasta }),
+      payloadComum: (pasta) => ({ tool_name: 'Bash', tool_input: { command: 'npm test' }, cwd: pasta }),
+      marcou: (stdout) => /regra dura 4/i.test(JSON.parse(stdout).hookSpecificOutput?.additionalContext || ''),
+      semDecisao: (stdout) => !stdout.trim() || Object.keys(JSON.parse(stdout)).length === 0,
+    },
     cwdDoHook: 'sessao',
     mcpHttp: (url) => ({ type: 'streamable-http', url }),
     payload: () => ({ session_id: SESSION_ID('codex') }),
@@ -152,6 +163,18 @@ export const HARNESSES = {
     // relativo (`./scripts/...`); o shell do Windows nao e documentado — o teste usa cmd.
     shell: { posix: 'sh', windows: 'cmd' },
     cwdDoHook: 'plugin',
+    // Guarda de varredura nas ferramentas de busca nativas; o Antigravity sabe perguntar
+    // ("ask"). run_command fica de fora: o custo de subir o runtime em TODO comando de
+    // shell no Windows nao compensa — a busca do agente do Antigravity e grep_search.
+    guarda: {
+      lerHooks: (j) => Object.values(j).flatMap((g) => (g?.PreToolUse || []).flatMap((m) => (m.hooks || []).map((h) => handler(h, m.matcher, porPrimeiroToken(linha(h)))))),
+      ferramentas: ['grep_search', 'find_by_name'],
+      argumento: 'antigravity',
+      payload: (pasta) => ({ toolCall: { name: 'grep_search', args: { SearchPath: pasta, Query: 'pendencia' } }, workspacePaths: [pasta] }),
+      payloadComum: (pasta) => ({ toolCall: { name: 'grep_search', args: { SearchPath: pasta, Query: 'pendencia' } }, workspacePaths: [pasta] }),
+      marcou: (stdout) => JSON.parse(stdout).decision === 'ask',
+      semDecisao: (stdout) => JSON.parse(stdout).decision === 'allow',
+    },
     mcpHttp: (url) => ({ serverUrl: url }),
     payload: () => ({ conversationId: SESSION_ID('antigravity') }),
     lerSaida: (stdout) => JSON.parse(stdout).injectSteps?.[0]?.systemMessage?.systemMessage,
