@@ -34,14 +34,16 @@ const DESCRICAO = 'Connect knowledge, session, and governance tools through a lo
 const URL_MCP = 'http://127.0.0.1:3737/mcp';
 const gravar = (relativo, valor) => fs.writeFileSync(path.join(output, relativo), `${JSON.stringify(valor, null, 2)}\n`);
 
+// Vitrine da OpenAI: a mesma em plugin.json (extensions.com.openai) e no overlay legado.
+const vitrineHttp = (i) => i && Object.assign(i, {
+  displayName: 'Connect HTTP (Local)',
+  shortDescription: 'Connect por um endpoint MCP HTTP so de loopback',
+});
+
 const manifest = JSON.parse(fs.readFileSync(path.join(source, 'plugin.json'), 'utf8'));
 manifest.name = 'connect-http';
 manifest.description = DESCRICAO;
-const openai = manifest.extensions?.['com.openai'];
-if (openai?.interface) {
-  openai.interface.displayName = 'Connect HTTP (Local)';
-  openai.interface.shortDescription = 'Connect over a loopback-only HTTP MCP endpoint';
-}
+vitrineHttp(manifest.extensions?.['com.openai']?.interface);
 gravar('plugin.json', manifest);
 
 gravar('mcp.json', {
@@ -63,7 +65,7 @@ gravar('.mcp.json', { mcpServers: { connect: { type: 'http', url: URL_MCP } } })
 const codexOverlayPath = path.join('.codex-plugin', 'plugin.json');
 const codexOverlay = JSON.parse(fs.readFileSync(path.join(output, codexOverlayPath), 'utf8'));
 codexOverlay.name = 'connect-http';
-if (codexOverlay.interface) codexOverlay.interface.displayName = 'Connect HTTP (Local)';
+vitrineHttp(codexOverlay.interface);
 gravar(codexOverlayPath, codexOverlay);
 
 const antigravityPath = path.join('.antigravity-plugin', 'plugin.json');

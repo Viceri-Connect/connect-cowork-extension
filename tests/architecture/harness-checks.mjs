@@ -448,6 +448,28 @@ export function checarAcessoPorHost(pacote, harness) {
   }
 }
 
+// FEATURE (Codex): configuracao da OpenAI no plugin.json portavel (extensions.com.openai),
+// como recomenda a doc atual; o overlay .codex-plugin/ so espelha, para Codex antigo.
+// Sem `hooks` explicito, o Codex carrega hooks/hooks.json — que e o do Claude.
+export function checarExtensaoOpenAI(pacote, harness) {
+  if (!HARNESSES[harness].extensaoOpenAI) return [];
+  const v = [];
+  const raiz = tentarJson(resolverNoPacote(pacote, 'plugin.json'), v, `${pacote}/${harness} plugin.json`);
+  const ext = raiz?.extensions?.['com.openai'];
+  if (!ext) return [...v, `${pacote}/${harness}: plugin.json sem extensions.com.openai`];
+  if (!ext.hooks) v.push(`${pacote}/${harness}: extensions.com.openai sem "hooks" explicito — o Codex cairia no hooks/hooks.json do Claude`);
+  for (const chave of ['hooks', 'onboardingSkill']) {
+    if (ext[chave] && !fs.existsSync(resolverNoPacote(pacote, ext[chave]))) v.push(`${pacote}/${harness}: extensions.com.openai.${chave} aponta para ${ext[chave]}, que nao existe`);
+  }
+  if (!ext.onboardingSkill) v.push(`${pacote}/${harness}: sem onboardingSkill — o setup pos-instalacao do Codex nao conduz o 1o uso`);
+  if (!ext.interface?.displayName) v.push(`${pacote}/${harness}: extensions.com.openai.interface.displayName ausente`);
+  const overlay = lerManifesto(pacote, harness, []) || {};
+  for (const chave of ['hooks', 'onboardingSkill', 'interface']) {
+    if (JSON.stringify(overlay[chave]) !== JSON.stringify(ext[chave])) v.push(`${pacote}/${harness}: .codex-plugin/plugin.json diverge de extensions.com.openai em "${chave}"`);
+  }
+  return v;
+}
+
 // PACOTE: o launcher do MCP sobe o servidor pelo runtime portatil e responde ao handshake.
 export function checarLauncherMcp(pacote) {
   const base = path.join(dirPacote(pacote), 'scripts', 'connect-mcp');
@@ -578,6 +600,7 @@ export const FEATURES = {
   'runtime portatil': checarRuntimePortatil,
   'hook pelo runtime': checarHookPeloRuntime,
   'acesso no ritmo do host': checarAcessoPorHost,
+  'extensao OpenAI': checarExtensaoOpenAI,
   'artefato gerado': checarArtefatoGerado,
 };
 

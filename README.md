@@ -37,17 +37,35 @@ Entregar o `connect.plugin`; no Cowork, abrir o arquivo e aceitar a instalação
 > `claude plugin install connect@impulsa`. É a CLI do Claude Code, **não** o Cowork —
 > serve para desenvolver/testar o mecanismo, não é o caminho de entrega da v1.
 
-## GitHub Copilot (VS Code)
+## Runtime em todos os hosts
 
-O adaptador do Copilot é gerado a partir do mesmo MCP e das mesmas skills, com um hook
-`SessionStart` nativo que injeta o bootstrap do Connect no início da sessão. Gere o
-plugin instalável:
+Nenhum host depende de `node` no PATH. MCP e hooks de Cowork, Codex, Copilot e
+Antigravity sobem pelo mesmo runtime (`plugins/connect/scripts/run-node.*`), que baixa o
+Node portátil para `CONNECT_HOME/bin` na primeira sessão e o reaproveita nas seguintes.
+Nos hosts do formato portátil, o MCP entra por `scripts/connect-mcp` (macOS/Linux) e
+`scripts/connect-mcp.cmd` (Windows, resolvido pelo PATHEXT). Em host com **sandbox**
+que não deixa escrever no `CONNECT_HOME`, o runtime vai para a pasta de dados que o host
+dá ao plugin (`PLUGIN_DATA`, `COPILOT_PLUGIN_DATA` ou `CLAUDE_PLUGIN_DATA`). A primeira
+sessão pode levar mais tempo por causa do download; o timeout de SessionStart é de 120 s.
+
+Fora do Cowork, o pedido de acesso às pastas do Connect vem inteiro na primeira sessão de
+cada host e quando as pastas mudam; nas demais, vira um lembrete de uma linha. As tools do
+MCP declaram `annotations` de leitura e escrita, e os hosts pedem confirmação só para o que
+sobrescreve ou remove.
+
+## GitHub Copilot (VS Code e Copilot CLI)
+
+O adaptador do Copilot usa o mesmo MCP e as mesmas skills, com um hook `sessionStart`
+nativo (`com.github.copilot/hooks/hooks.json`, campos `bash` e `powershell`) que injeta o
+bootstrap do Connect. Gere o plugin instalável:
 
 ```
 npm run build:copilot
 ```
 
-Instale `dist/copilot` pela tela **Chat: Open Customizations > Plugins > Install from Source**, ou adicione o repositório como marketplace no VS Code e instale **connect**. O Agent Plugin usa os manifests portáveis `plugin.json` e `mcp.json`, compartilha `skills/` com o Cowork e usa o mesmo `CONNECT_HOME` do Cowork (padrão `~/Connect`). O hook injeta o resultado de `iniciar_sessao`; se ainda não houver matriz nesta instalação, injeta o fluxo de primeiro uso para o agente conduzir. O servidor requer `node` no ambiente que inicia o MCP e os caminhos locais da matriz precisam estar visíveis para esse processo. Em ambientes remotos ou isolados, execute `ambiente_connect` para verificar o estado observável; suporte a links é reportado como não testado sem efeitos colaterais.
+Instale `dist/copilot` pela tela **Chat: Open Customizations > Plugins > Install from Source**, ou adicione o repositório como marketplace no VS Code e instale **connect**. Como a raiz declara o schema do Agent Plugins, o VS Code usa `plugin.json`, `mcp.json` e o hook de `com.github.copilot/`, e não os arquivos do formato Claude. O plugin compartilha `skills/` com o Cowork e usa o mesmo `CONNECT_HOME` (padrão `~/Connect`). Se ainda não houver matriz nesta instalação, o hook injeta o fluxo de primeiro uso para o agente conduzir. Em ambientes remotos ou isolados, execute `ambiente_connect` para verificar o estado observável; o suporte a links aparece como não testado, porque testar teria efeito colateral.
+
+Com o **sandbox de sessão** do Copilot CLI ligado, inclua `~/Connect` (e as pastas da matriz) em `sandbox.userPolicy` nas configurações do Copilot. Sem isso, o hook não grava a sessão no `CONNECT_HOME`.
 
 O marketplace do repositório também lista **connect-http** como alternativa. `.github/copilot/settings.json` registra o marketplace `impulsa` e habilita somente `connect` por padrão; selecione `connect-http` manualmente quando necessário.
 
@@ -57,20 +75,32 @@ Consulte `docs/host-control-boundary.md` antes de habilitar ferramentas de host.
 
 ## Codex e ChatGPT Work
 
-O marketplace local em `.agents/plugins/marketplace.json` oferece **Connect**
-(STDIO, padrão) e **Connect HTTP (Local)**. O pacote versionado em
-`plugins/connect-http` compartilha as mesmas skills e tools. Para gerar uma cópia
-de distribuição em `dist/connect-http`, execute `npm run build:connect-http -- dist/connect-http`.
-No ChatGPT Desktop, adicione este repositório como marketplace e instale
-somente uma das variantes. Codex CLI, extensão IDE e ChatGPT Work em execução local
-podem usar o MCP local pela configuração compartilhada do host. Hooks não gerenciados
-precisam ser revisados e autorizados pelo Codex.
+O marketplace local em `.agents/plugins/marketplace.json` oferece **Connect** (STDIO,
+padrão) e **Connect HTTP (Local)**. As configurações da OpenAI ficam em
+`plugin.json > extensions.com.openai`: hooks, nome de exibição, prompts sugeridos e a
+skill de primeiro uso (`cnct-nucleo-sessao`, que o Codex roda no setup depois da
+instalação). `.codex-plugin/plugin.json` espelha o mesmo para versões antigas do Codex.
+Para gerar uma cópia de distribuição em `dist/connect-http`, execute
+`npm run build:connect-http -- dist/connect-http`. No ChatGPT Desktop, adicione este
+repositório como marketplace e instale somente uma das variantes.
+
+Onde roda:
+- Codex CLI e Codex/ChatGPT Work no app desktop, em execução local: skills, MCP e hooks.
+- A extensão do Codex para IDE **não** carrega plugins.
+- ChatGPT Work orquestrado na nuvem não roda hooks de plugin nem alcança o processo e os
+  caminhos da máquina. Essa modalidade exige endpoint MCP remoto HTTPS com autenticação,
+  que este repositório não provisiona.
+
+Os hooks do plugin precisam ser revisados e aprovados no Codex (`/hooks` na CLI ou
+**Review hooks** no app) antes de rodar. A aprovação vale para o conteúdo exato: a cada
+versão que mude um hook ou script, o Codex pede a revisão de novo.
 
 Use a variante HTTP somente se o host não conseguir iniciar um MCP stdio. Inicie o
-servidor separado na raiz do repo e deixe-o em execução:
+servidor e deixe-o em execução (o launcher garante o Node portátil):
 
 ```
-node plugins/connect-http/mcp/connect-mcp.mjs --transport=http --port=3737
+plugins/connect-http/scripts/connect-mcp --transport=http --port=3737          # macOS/Linux
+plugins\connect-http\scripts\connect-mcp.cmd --transport=http --port=3737     # Windows
 ```
 
 O endpoint fica em `http://127.0.0.1:3737/mcp`; a porta pode ser alterada por
@@ -78,25 +108,21 @@ O endpoint fica em `http://127.0.0.1:3737/mcp`; a porta pode ser alterada por
 `CONNECT_MCP_TRANSPORT=http`. O servidor só escuta em loopback. Não instale as duas
 variantes simultaneamente no mesmo host: ambas expõem as mesmas tools.
 
-ChatGPT Work em execução na nuvem não acessa o processo local nem os caminhos da
-máquina. Essa modalidade exige endpoint MCP remoto HTTPS com autenticação e
-hospedagem configuradas; este repositório não presume nem provisiona essa
-infraestrutura.
-
 ## Antigravity App
 
 Os pacotes `plugins/connect` e `plugins/connect-http` incluem o overlay
 `.antigravity-plugin/plugin.json`, a configuração MCP e o hook `SessionStart` no
-formato nativo do Antigravity. Instale a variante desejada a partir do diretório
-local (`agy plugin install ./plugins/connect` ou
-`agy plugin install ./plugins/connect-http`) ou coloque-a em `.agents/plugins/`.
+formato nativo do Antigravity: uma entrada por SO, caminho relativo à raiz do plugin.
+Instale a variante desejada a partir do diretório local (`agy plugin install ./plugins/connect`
+ou `agy plugin install ./plugins/connect-http`) ou coloque-a em `.agents/plugins/`.
 Para validar, execute `agy plugin validate --strict` no diretório escolhido.
 
 Todos os hosts (Cowork, Copilot, Codex e Antigravity) usam o mesmo `CONNECT_HOME`,
 padrão `~/Connect`: `repos`, `subVaults`, matriz e perfil do operador são por máquina
 e não por host. Um `PLUGIN_DATA` separado por host deixava o config sem `repos` e sem
 sub-vaults, e o agente não resolvia o que o Cowork resolve. Defina `CONNECT_HOME` só se
-quiser outro local, e o mesmo em todos os hosts.
+quiser outro local, e o mesmo em todos os hosts. A pasta de dados do host serve apenas
+de abrigo para o runtime quando o sandbox não deixa escrever no `CONNECT_HOME`.
 
 Todos os adaptadores preservam a fronteira do host: Connect não inclui execução
 genérica de shell/PowerShell nem controle de desktop. O Windows MCP segue separado.

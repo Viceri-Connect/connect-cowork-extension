@@ -115,6 +115,9 @@ export const HARNESSES = {
     variaveisDeRaiz: ['PLUGIN_ROOT'],
     manifesto: '.codex-plugin/plugin.json',
     exigeVersao: false, // overlay: a versao vem do plugin.json portavel
+    // Doc atual da OpenAI: configuracao em plugin.json > extensions.com.openai; o overlay
+    // .codex-plugin/ e fallback de compatibilidade e tem de espelhar (checarExtensaoOpenAI).
+    extensaoOpenAI: true,
     arquivos: ['.codex-plugin/plugin.json', 'hooks/codex-hooks.json', 'hooks/session-start-codex.mjs'],
     mcp: () => './mcp.json',
     hooks: (m) => m.hooks,
