@@ -32,7 +32,8 @@ describe('Codex and Antigravity adapters', () => {
 
     const portableMcp = JSON.parse(fs.readFileSync(path.join(plugin, 'mcp.json'), 'utf8'));
     expect(portableMcp.mcpServers.connect.type).toBe('stdio');
-    expect(portableMcp.mcpServers.connect.args).toEqual(['${PLUGIN_ROOT}/mcp/connect-mcp.mjs']);
+    // 0.41.0: o MCP sobe pelo runtime portatil (launcher), nunca por `node` do PATH.
+    expect(portableMcp.mcpServers.connect.command).toBe('./scripts/connect-mcp');
 
     const codexOverlay = JSON.parse(fs.readFileSync(path.join(plugin, '.codex-plugin', 'plugin.json'), 'utf8'));
     expect(codexOverlay.name).toBe('connect');
@@ -44,7 +45,7 @@ describe('Codex and Antigravity adapters', () => {
     expect(antigravity.$schema).toBe('https://antigravity.google/schemas/v1/plugin.json');
     expect(antigravity.name).toBe('connect');
     const antigravityMcp = JSON.parse(fs.readFileSync(path.join(plugin, 'mcp_config.json'), 'utf8'));
-    expect(antigravityMcp.mcpServers.connect.args).toEqual(['${PLUGIN_ROOT}/mcp/connect-mcp.mjs']);
+    expect(antigravityMcp.mcpServers.connect.command).toBe('${PLUGIN_ROOT}/scripts/connect-mcp');
     // repos/subVaults sao por maquina: todos os hosts compartilham o home do Cowork.
     expect(JSON.stringify([portableMcp, antigravityMcp])).not.toContain('CONNECT_HOME');
     const antigravityHooks = JSON.parse(fs.readFileSync(path.join(plugin, 'hooks.json'), 'utf8'));
@@ -94,7 +95,8 @@ describe('Codex and Antigravity adapters', () => {
         type: 'http',
         url: 'http://127.0.0.1:3737/mcp',
       });
-      expect(copilotHooks.hooks.sessionStart[0].command).toContain('copilot/session-start.mjs');
+      expect(copilotHooks.hooks.sessionStart[0].bash).toContain('copilot/session-start.mjs');
+      expect(copilotHooks.hooks.sessionStart[0].powershell).toContain('copilot/session-start.mjs');
       expect(fs.existsSync(path.join(output, 'skills', 'cnct-nucleo-sessao', 'SKILL.md'))).toBe(true);
       expect(fs.readFileSync(path.join(output, 'hooks', 'hooks.json'), 'utf8')).toContain('session-start.mjs');
 

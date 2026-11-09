@@ -3,8 +3,7 @@
   "mcpServers": {
     "connect": {
       "type": "stdio",
-      "command": "node",
-      "args": ["${PLUGIN_ROOT}/mcp/connect-mcp.mjs"]
+      "command": "./scripts/connect-mcp"
     }
   }
 }

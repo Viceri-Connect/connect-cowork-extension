@@ -69,6 +69,22 @@ const SESSION_ID = (harness) => `arch-${harness}`;
 // `args`, adotado pelo Claude na 0.39.0 — uma entrada por SO, sem depender de Git Bash).
 const linha = (h) => [h.command, ...(Array.isArray(h.args) ? h.args : [])].filter(Boolean).join(' ');
 
+// Em que SO uma entrada roda. Host sem campo por SO (Claude, Antigravity) recebe uma
+// entrada por SO e a do outro SO falha ao iniciar sem rodar nada (0.39.0): o primeiro
+// token diz qual e qual. Sem token reconhecido, a entrada vale para os dois.
+function porPrimeiroToken(l) {
+  if (/^\/bin\/sh\b/.test(l)) return { posix: l };
+  if (/^powershell(\.exe)?\b/i.test(l)) return { windows: l };
+  return { posix: l, windows: l };
+}
+
+// Handler normalizado: `command` (linha principal, para as checagens de texto), `linhas`
+// por SO (para executar como o host executa) e `exec` (exec form, quando houver).
+function handler(h, matcher, linhas) {
+  const exec = Array.isArray(h.args) ? { command: h.command, args: h.args } : null;
+  return { matcher, command: linhas.posix || linhas.windows, execForm: !!exec, exec, linhas };
+}
+
 export const HARNESSES = {
   claude: {
     rotulo: 'Claude (Cowork / Claude Code)',
@@ -79,10 +95,13 @@ export const HARNESSES = {
     arquivos: ['.claude-plugin/plugin.json', '.mcp.json', 'hooks/hooks.json'],
     mcp: (m) => m.mcpServers,
     hooks: () => './hooks/hooks.json',
-    lerHooks: (j) => (j.hooks?.SessionStart || []).flatMap((g) => (g.hooks || []).map((h) => ({ matcher: g.matcher, command: linha(h), execForm: Array.isArray(h.args) }))),
+    lerHooks: (j) => (j.hooks?.SessionStart || []).flatMap((g) => (g.hooks || []).map((h) => handler(h, g.matcher, porPrimeiroToken(linha(h))))),
     // 0.39.0: shell form no Windows sem Git Bash cai no PowerShell, que imprime a linha
     // em vez de executar — o hook "passa" sem injetar nada. Todo hook Claude e exec form.
     exigeExecForm: true,
+    // Como o host executa a linha de cada SO (para o teste rodar igual): exec form.
+    shell: { posix: 'exec', windows: 'exec' },
+    cwdDoHook: 'sessao',
     // Forma HTTP que o Claude aceita.
     mcpHttp: (url) => ({ type: 'http', url }),
     payload: () => ({ session_id: SESSION_ID('claude') }),
@@ -96,7 +115,11 @@ export const HARNESSES = {
     arquivos: ['.codex-plugin/plugin.json', 'hooks/codex-hooks.json', 'hooks/session-start-codex.mjs'],
     mcp: () => './mcp.json',
     hooks: (m) => m.hooks,
-    lerHooks: (j) => (j.hooks?.SessionStart || []).flatMap((g) => (g.hooks || []).map((h) => ({ matcher: g.matcher, command: linha(h) }))),
+    // `commandWindows` e o override documentado do Codex para Windows.
+    lerHooks: (j) => (j.hooks?.SessionStart || []).flatMap((g) => (g.hooks || []).map((h) => handler(h, g.matcher, { posix: h.command, windows: h.commandWindows || h.command }))),
+    // codex-rs/hooks: `$SHELL -lc <linha>` fora do Windows; `%COMSPEC% /C "<linha>"` nele.
+    shell: { posix: 'sh', windows: 'cmd' },
+    cwdDoHook: 'sessao',
     mcpHttp: (url) => ({ type: 'streamable-http', url }),
     payload: () => ({ session_id: SESSION_ID('codex') }),
     lerSaida: (stdout) => {
@@ -114,7 +137,11 @@ export const HARNESSES = {
     arquivos: ['.antigravity-plugin/plugin.json', 'mcp_config.json', 'hooks.json', 'hooks/session-start-antigravity.mjs'],
     mcp: () => './mcp_config.json',
     hooks: () => './hooks.json',
-    lerHooks: (j) => Object.values(j).flatMap((grupo) => (grupo?.SessionStart || []).map((h) => ({ matcher: h.matcher, command: linha(h) }))),
+    lerHooks: (j) => Object.values(j).flatMap((grupo) => (grupo?.SessionStart || []).map((h) => handler(h, h.matcher, porPrimeiroToken(linha(h))))),
+    // Doc do Antigravity: hooks de plugin rodam com cwd = raiz do plugin e caminho
+    // relativo (`./scripts/...`); o shell do Windows nao e documentado — o teste usa cmd.
+    shell: { posix: 'sh', windows: 'cmd' },
+    cwdDoHook: 'plugin',
     mcpHttp: (url) => ({ serverUrl: url }),
     payload: () => ({ conversationId: SESSION_ID('antigravity') }),
     lerSaida: (stdout) => JSON.parse(stdout).injectSteps?.[0]?.systemMessage?.systemMessage,
@@ -131,8 +158,11 @@ export const HARNESSES = {
     lerHooks: (j) => {
       if (j.version !== 1) throw new Error(`hooks.json do Copilot exige version 1 (veio ${j.version})`);
       if (j.hooks?.SessionStart) throw new Error('Copilot usa "sessionStart" (camelCase); "SessionStart" e ignorado pelo host');
-      return (j.hooks?.sessionStart || []).map((h) => ({ matcher: h.matcher, command: linha(h) }));
+      // `bash`/`powershell` por SO; `command` e o fallback que vale para os dois.
+      return (j.hooks?.sessionStart || []).map((h) => handler(h, h.matcher, { posix: h.bash || h.command, windows: h.powershell || h.command }));
     },
+    shell: { posix: 'sh', windows: 'powershell' },
+    cwdDoHook: 'sessao',
     mcpHttp: (url) => ({ type: 'streamable-http', url }),
     payload: () => ({ session_id: SESSION_ID('copilot'), source: 'startup' }),
     lerSaida: (stdout) => JSON.parse(stdout).additionalContext,

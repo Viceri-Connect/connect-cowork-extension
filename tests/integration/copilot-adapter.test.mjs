@@ -25,18 +25,19 @@ describe('Copilot adapter package', () => {
       const config = JSON.parse(fs.readFileSync(path.join(output, 'mcp.json'), 'utf8'));
       const hooks = JSON.parse(fs.readFileSync(path.join(output, 'com.github.copilot', 'hooks', 'hooks.json'), 'utf8'));
       expect(config.$schema).toBe('https://agent-plugins.org/schemas/1.0.0/mcp.schema.json');
+      // 0.41.0: MCP e hook sobem pelo runtime portatil do Cowork, sem `node` no PATH.
       expect(config.mcpServers.connect).toEqual({
         type: 'stdio',
-        command: 'node',
-        args: ['${PLUGIN_ROOT}/mcp/connect-mcp.mjs'],
+        command: './scripts/connect-mcp',
       });
       expect(hooks.version).toBe(1);
       expect(hooks.hooks.sessionStart).toHaveLength(1);
       expect(hooks.hooks.SessionStart).toBeUndefined();
       expect(hooks.hooks.sessionStart[0]).toMatchObject({
         type: 'command',
-        command: 'node "${PLUGIN_ROOT}/copilot/session-start.mjs"',
-        timeoutSec: 30,
+        bash: '/bin/sh "${PLUGIN_ROOT}/scripts/run-node.sh" "${PLUGIN_ROOT}/copilot/session-start.mjs"',
+        powershell: 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${PLUGIN_ROOT}/scripts/run-node.ps1" "${PLUGIN_ROOT}/copilot/session-start.mjs"',
+        timeoutSec: 120,
       });
       expect(hooks.hooks.sessionStart[0].env).toBeUndefined();
       expect(fs.existsSync(path.join(output, 'skills', 'cnct-nucleo-sessao', 'SKILL.md'))).toBe(true);
@@ -44,6 +45,9 @@ describe('Copilot adapter package', () => {
       expect(fs.existsSync(path.join(output, 'hooks', 'hooks.json'))).toBe(false);
       expect(fs.existsSync(path.join(output, 'mcp', 'connect-mcp.mjs'))).toBe(true);
       expect(fs.existsSync(path.join(output, 'copilot', 'session-start.mjs'))).toBe(true);
+      for (const launcher of ['connect-mcp', 'connect-mcp.cmd', 'run-node.sh', 'run-node.bat', 'run-node.ps1']) {
+        expect(fs.existsSync(path.join(output, 'scripts', launcher)), launcher).toBe(true);
+      }
 
       const home = path.join(temp, 'connect-home');
       const hookEnv = Object.fromEntries(Object.entries(process.env).filter(([name]) => !name.startsWith('CONNECT_')));

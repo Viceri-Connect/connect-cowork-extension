@@ -1,5 +1,5 @@
 {
-  "description": "Restore Connect context when a Codex session starts or resumes.",
+  "description": "Restore Connect context when a Codex session starts or resumes. Runs on the same portable Node runtime as Cowork (scripts/run-node.*), so Node on PATH is not required.",
   "hooks": {
     "SessionStart": [
       {
@@ -7,9 +7,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${PLUGIN_ROOT}/hooks/session-start-codex.mjs\"",
+            "command": "/bin/sh \"${PLUGIN_ROOT}/scripts/run-node.sh\" \"${PLUGIN_ROOT}/hooks/session-start-codex.mjs\"",
+            "commandWindows": "\"${PLUGIN_ROOT}\\scripts\\run-node.bat\" \"${PLUGIN_ROOT}\\hooks\\session-start-codex.mjs\"",
             "statusMessage": "Loading Connect session context",
-            "timeout": 30,
+            "timeout": 120,
             "additionalContextLimit": 5000
           }
         ]

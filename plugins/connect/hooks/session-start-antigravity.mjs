@@ -1,26 +1,26 @@
 #!/usr/bin/env node
-import { spawnSync } from 'node:child_process';
+// Hook de SessionStart do Antigravity: o mesmo bootstrap dos outros hosts
+// (lib/bootstrap.mjs), no envelope `injectSteps` do Antigravity.
+//
+// 0.41.0 — chamava o hooks/session-start.mjs num segundo processo Node; agora chama o
+// bootstrap direto (um processo a menos dentro do timeout do host) e devolve JSON em
+// ASCII (lib/saida-hook.mjs), que atravessa o PowerShell do Windows sem perder acento.
 import { readFileSync } from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { contextoDeInicio } from '../lib/bootstrap.mjs';
+import { jsonAscii } from '../lib/saida-hook.mjs';
 
-const hookRoot = path.dirname(fileURLToPath(import.meta.url));
 let payload = {};
 try {
   payload = JSON.parse(readFileSync(0, 'utf8') || '{}');
 } catch { /* Continue without optional hook metadata. */ }
 
-const sessionId = payload.conversationId || payload.sessionId || payload.session_id;
-const child = spawnSync(process.execPath, [path.join(hookRoot, 'session-start.mjs')], {
-  input: JSON.stringify({ session_id: sessionId }),
-  encoding: 'utf8',
-  env: process.env,
-  windowsHide: true,
-});
-
-if (child.error) process.stderr.write(`[connect] ${child.error.message}\n`);
-if (child.stderr) process.stderr.write(child.stderr);
-const context = child.stdout?.trim();
-process.stdout.write(JSON.stringify({
+let context = '';
+try {
+  const sessionId = payload.conversationId || payload.sessionId || payload.session_id;
+  context = contextoDeInicio({ sessionId }).texto.trim();
+} catch (error) {
+  process.stderr.write(`[connect] falha no iniciar_sessao: ${error.message}\n`);
+}
+process.stdout.write(jsonAscii({
   injectSteps: context ? [{ systemMessage: { systemMessage: context } }] : [],
 }));

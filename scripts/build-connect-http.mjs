@@ -1,4 +1,9 @@
 #!/usr/bin/env node
+// Gera plugins/connect-http (variante com MCP em Streamable HTTP local) a partir de
+// plugins/connect. So o que e de TRANSPORTE muda: manifests de identidade e as configs de
+// MCP de cada host. Hooks, skills, lib/ e o runtime portatil (scripts/) sao os mesmos do
+// pacote stdio — 0.41.0: os hooks de todos os hosts sobem pelo Node portatil
+// (scripts/run-node.*), entao scripts/ deixa de ser filtrado e nada de hook e regerado.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -19,94 +24,69 @@ fs.cpSync(source, output, {
   recursive: true,
   filter(file) {
     const relative = path.relative(source, file).replaceAll('\\', '/');
-    return !/(^|\/)(\.claude-plugin|bin|sessions|scripts)(\/|$)/.test(relative)
+    return !/(^|\/)(\.claude-plugin|bin|sessions)(\/|$)/.test(relative)
       && !/(^|\/)(\.mcp\.json|connect\.config\.json)$/.test(relative)
-      && !/(^|\/)launcher\.bat$/.test(relative);
+      && !/(^|\/)(launcher\.bat|spike-junction\.ps1)$/.test(relative);
   },
 });
 
+const DESCRICAO = 'Connect knowledge, session, and governance tools through a local HTTP MCP server.';
+const URL_MCP = 'http://127.0.0.1:3737/mcp';
+const gravar = (relativo, valor) => fs.writeFileSync(path.join(output, relativo), `${JSON.stringify(valor, null, 2)}\n`);
+
 const manifest = JSON.parse(fs.readFileSync(path.join(source, 'plugin.json'), 'utf8'));
 manifest.name = 'connect-http';
-manifest.description = 'Connect knowledge, session, and governance tools through a local HTTP MCP server.';
-fs.writeFileSync(path.join(output, 'plugin.json'), `${JSON.stringify(manifest, null, 2)}\n`);
+manifest.description = DESCRICAO;
+const openai = manifest.extensions?.['com.openai'];
+if (openai?.interface) {
+  openai.interface.displayName = 'Connect HTTP (Local)';
+  openai.interface.shortDescription = 'Connect over a loopback-only HTTP MCP endpoint';
+}
+gravar('plugin.json', manifest);
 
-fs.writeFileSync(path.join(output, 'mcp.json'), `${JSON.stringify({
+gravar('mcp.json', {
   $schema: 'https://agent-plugins.org/schemas/1.0.0/mcp.schema.json',
-  mcpServers: {
-    connect: {
-      type: 'streamable-http',
-      url: 'http://127.0.0.1:3737/mcp',
-    },
-  },
-}, null, 2)}\n`);
-fs.writeFileSync(path.join(output, 'mcp_config.json'), `${JSON.stringify({
-  mcpServers: {
-    connect: {
-      serverUrl: 'http://127.0.0.1:3737/mcp',
-    },
-  },
-}, null, 2)}\n`);
+  mcpServers: { connect: { type: 'streamable-http', url: URL_MCP } },
+});
+gravar('mcp_config.json', { mcpServers: { connect: { serverUrl: URL_MCP } } });
 
-const copilotHooks = {
-  version: 1,
-  hooks: {
-    sessionStart: [{
-      type: 'command',
-      command: 'node "${PLUGIN_ROOT}/copilot/session-start.mjs"',
-      timeoutSec: 30,
-    }],
-  },
-};
-const copilotHooksPath = path.join(output, 'com.github.copilot', 'hooks', 'hooks.json');
-fs.mkdirSync(path.dirname(copilotHooksPath), { recursive: true });
-fs.writeFileSync(copilotHooksPath, `${JSON.stringify(copilotHooks, null, 2)}\n`);
-
-const claudePlugin = {
+fs.mkdirSync(path.join(output, '.claude-plugin'), { recursive: true });
+gravar(path.join('.claude-plugin', 'plugin.json'), {
   name: 'connect-http',
   version: manifest.version,
-  description: manifest.description,
+  description: DESCRICAO,
   author: manifest.author,
   mcpServers: './.mcp.json',
-};
-fs.mkdirSync(path.join(output, '.claude-plugin'), { recursive: true });
-fs.writeFileSync(path.join(output, '.claude-plugin', 'plugin.json'), `${JSON.stringify(claudePlugin, null, 2)}\n`);
-fs.writeFileSync(path.join(output, '.mcp.json'), `${JSON.stringify({
-  mcpServers: {
-    connect: {
-      type: 'http',
-      url: 'http://127.0.0.1:3737/mcp',
-    },
-  },
-}, null, 2)}\n`);
-fs.writeFileSync(path.join(output, 'hooks', 'hooks.json'), `${JSON.stringify({
-  description: 'Connect session bootstrap hook.',
-  hooks: {
-    SessionStart: [{
-      matcher: 'startup|resume|fork',
-      // Exec form (command + args), como o hook do pacote stdio desde a 0.39.0: shell form
-      // no Windows sem Git Bash cai no PowerShell, que imprime a linha em vez de executar.
-      hooks: [{
-        type: 'command',
-        command: 'node',
-        args: ['${CLAUDE_PLUGIN_ROOT}/hooks/session-start.mjs'],
-        timeout: 20,
-      }],
-    }],
-  },
-}, null, 2)}\n`);
+});
+gravar('.mcp.json', { mcpServers: { connect: { type: 'http', url: URL_MCP } } });
 
-const codexOverlayPath = path.join(output, '.codex-plugin', 'plugin.json');
-const codexOverlay = JSON.parse(fs.readFileSync(codexOverlayPath, 'utf8'));
+const codexOverlayPath = path.join('.codex-plugin', 'plugin.json');
+const codexOverlay = JSON.parse(fs.readFileSync(path.join(output, codexOverlayPath), 'utf8'));
 codexOverlay.name = 'connect-http';
-fs.writeFileSync(codexOverlayPath, `${JSON.stringify(codexOverlay, null, 2)}\n`);
+if (codexOverlay.interface) codexOverlay.interface.displayName = 'Connect HTTP (Local)';
+gravar(codexOverlayPath, codexOverlay);
 
-const antigravityPath = path.join(output, '.antigravity-plugin', 'plugin.json');
-const antigravity = JSON.parse(fs.readFileSync(antigravityPath, 'utf8'));
+const antigravityPath = path.join('.antigravity-plugin', 'plugin.json');
+const antigravity = JSON.parse(fs.readFileSync(path.join(output, antigravityPath), 'utf8'));
 antigravity.name = 'connect-http';
 antigravity.displayName = 'Connect HTTP (Local)';
 antigravity.description = 'Connect knowledge, session, and governance workflows through local HTTP MCP.';
-fs.writeFileSync(antigravityPath, `${JSON.stringify(antigravity, null, 2)}\n`);
+gravar(antigravityPath, antigravity);
 
-fs.writeFileSync(path.join(output, 'README.md'), `# Connect HTTP (Local)\n\nThis package uses the same Connect skills and MCP tools as the stdio plugin, over a loopback-only Streamable HTTP endpoint.\n\nStart the server from the repository root and keep it running:\n\n\`\`\`powershell\nnode plugins/connect-http/mcp/connect-mcp.mjs --transport=http --port=3737\n\`\`\`\n\nThe endpoint is \`http://127.0.0.1:3737/mcp\`. The server binds only to localhost and rejects non-local Host and Origin headers. Set \`CONNECT_HOME\` before starting it if the default Connect data directory is not the one you want.\n\nUse this marketplace option only when the agent host cannot launch a stdio MCP server. Do not install both Connect transport variants in the same host session, because they expose the same tools.\n`);
+fs.writeFileSync(path.join(output, 'README.md'), `# Connect HTTP (Local)
+
+This package uses the same Connect skills, hooks, and MCP tools as the stdio plugin, over a loopback-only Streamable HTTP endpoint.
+
+Start the server and keep it running. The launcher provisions the same portable Node runtime as Cowork, so Node on PATH is not required:
+
+\`\`\`
+plugins/connect-http/scripts/connect-mcp --transport=http --port=3737        # macOS/Linux
+plugins\\connect-http\\scripts\\connect-mcp.cmd --transport=http --port=3737   # Windows
+\`\`\`
+
+The endpoint is \`${URL_MCP}\`. The server binds only to localhost and rejects non-local Host and Origin headers. Set \`CONNECT_HOME\` before starting it if the default Connect data directory is not the one you want.
+
+Use this marketplace option only when the agent host cannot launch a stdio MCP server. Do not install both Connect transport variants in the same host session, because they expose the same tools.
+`);
 
 process.stdout.write(`Connect HTTP plugin created: ${output}\n`);

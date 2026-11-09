@@ -1,11 +1,12 @@
 # Connect HTTP (Local)
 
-This package uses the same Connect skills and MCP tools as the stdio plugin, over a loopback-only Streamable HTTP endpoint.
+This package uses the same Connect skills, hooks, and MCP tools as the stdio plugin, over a loopback-only Streamable HTTP endpoint.
 
-Start the server from the repository root and keep it running:
+Start the server and keep it running. The launcher provisions the same portable Node runtime as Cowork, so Node on PATH is not required:
 
-```powershell
-node plugins/connect-http/mcp/connect-mcp.mjs --transport=http --port=3737
+```
+plugins/connect-http/scripts/connect-mcp --transport=http --port=3737        # macOS/Linux
+plugins\connect-http\scripts\connect-mcp.cmd --transport=http --port=3737   # Windows
 ```
 
 The endpoint is `http://127.0.0.1:3737/mcp`. The server binds only to localhost and rejects non-local Host and Origin headers. Set `CONNECT_HOME` before starting it if the default Connect data directory is not the one you want.

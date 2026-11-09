@@ -55,7 +55,8 @@ const resolverNoPacote = (nome, rel) => path.join(dirPacote(nome), String(rel).r
 // Caminhos que um comando/arg referencia dentro do pacote: ${VAR}/x, ./x.
 export function referenciasDePacote(texto) {
   const refs = [];
-  for (const m of String(texto).matchAll(/\$\{(?:CLAUDE_)?PLUGIN_ROOT\}\/([^"'\s]+)/g)) refs.push(m[1]);
+  // Separador `/` ou `\` (o override de Windows do Codex usa barra invertida).
+  for (const m of String(texto).matchAll(/\$\{(?:CLAUDE_)?PLUGIN_ROOT\}[\\/]([^"'\s]+)/g)) refs.push(m[1].replaceAll('\\', '/'));
   for (const m of String(texto).matchAll(/(?:^|[\s"'])\.\/([^"'\s]+)/g)) refs.push(m[1]);
   return refs;
 }
@@ -234,6 +235,10 @@ export function checarIsolamento(pacote, harness) {
 export function entrypointDoHook(pacote, harness) {
   const hooks = lerHooksDoHarness(pacote, harness, []);
   const refs = hooks.flatMap((hk) => referenciasDePacote(hk.command)).filter((r) => r.endsWith('.mjs'));
+  if (!refs.length) {
+    const outras = hooks.flatMap((hk) => Object.values(hk.linhas || {}).flatMap(referenciasDePacote)).filter((r) => r.endsWith('.mjs'));
+    return outras.length ? resolverNoPacote(pacote, outras[outras.length - 1]) : null;
+  }
   return refs.length ? resolverNoPacote(pacote, refs[refs.length - 1]) : null;
 }
 
@@ -309,6 +314,137 @@ export function checarBootstrapNuvem(pacote, harness) {
       return v;
     },
   });
+}
+
+// ---------------------------------------------------------------------------
+// FEATURE: runtime portatil — nenhum host depende de `node` no PATH (0.41.0).
+// Hooks e MCP passam pelo runtime do Cowork: scripts/run-node.* garante o Node portatil
+// em CONNECT_HOME/bin (ou na pasta de dados do host, em sandbox).
+// ---------------------------------------------------------------------------
+const RUNTIME = /scripts[\\/]run-node\.(sh|ps1|bat)\b/;
+const SOS = ['posix', 'windows'];
+
+function launcherChegaNoRuntime(pacote, ref) {
+  const alvo = resolverNoPacote(pacote, ref);
+  if (!fs.existsSync(alvo) || !/run-node/.test(fs.readFileSync(alvo, 'utf8'))) return false;
+  // Launcher sem extensao (POSIX) precisa do irmao .cmd: o host do Windows resolve pelo PATHEXT.
+  if (!path.extname(alvo)) return fs.existsSync(`${alvo}.cmd`) && /run-node\.bat/.test(fs.readFileSync(`${alvo}.cmd`, 'utf8'));
+  return true;
+}
+
+export function checarRuntimePortatil(pacote, harness) {
+  const v = [];
+  const h = HARNESSES[harness];
+  const hooks = lerHooksDoHarness(pacote, harness, v);
+  const cobre = Object.fromEntries(SOS.map((so) => [so, false]));
+  for (const hk of hooks) {
+    for (const so of SOS) {
+      const l = hk.linhas?.[so];
+      if (!l) continue;
+      if (RUNTIME.test(l)) cobre[so] = true;
+      else v.push(`${pacote}/${harness}: hook (${so}) nao passa pelo runtime portatil (scripts/run-node.*): ${l}`);
+    }
+  }
+  if (hooks.length) for (const so of SOS) if (!cobre[so]) v.push(`${pacote}/${harness}: nenhum hook de SessionStart para ${so} pelo runtime portatil`);
+
+  if (VARIANTES[PACOTES[pacote].variante].transporte !== 'stdio') return v;
+  const rel = h.mcp(lerManifesto(pacote, harness, []) || {});
+  const servidor = (typeof rel === 'string' && tentarJson(resolverNoPacote(pacote, rel), [], ''))?.mcpServers?.[SERVIDOR_MCP];
+  if (!servidor) return v; // ausencia ja e violacao da feature "mcp"
+  if (/^node(\.exe)?$/i.test(String(servidor.command))) {
+    v.push(`${pacote}/${harness}: MCP chama "node" direto — exige Node no PATH; use o launcher do runtime portatil`);
+  }
+  const refs = referenciasDePacote([servidor.command, ...(servidor.args || [])].join(' '));
+  if (!refs.some((r) => launcherChegaNoRuntime(pacote, r))) {
+    v.push(`${pacote}/${harness}: MCP nao sobe por launcher que chegue ao runtime portatil (refs: ${refs.join(', ') || 'nenhuma'})`);
+  }
+  return v;
+}
+
+// Sandbox com o runtime portatil ja "instalado" (hard link do Node que roda o teste):
+// prova que o caminho usado e o do CONNECT_HOME, sem baixar 70 MB a cada execucao.
+function sandboxComRuntime(prefixo, base = path.join(RAIZ, '.test-tmp')) {
+  fs.mkdirSync(base, { recursive: true });
+  const raiz = fs.mkdtempSync(path.join(base, prefixo));
+  const home = path.join(raiz, 'home');
+  const bin = path.join(home, 'Connect', 'bin');
+  fs.mkdirSync(bin, { recursive: true });
+  const node = path.join(bin, process.platform === 'win32' ? 'node.exe' : 'node');
+  try { fs.linkSync(process.execPath, node); } catch { fs.copyFileSync(process.execPath, node); fs.chmodSync(node, 0o755); }
+  const env = Object.fromEntries(Object.entries(process.env)
+    .filter(([k]) => !k.startsWith('CONNECT_') && !/^(CLAUDE_CODE_REMOTE|PLUGIN_DATA|COPILOT_PLUGIN_DATA|CLAUDE_PLUGIN_DATA)$/.test(k)));
+  Object.assign(env, { HOME: home, USERPROFILE: home, CONNECT_HOME: path.join(home, 'Connect'), NO_COLOR: '1' });
+  return { raiz, env, limpar: () => fs.rmSync(raiz, { recursive: true, force: true, maxRetries: 3 }) };
+}
+
+const SO_ATUAL = process.platform === 'win32' ? 'windows' : 'posix';
+const expandirRaiz = (texto, raiz) => String(texto).replaceAll('${PLUGIN_ROOT}', raiz).replaceAll('${CLAUDE_PLUGIN_ROOT}', raiz);
+
+// Executa a linha do SO atual do jeito que o host executa (contrato: `shell`).
+function executarComoHost(harness, hk, { raizPlugin, cwd, env, input }) {
+  const modo = HARNESSES[harness].shell?.[SO_ATUAL];
+  const linhaSo = expandirRaiz(hk.linhas[SO_ATUAL], raizPlugin);
+  const opcoes = { cwd, env: { ...env, PLUGIN_ROOT: raizPlugin, CLAUDE_PLUGIN_ROOT: raizPlugin }, input, encoding: 'utf8', timeout: 60_000, windowsHide: true };
+  if (modo === 'exec') return spawnSync(expandirRaiz(hk.exec.command, raizPlugin), hk.exec.args.map((a) => expandirRaiz(a, raizPlugin)), opcoes);
+  if (modo === 'sh') return spawnSync('/bin/sh', ['-c', linhaSo], opcoes);
+  if (modo === 'cmd') return spawnSync(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', `"${linhaSo}"`], { ...opcoes, windowsVerbatimArguments: true });
+  if (modo === 'powershell') return spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', linhaSo], opcoes);
+  return { status: null, error: new Error(`modo de shell desconhecido: ${modo}`) };
+}
+
+// FEATURE: o hook do SO atual roda pela linha REAL do host (wrapper + runtime portatil)
+// e injeta o bootstrap — nao so o .mjs chamado direto pelo teste.
+export function checarHookPeloRuntime(pacote, harness) {
+  const h = HARNESSES[harness];
+  const hk = lerHooksDoHarness(pacote, harness, []).find((x) => x.linhas?.[SO_ATUAL] && (x.exec || h.shell?.[SO_ATUAL] !== 'exec'));
+  if (!hk) return [`${pacote}/${harness}: nenhum hook de SessionStart para ${SO_ATUAL}`];
+  const sb = sandboxComRuntime(`arch-rt-${pacote}-${harness}-`);
+  try {
+    const raizPlugin = dirPacote(pacote);
+    const r = executarComoHost(harness, hk, {
+      raizPlugin, cwd: h.cwdDoHook === 'plugin' ? raizPlugin : sb.raiz, env: sb.env, input: JSON.stringify(h.payload()),
+    });
+    if (r.status !== 0) return [`${pacote}/${harness}: hook (${SO_ATUAL}) saiu com ${r.status} — ${r.stderr || r.error?.message}`];
+    const v = [];
+    if (/node do PATH|runtime indisponivel/i.test(r.stderr || '')) v.push(`${pacote}/${harness}: hook nao usou o runtime portatil — ${r.stderr.trim()}`);
+    let contexto = '';
+    try { contexto = h.lerSaida(r.stdout) || ''; } catch (e) { return [...v, `${pacote}/${harness}: saida fora do formato do host pelo runtime — ${e.message}; stdout=${String(r.stdout).slice(0, 200)}`]; }
+    if (!contexto.includes(MARCADOR_BOOTSTRAP)) v.push(`${pacote}/${harness}: pelo runtime portatil o hook nao injetou o bootstrap`);
+    return v;
+  } finally {
+    sb.limpar();
+  }
+}
+
+// PACOTE: o launcher do MCP sobe o servidor pelo runtime portatil e responde ao handshake.
+export function checarLauncherMcp(pacote) {
+  const base = path.join(dirPacote(pacote), 'scripts', 'connect-mcp');
+  const v = [];
+  if (!fs.existsSync(base) || !fs.existsSync(`${base}.cmd`)) return [`${pacote}: scripts/connect-mcp e scripts/connect-mcp.cmd sao obrigatorios`];
+  // O host executa o arquivo POSIX direto: sem modo 755 no git, nao sobe no macOS/Linux.
+  const rel = posix(path.relative(RAIZ, base));
+  const modo = spawnSync('git', ['ls-files', '-s', rel], { cwd: RAIZ, encoding: 'utf8' });
+  if (modo.status === 0 && modo.stdout.trim() && !modo.stdout.startsWith('100755')) v.push(`${pacote}: ${rel} precisa de modo 755 no git (git update-index --chmod=+x)`);
+
+  const sb = sandboxComRuntime(`arch-mcp-${pacote}-`);
+  try {
+    const input = [
+      { jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18' } },
+      { jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} },
+    ].map((m) => JSON.stringify(m)).join('\n') + '\n';
+    const opcoes = { cwd: sb.raiz, env: sb.env, input, encoding: 'utf8', timeout: 60_000, windowsHide: true };
+    const r = process.platform === 'win32'
+      ? spawnSync(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', `""${base}.cmd""`], { ...opcoes, windowsVerbatimArguments: true })
+      : spawnSync('/bin/sh', [base], opcoes);
+    if (/node do PATH|runtime indisponivel/i.test(r.stderr || '')) v.push(`${pacote}: o launcher nao usou o runtime portatil — ${r.stderr.trim()}`);
+    const respostas = String(r.stdout || '').trim().split(/\r?\n/).filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return { invalida: l }; } });
+    if (respostas.some((x) => x.invalida)) v.push(`${pacote}: o launcher escreveu fora do protocolo no stdout: ${respostas.find((x) => x.invalida).invalida.slice(0, 120)}`);
+    if (respostas.find((x) => x.id === 1)?.result?.serverInfo?.name !== SERVIDOR_MCP) v.push(`${pacote}: o launcher nao respondeu ao initialize — status ${r.status}, stderr ${String(r.stderr).slice(0, 300)}`);
+    if (!respostas.find((x) => x.id === 2)?.result?.tools?.length) v.push(`${pacote}: o launcher nao listou tools`);
+  } finally {
+    sb.limpar();
+  }
+  return v;
 }
 
 // ---------------------------------------------------------------------------
@@ -407,13 +543,15 @@ export const FEATURES = {
   isolamento: checarIsolamento,
   bootstrap: checarBootstrap,
   'bootstrap na nuvem': checarBootstrapNuvem,
+  'runtime portatil': checarRuntimePortatil,
+  'hook pelo runtime': checarHookPeloRuntime,
   'artefato gerado': checarArtefatoGerado,
 };
 
 export function verificarTudo() {
   const v = [...checarMarketplaces()];
   for (const pacote of Object.keys(PACOTES)) {
-    v.push(...checarSkills(pacote), ...checarInventario(pacote));
+    v.push(...checarSkills(pacote), ...checarInventario(pacote), ...checarLauncherMcp(pacote));
     for (const harness of Object.keys(HARNESSES)) {
       for (const fn of Object.values(FEATURES)) v.push(...fn(pacote, harness));
     }

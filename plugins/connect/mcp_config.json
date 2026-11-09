@@ -1,8 +1,7 @@
 {
   "mcpServers": {
     "connect": {
-      "command": "node",
-      "args": ["${PLUGIN_ROOT}/mcp/connect-mcp.mjs"]
+      "command": "${PLUGIN_ROOT}/scripts/connect-mcp"
     }
   }
 }

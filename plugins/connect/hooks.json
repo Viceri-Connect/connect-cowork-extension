@@ -3,8 +3,13 @@
     "SessionStart": [
       {
         "type": "command",
-        "command": "node ./hooks/session-start-antigravity.mjs",
-        "timeout": 30
+        "command": "powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/run-node.ps1 ./hooks/session-start-antigravity.mjs",
+        "timeout": 120
+      },
+      {
+        "type": "command",
+        "command": "/bin/sh ./scripts/run-node.sh ./hooks/session-start-antigravity.mjs",
+        "timeout": 120
       }
     ]
   }
