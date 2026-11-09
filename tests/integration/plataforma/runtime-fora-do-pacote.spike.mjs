@@ -15,7 +15,7 @@
 //   Esta distincao esta escrita porque a norma D163 exige: conclusao tirada de spike
 //   vale so no caminho que o spike percorreu.
 //
-//   node tests/spike-runtime-fora-do-pacote.mjs
+//   node tests/integration/plataforma/runtime-fora-do-pacote.spike.mjs
 
 import assert from 'node:assert/strict';
 import fs from 'node:fs';

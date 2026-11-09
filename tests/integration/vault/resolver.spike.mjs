@@ -1,9 +1,9 @@
-// tests/spike-resolver.mjs
+// tests/integration/vault/resolver.spike.mjs
 // Spike do `resolver` por conceito: registro DERIVADO de manifestos PUROS (sem
 // path/url, D35) -> path local (connect.config.json.subVaults) -> mount.
 // Roda no Linux via symlink (mesma logica do junction no Windows). Zero-dep.
 //
-//   node tests/spike-resolver.mjs
+//   node tests/integration/vault/resolver.spike.mjs
 //
 // Cria uma matriz temporaria com um MANIFESTO puro (nota `connect.md` cujo
 // frontmatter declara `tipo`+`externo:true`+`criado-por`/`criado-em`), resolve
@@ -18,7 +18,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { resolver, lerRegistro, casar, parseManifesto } from '../plugins/connect/lib/resolver.mjs';
+import { resolver, lerRegistro, casar, parseManifesto } from '../../../plugins/connect/lib/resolver.mjs';
 
 let pass = 0, fail = 0;
 const ok = (cond, msg) => { if (cond) { pass++; } else { fail++; console.error('  ✗', msg); } };

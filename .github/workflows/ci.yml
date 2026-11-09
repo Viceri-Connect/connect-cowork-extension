@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test (${{ matrix.os }}, node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    # O codigo de junction/symlink/OneDrive muda por SO; macOS entra como informativo ate
+    # a primeira rodada verde provar que o suite inteiro passa la.
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        node: ['20.11.1', '22']
+        experimental: [false]
+        include:
+          - os: macos-latest
+            node: '20.11.1'
+            experimental: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run test:ci
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: junit-${{ matrix.os }}-node${{ matrix.node }}
+          path: reports/junit.xml
+          if-no-files-found: ignore
+
+  bundle:
+    name: bundle .plugin
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/build-plugin.sh dist
+      - name: plugin.json na raiz do zip
+        run: unzip -Z1 dist/connect.plugin | grep -x '.claude-plugin/plugin.json'
+      - name: o bundle nao carrega estado local nem o ferramental de teste
+        run: |
+          if unzip -Z1 dist/connect.plugin | grep -E '(^|/)(node_modules|tests|connect\.config\.json|sessions)(/|$)'; then
+            echo "bundle contem arquivo que nao deveria"; exit 1
+          fi
+
+  copilot-bundle:
+    name: bundle Copilot Agent Plugin
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build:copilot -- dist/copilot
+      - name: required Copilot files
+        run: |
+          test -f dist/copilot/plugin.json
+          test -f dist/copilot/mcp.json
+          test -f dist/copilot/skills/cnct-nucleo-sessao/SKILL.md
+          test -f dist/copilot/mcp/connect-mcp.mjs

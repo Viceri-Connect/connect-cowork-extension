@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// tests/spike-mecanismo.mjs
+// tests/integration/sessao/mecanismo.spike.mjs
 // Prova o mecanismo do iniciarSessao() de ponta a ponta, sem Cowork:
 //   - cria uma matriz e um cerebro pessoal falsos (com a mesma forma real)
 //   - roda iniciarSessao() apontando para eles
@@ -14,8 +14,8 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { iniciarSessao } from '../plugins/connect/lib/session.mjs';
-import { renderContexto } from '../plugins/connect/lib/render.mjs';
+import { iniciarSessao } from '../../../plugins/connect/lib/session.mjs';
+import { renderContexto } from '../../../plugins/connect/lib/render.mjs';
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'connect-spike-'));
 const home = path.join(tmp, 'connect-home');          // {CONNECT_HOME} (fora do "OneDrive")

@@ -141,3 +141,21 @@ node tests/handshake-mcp.mjs       # handshake do MCP + iniciar_sessao
 
 Ver `docs/POC-NOTES.md` para o spike das premissas 1–3 no host Windows/Cowork.
 
+
+## Testes
+
+Ferramental de desenvolvimento na raiz (não entra no bundle `.plugin`, que empacota só `plugins/connect/`).
+
+```
+npm ci            # uma vez
+npm test          # tudo: unitários + integração
+npm run test:unit
+npm run test:integration
+npm run test:e2e
+npm run test:watch
+npm run build:copilot
+```
+
+- `tests/unit/*.test.mjs` — testes nativos do Vitest, um arquivo por módulo de `plugins/connect/lib/`.
+- `tests/integration/<domínio>/*.spike.mjs` — os spikes originais, agrupados por domínio (`sessao`, `vault`, `sincronizacao`, `plataforma`, `mcp`). O `tests/integration/spikes.test.mjs` roda cada um como subprocesso **em um perfil de usuário descartável** (`HOME`, `USERPROFILE` e `CONNECT_HOME` apontam para um diretório temporário em `.test-tmp/`; variáveis `CONNECT_*` do seu ambiente são removidas), então nenhum teste toca o seu `~/Connect` nem seus vaults reais. Migrar um spike para teste nativo = mover a lógica para `tests/unit/` e apagar o `.spike.mjs`.
+- CI (`.github/workflows/ci.yml`): Windows e Linux (Node 20.11.1 — o do runtime embarcado — e 22), macOS informativo, e checagens dos bundles Cowork e Agent Plugins.

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// tests/handshake-mcp.mjs
+// tests/integration/mcp/handshake.spike.mjs
 // Sobe o servidor MCP como processo filho, faz initialize / tools/list /
 // tools/call(iniciar_sessao) e valida as respostas. Encerra o servidor no fim.
 
@@ -8,7 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const server = path.join(__dirname, '..', 'plugins', 'connect', 'mcp', 'connect-mcp.mjs');
+const server = path.join(__dirname, '..', '..', '..', 'plugins', 'connect', 'mcp', 'connect-mcp.mjs');
 
 const child = spawn('node', [server], { stdio: ['pipe', 'pipe', 'inherit'], env: process.env });
 

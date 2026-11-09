@@ -1,4 +1,4 @@
-// tests/spike-entrega-contexto.mjs
+// tests/integration/sessao/entrega-contexto.spike.mjs
 // Cobre as quatro correcoes da 0.13.0, todas nascidas de medicao em sessao real
 // (dogfooding de 23/08) e nao de hipotese:
 //
@@ -7,16 +7,16 @@
 //   3. Camada 0 do operador na casa canonica + fallback alcancavel          (P75/P76)
 //   4. concessao de acesso e estado zero do operador como secao estrutural  (P90/D105)
 //
-//   node tests/spike-entrega-contexto.mjs
+//   node tests/integration/sessao/entrega-contexto.spike.mjs
 
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { iniciarSessao } from '../plugins/connect/lib/session.mjs';
-import { defaultConnectHome, homeLegado, migrarHomeLegado } from '../plugins/connect/lib/config-local.mjs';
-import { montarL1Pessoal } from '../plugins/connect/lib/matriz.mjs';
-import { criarEntrega } from '../plugins/connect/lib/entrega.mjs';
-import { renderContexto } from '../plugins/connect/lib/render.mjs';
+import { iniciarSessao } from '../../../plugins/connect/lib/session.mjs';
+import { defaultConnectHome, homeLegado, migrarHomeLegado } from '../../../plugins/connect/lib/config-local.mjs';
+import { montarL1Pessoal } from '../../../plugins/connect/lib/matriz.mjs';
+import { criarEntrega } from '../../../plugins/connect/lib/entrega.mjs';
+import { renderContexto } from '../../../plugins/connect/lib/render.mjs';
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.error('  ✗', m); } };

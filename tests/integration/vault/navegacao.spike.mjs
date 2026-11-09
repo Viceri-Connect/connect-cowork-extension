@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// tests/spike-navegacao.mjs
+// tests/integration/vault/navegacao.spike.mjs
 // Spike do CONTRATO DE NAVEGACAO (o interior do vault) — 0.12.0.
 //
 // Premissas que este spike mata:
@@ -17,9 +17,9 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { lerCarta, validarCarta, resolverEntrada, SECOES_OBRIGATORIAS, ORCAMENTO_TOKENS_DELTA } from '../plugins/connect/lib/navegacao.mjs';
-import { montarL1 } from '../plugins/connect/lib/matriz.mjs';
-import { blocoCarta } from '../plugins/connect/lib/render.mjs';
+import { lerCarta, validarCarta, resolverEntrada, SECOES_OBRIGATORIAS, ORCAMENTO_TOKENS_DELTA } from '../../../plugins/connect/lib/navegacao.mjs';
+import { montarL1 } from '../../../plugins/connect/lib/matriz.mjs';
+import { blocoCarta } from '../../../plugins/connect/lib/render.mjs';
 
 let passou = 0, falhou = 0;
 const ok = (cond, nome) => {

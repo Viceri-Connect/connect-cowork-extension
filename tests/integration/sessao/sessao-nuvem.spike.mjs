@@ -1,4 +1,4 @@
-// tests/spike-sessao-nuvem.mjs
+// tests/integration/sessao/sessao-nuvem.spike.mjs
 // 0.40.0 — Connect numa sessao na NUVEM: agente e hook no servidor, MCP no PC do
 // operador, chamado pela ponte do app desktop. Medido em 07/11:
 //   (a) o hook rodava no servidor com CONNECT_HOME vazio, diagnosticava "1o uso" e
@@ -9,19 +9,19 @@
 // Este spike trava as duas correcoes: o hook orienta em vez de diagnosticar, e a
 // primeira entrega de carta e vinculo vai nos DOIS canais (dedup a partir da segunda).
 //
-//   node tests/spike-sessao-nuvem.mjs
+//   node tests/integration/sessao/sessao-nuvem.spike.mjs
 
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { execucaoNaNuvem } from '../plugins/connect/lib/ambiente.mjs';
-import { renderResolucao, renderVinculoOperador, renderSessaoNuvem } from '../plugins/connect/lib/render.mjs';
-import { gravarConfig, registrarSubVaultLocal } from '../plugins/connect/lib/session.mjs';
+import { execucaoNaNuvem } from '../../../plugins/connect/lib/ambiente.mjs';
+import { renderResolucao, renderVinculoOperador, renderSessaoNuvem } from '../../../plugins/connect/lib/render.mjs';
+import { gravarConfig, registrarSubVaultLocal } from '../../../plugins/connect/lib/session.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const raiz = path.join(__dirname, '..', 'plugins', 'connect');
+const raiz = path.join(__dirname, '..', '..', '..', 'plugins', 'connect');
 
 let pass = 0, fail = 0;
 const ok = (cond, msg) => { if (cond) pass++; else { fail++; console.error('  ✗', msg); } };

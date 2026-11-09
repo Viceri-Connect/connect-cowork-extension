@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// tests/spike-multiplataforma.mjs
+// tests/integration/plataforma/multiplataforma.spike.mjs
 // P175 (0.37.0): o arranque do plugin sobe com O MESMO pacote no Windows e no macOS.
 //
-//   node tests/spike-multiplataforma.mjs
+//   node tests/integration/plataforma/multiplataforma.spike.mjs
 //
 // Premissas que este spike mata:
 //   1. O `.mcp.json` nao depende de comando por SO: `command` e `${ComSpec:-/bin/sh}`
@@ -29,7 +29,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const REPO = path.join(__dirname, '..');
+const REPO = path.join(__dirname, '..', '..', '..');
 const ROOT = path.join(REPO, 'plugins', 'connect');
 const WIN = process.platform === 'win32';
 

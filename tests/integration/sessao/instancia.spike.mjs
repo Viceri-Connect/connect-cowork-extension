@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// tests/spike-instancia.mjs
+// tests/integration/sessao/instancia.spike.mjs
 // CONNECT-E6-01 (0.39.0): primeiro uso por codigo de instancia.
 //
-//   node tests/spike-instancia.mjs
+//   node tests/integration/sessao/instancia.spike.mjs
 //
 // Premissas que este spike mata (criterios de aceite da US, rascunho):
 //   CA1. Maquina sem a Matriz, OneDrive com a conta da empresa: o codigo resulta na
@@ -23,7 +23,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   codificarCodigo, decodificarCodigo, extrairCodigo, gerarCodigoInstancia, configurarPorCodigo,
-} from '../plugins/connect/lib/instancia.mjs';
+} from '../../../plugins/connect/lib/instancia.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 let pass = 0, fail = 0;
@@ -185,7 +185,7 @@ ok(g.status === 'dominio-indefinido', 'dois dominios logados: pede `dominio`');
 
 // --- CA6 ---------------------------------------------------------------------------------
 console.log('\n[instancia] CA6 — nada da instancia no pacote');
-const ROOT = path.join(__dirname, '..', 'plugins', 'connect');
+const ROOT = path.join(__dirname, '..', '..', '..', 'plugins', 'connect');
 const textos = [];
 const varrer = (d) => {
   for (const n of fs.readdirSync(d, { withFileTypes: true })) {

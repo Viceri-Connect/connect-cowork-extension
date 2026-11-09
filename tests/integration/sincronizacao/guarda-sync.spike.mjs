@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// tests/spike-guarda-sync.mjs
+// tests/integration/sincronizacao/guarda-sync.spike.mjs
 // Spike da TRAVA DE INTEGRIDADE do mount — incidente de 09/09/2026, medido em 17/09.
 //
 // O que aconteceu: uma resolucao de heranca rodou com `workspaceDir` = raiz da
@@ -22,9 +22,9 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { mount } from '../plugins/connect/lib/mount.mjs';
-import { detectarSincronizacao, ehRaizDeVault, assertDestinoDeMountSeguro } from '../plugins/connect/lib/sincronizado.mjs';
-import { marcarInjetado, lerRegistro } from '../plugins/connect/lib/heranca.mjs';
+import { mount } from '../../../plugins/connect/lib/mount.mjs';
+import { detectarSincronizacao, ehRaizDeVault, assertDestinoDeMountSeguro } from '../../../plugins/connect/lib/sincronizado.mjs';
+import { marcarInjetado, lerRegistro } from '../../../plugins/connect/lib/heranca.mjs';
 
 let passou = 0, falhou = 0;
 const ok = (cond, nome) => {

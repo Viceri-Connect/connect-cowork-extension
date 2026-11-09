@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// tests/spike-onedrive.mjs
+// tests/integration/sincronizacao/onedrive.spike.mjs
 // Spike da ADR-23: origem na nuvem no manifesto -> sync -> caminho LIDO no catalogo.
 //
-//   node tests/spike-onedrive.mjs
+//   node tests/integration/sincronizacao/onedrive.spike.mjs
 //
 // Premissas que este spike mata:
 //   1. `origem` malformada nunca vira link: provedor desconhecido, GUID errado e
@@ -25,9 +25,9 @@ import os from 'node:os';
 import path from 'node:path';
 import {
   lerOrigem, montarLinkSync, parseCatalogoIni, localizarNoCatalogo, normalizarGuid, tokenizar,
-} from '../plugins/connect/lib/onedrive.mjs';
-import { sincronizarSubvault, catalogoSync } from '../plugins/connect/lib/sincronizar.mjs';
-import { resolver } from '../plugins/connect/lib/resolver.mjs';
+} from '../../../plugins/connect/lib/onedrive.mjs';
+import { sincronizarSubvault, catalogoSync } from '../../../plugins/connect/lib/sincronizar.mjs';
+import { resolver } from '../../../plugins/connect/lib/resolver.mjs';
 
 let pass = 0, fail = 0;
 const ok = (cond, msg) => { if (cond) { pass++; } else { fail++; console.error('  ✗', msg); } };
@@ -88,7 +88,7 @@ const catBiblioteca = [{ tipo: 'biblioteca', listaId: G.lista, mountPoint: local
 ok(localizarNoCatalogo(catBiblioteca, r1.itens[0]).caminho === path.join(local('Acervo - Documentos'), 'Connect', 'Marketing'), 'biblioteca inteira sincronizada: pasta dentro dela');
 
 // UTF-16LE com BOM, como o cliente grava — pelo leitor de disco
-import { lerCatalogoOneDrive } from '../plugins/connect/lib/onedrive.mjs';
+import { lerCatalogoOneDrive } from '../../../plugins/connect/lib/onedrive.mjs';
 const appdata = path.join(base, 'appdata');
 const dirConta = path.join(appdata, 'Microsoft', 'OneDrive', 'settings', 'Business1');
 fs.mkdirSync(dirConta, { recursive: true });
@@ -212,7 +212,7 @@ ok(h.links[0]?.includes('userEmail=b%40y.com'), 'email por parametro desempata')
 h = hostFalso({ catalogos: [cat], contas: [] });
 s = await sincronizarSubvault({ conceito: 'marketing', host: h, ...cfg });
 ok(s.status === 'sincronizado', 'ja sincronizado nao exige conta (catalogo vem antes do e-mail)');
-import { parseEmailsReg } from '../plugins/connect/lib/onedrive.mjs';
+import { parseEmailsReg } from '../../../plugins/connect/lib/onedrive.mjs';
 const regOut = '\r\nHKEY_CURRENT_USER\\Software\\Microsoft\\OneDrive\\Accounts\\Business1\r\n    UserEmail    REG_SZ    op@contoso.com\r\n\r\nHKEY_CURRENT_USER\\Software\\Microsoft\\OneDrive\\Accounts\\Personal\r\n    UserEmail    REG_SZ    pessoal@live.com\r\n\r\nFim da pesquisa: 2 correspondência(s) encontrada(s).\r\n';
 const em = parseEmailsReg(regOut);
 ok(em.length === 1 && em[0].email === 'op@contoso.com', 'reg query: so contas Business, conta pessoal fora');
@@ -249,8 +249,8 @@ const r8b = resolver({ conceito: 'legado', workspaceDir: path.join(base, 'ws'), 
 ok(r8b.sincronizavel === false && /registrar_subvault_local/.test(r8b.avisos.join(' ')), 'resolver: sem origem segue mandando perguntar');
 
 // --- 9. captura passiva (emenda de 06/10) -----------------------------------
-import { capturarOrigem, origemEmYaml } from '../plugins/connect/lib/onedrive.mjs';
-import { parseFrontmatter } from '../plugins/connect/lib/frontmatter.mjs';
+import { capturarOrigem, origemEmYaml } from '../../../plugins/connect/lib/onedrive.mjs';
+import { parseFrontmatter } from '../../../plugins/connect/lib/frontmatter.mjs';
 
 // site-titulo nomeia a pasta local: o link usa o titulo declarado, nao o slug
 const comTitulo = lerOrigem([{ ...boa, 'site-titulo': 'Acervo Contoso' }]).itens[0];

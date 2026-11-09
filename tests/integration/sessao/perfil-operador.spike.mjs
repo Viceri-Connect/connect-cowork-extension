@@ -1,14 +1,14 @@
-// tests/spike-perfil-operador.mjs
+// tests/integration/sessao/perfil-operador.spike.mjs
 // Prova que o perfil do operador gerido no CONNECT_HOME torna o vault pessoal
 // OPCIONAL: identidade restaurada sem nenhum vault Obsidian pessoal montado.
 // Decisao 2026-08-17 (perfil no CONNECT_HOME; vault pessoal = enriquecimento).
 //
-//   node tests/spike-perfil-operador.mjs
+//   node tests/integration/sessao/perfil-operador.spike.mjs
 
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { iniciarSessao } from '../plugins/connect/lib/session.mjs';
+import { iniciarSessao } from '../../../plugins/connect/lib/session.mjs';
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.error('  ✗', m); } };

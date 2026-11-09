@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// tests/spike-governanca.mjs
+// tests/integration/vault/governanca.spike.mjs
 // Spike do ARQUIVO DE GOVERNANCA na raiz do vault — ADR-18.
 //
 // Premissas que este spike mata:
@@ -30,10 +30,10 @@ import {
   precisaAtualizar,
   slugVault,
   NOME_ARQUIVO_GOVERNANCA,
-} from '../plugins/connect/lib/governanca.mjs';
-import { REGRAS_DURAS } from '../plugins/connect/lib/regras.mjs';
-import { montarL1 } from '../plugins/connect/lib/matriz.mjs';
-import { blocoGovernanca, blocoCanalInjetado, renderContextoCurto } from '../plugins/connect/lib/render.mjs';
+} from '../../../plugins/connect/lib/governanca.mjs';
+import { REGRAS_DURAS } from '../../../plugins/connect/lib/regras.mjs';
+import { montarL1 } from '../../../plugins/connect/lib/matriz.mjs';
+import { blocoGovernanca, blocoCanalInjetado, renderContextoCurto } from '../../../plugins/connect/lib/render.mjs';
 
 let passou = 0, falhou = 0;
 const ok = (cond, nome) => {

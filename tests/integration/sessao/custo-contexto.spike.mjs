@@ -1,4 +1,4 @@
-// tests/spike-custo-contexto.mjs
+// tests/integration/sessao/custo-contexto.spike.mjs
 // Cobre os tres cortes da 0.20.0, todos nascidos de MEDICAO em sessao real
 // (dogfooding de 26/08, 8a sessao) e nao de hipotese:
 //
@@ -14,14 +14,14 @@
 // Invariante que este arquivo protege: NENHUM dos cortes pode reintroduzir ausencia
 // de aviso. Economia que apaga governanca nao e economia, e regressao silenciosa.
 //
-//   node tests/spike-custo-contexto.mjs
+//   node tests/integration/sessao/custo-contexto.spike.mjs
 
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { iniciarSessao } from '../plugins/connect/lib/session.mjs';
-import { renderContexto, renderContextoCurto, renderResolucao } from '../plugins/connect/lib/render.mjs';
-import { criarEntrega } from '../plugins/connect/lib/entrega.mjs';
+import { iniciarSessao } from '../../../plugins/connect/lib/session.mjs';
+import { renderContexto, renderContextoCurto, renderResolucao } from '../../../plugins/connect/lib/render.mjs';
+import { criarEntrega } from '../../../plugins/connect/lib/entrega.mjs';
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.error('  ✗', m); } };

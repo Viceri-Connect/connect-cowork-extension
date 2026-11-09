@@ -1,4 +1,4 @@
-// tests/spike-heranca.mjs
+// tests/integration/vault/heranca.spike.mjs
 // Herança de processo (contrato-navegacao.md §9) e as métricas M1..M7 (§9.4).
 //
 // Por que este arquivo existe: as sete métricas passaram da v0.4.0 à v0.5.0 de
@@ -6,17 +6,17 @@
 // verificação que depende de disciplina. Deixar o mecanismo que substitui a
 // disciplina sem teste seria repetir a classe do defeito num andar acima.
 //
-// Zero dependências. Roda: node tests/spike-heranca.mjs
+// Zero dependências. Roda: node tests/integration/vault/heranca.spike.mjs
 
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { lerCarta } from '../plugins/connect/lib/navegacao.mjs';
-import { resolverHeranca, lerCartaProcesso, caminhoCartaProcesso } from '../plugins/connect/lib/heranca.mjs';
-import { parseTabelaAlcance, lerDeclaracoes, corpoSemAlcance, resolverCorrente } from '../plugins/connect/lib/alcance.mjs';
-import { medirVault } from '../plugins/connect/lib/metricas.mjs';
-import { parseFrontmatter, estimarTokens } from '../plugins/connect/lib/frontmatter.mjs';
-import { blocoHeranca } from '../plugins/connect/lib/render.mjs';
+import { lerCarta } from '../../../plugins/connect/lib/navegacao.mjs';
+import { resolverHeranca, lerCartaProcesso, caminhoCartaProcesso } from '../../../plugins/connect/lib/heranca.mjs';
+import { parseTabelaAlcance, lerDeclaracoes, corpoSemAlcance, resolverCorrente } from '../../../plugins/connect/lib/alcance.mjs';
+import { medirVault } from '../../../plugins/connect/lib/metricas.mjs';
+import { parseFrontmatter, estimarTokens } from '../../../plugins/connect/lib/frontmatter.mjs';
+import { blocoHeranca } from '../../../plugins/connect/lib/render.mjs';
 
 let okCount = 0;
 let failCount = 0;

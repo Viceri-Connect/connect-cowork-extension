@@ -15,13 +15,13 @@
 //   - o acionavel e as regras duras ficam nos primeiros 2.000 caracteres (a previa
 //     que sobrevive se o teto um dia for estourado).
 //
-// Rodar: node tests/spike-presenca-contexto.mjs
+// Rodar: node tests/integration/sessao/presenca-contexto.spike.mjs
 
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { renderContexto, renderContextoCurto, TETO_INJETADO } from '../plugins/connect/lib/render.mjs';
+import { renderContexto, renderContextoCurto, TETO_INJETADO } from '../../../plugins/connect/lib/render.mjs';
 
 const TETO_CLIENTE = 10000;
 

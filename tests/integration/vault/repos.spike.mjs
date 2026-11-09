@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// tests/spike-repos.mjs
+// tests/integration/vault/repos.spike.mjs
 // Spike do primitivo de REPOSITORIO DE CODIGO (P64) — 0.12.0.
 //
 // Premissas que este spike mata:
@@ -14,7 +14,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { resolverRepo, registrarRepoLocal, listarRepos } from '../plugins/connect/lib/repos.mjs';
+import { resolverRepo, registrarRepoLocal, listarRepos } from '../../../plugins/connect/lib/repos.mjs';
 
 let passou = 0, falhou = 0;
 const ok = (cond, nome) => {
@@ -35,6 +35,8 @@ console.log(`\nspike-repos — sandbox: ${tmp}\n`);
 const r1 = resolverRepo({ home, conceito: 'connect-site' });
 ok(r1.status === 'local-nao-configurado', 'repo desconhecido: local-nao-configurado');
 ok(/pergunte|Nunca procure/i.test(r1.avisos.join(' ')), 'aviso manda perguntar, e proibe procurar');
+ok(r1.home === home && /VAZIA/.test(r1.avisos.join(' ')) && /CONNECT_HOME/.test(r1.avisos.join(' ')),
+  'tabela vazia: aviso nomeia o home lido e manda conferir o CONNECT_HOME do host');
 
 // 2. grava e resolve
 const g = registrarRepoLocal({ home, conceito: 'connect-site', caminho: repoOk });
@@ -65,6 +67,8 @@ ok(amb2.status === 'ambigua' && amb2.candidatos.length === 2, 'termo que casa 2 
 const naoReg = resolverRepo({ home, conceito: 'connect-web-frontend' });
 ok(naoReg.status === 'local-nao-configurado', 'nome NAO registrado nao resolve pro repo de nome parecido');
 ok(resolverRepo({ home, conceito: 'we' }).status === 'local-nao-configurado', 'termo com menos de 3 letras nao dispara fuzzy');
+ok(naoReg.parecidos.includes('connect-web') && !('caminho' in naoReg),
+  'nao registrado: sugere os registrados mais proximos, mas NAO devolve caminho');
 
 // 3. path invalido nao entra
 const gi = registrarRepoLocal({ home, conceito: 'fantasma', caminho: path.join(tmp, 'nao-existe') });

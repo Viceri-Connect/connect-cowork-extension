@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// tests/spike-config-guiada.mjs
+// tests/integration/sessao/config-guiada.spike.mjs
 // Prova o fluxo de 1o uso sem env pre-configurada:
 //   estado_sessao (nao configurado) -> configurar (grava paths) ->
 //   estado_sessao (configurado) -> iniciar_sessao (monta e restaura).
@@ -7,7 +7,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { estadoSessao, gravarConfig, iniciarSessao } from '../plugins/connect/lib/session.mjs';
+import { estadoSessao, gravarConfig, iniciarSessao } from '../../../plugins/connect/lib/session.mjs';
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'connect-cfg-'));
 const home = path.join(tmp, 'connect-home');

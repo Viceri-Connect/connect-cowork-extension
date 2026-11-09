@@ -1,4 +1,4 @@
-// tests/spike-ponteiro-escopado.mjs
+// tests/integration/vault/ponteiro-escopado.spike.mjs
 // Gate da ADR-22 — ponteiro local escopado por coletivo, com classe de artefato.
 //
 // Cada bloco abaixo e uma SITUACAO da secao `## Simulacao` da ADR, contra material
@@ -14,10 +14,10 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { lerTabela, casarPonteiro, montarChave, partirChave, vizinhos } from '../plugins/connect/lib/ponteiro.mjs';
-import { casarMuitos, classeDeclarada } from '../plugins/connect/lib/resolver.mjs';
-import { lerVinculo, coletivosComVinculo, chaveDoVinculo, lerVinculoDaEntidade } from '../plugins/connect/lib/vinculo.mjs';
-import { criarEntrega } from '../plugins/connect/lib/entrega.mjs';
+import { lerTabela, casarPonteiro, montarChave, partirChave, vizinhos } from '../../../plugins/connect/lib/ponteiro.mjs';
+import { casarMuitos, classeDeclarada } from '../../../plugins/connect/lib/resolver.mjs';
+import { lerVinculo, coletivosComVinculo, chaveDoVinculo, lerVinculoDaEntidade } from '../../../plugins/connect/lib/vinculo.mjs';
+import { criarEntrega } from '../../../plugins/connect/lib/entrega.mjs';
 
 let ok = 0; const falhas = [];
 const t = (nome, fn) => {

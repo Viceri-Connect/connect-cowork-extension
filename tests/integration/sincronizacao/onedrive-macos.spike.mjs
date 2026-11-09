@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// tests/spike-onedrive-macos.mjs
+// tests/integration/sincronizacao/onedrive-macos.spike.mjs
 // P175 (0.37.0): o ramo macOS do sync (ADR-23) — host simulado como `darwin`.
 //
-//   node tests/spike-onedrive-macos.mjs
+//   node tests/integration/sincronizacao/onedrive-macos.spike.mjs
 //
 // O que este spike garante (o que ele NAO garante: o layout real do OneDrive no
 // Mac — isso so a maquina do Advisor responde, e o `diagnostico` existe para isso):
@@ -19,9 +19,9 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { raizesCatalogo, lerCatalogoOneDrive, parseEmailsDefaults, traduzirMountPoint, instrucaoFixarMac, parseAtributoPinned } from '../plugins/connect/lib/onedrive.mjs';
-import { garantirRetencaoMatriz } from '../plugins/connect/lib/session.mjs';
-import { sincronizarSubvault, catalogoSync } from '../plugins/connect/lib/sincronizar.mjs';
+import { raizesCatalogo, lerCatalogoOneDrive, parseEmailsDefaults, traduzirMountPoint, instrucaoFixarMac, parseAtributoPinned } from '../../../plugins/connect/lib/onedrive.mjs';
+import { garantirRetencaoMatriz } from '../../../plugins/connect/lib/session.mjs';
+import { sincronizarSubvault, catalogoSync } from '../../../plugins/connect/lib/sincronizar.mjs';
 
 let pass = 0, fail = 0;
 const ok = (cond, msg) => { if (cond) { pass++; } else { fail++; console.error('  ✗', msg); } };
