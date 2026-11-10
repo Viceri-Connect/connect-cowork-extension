@@ -18,6 +18,8 @@ import {
 import { parseFrontmatter } from '../../plugins/connect/lib/frontmatter.mjs';
 import { MARCA_ACESSO_COMPLETO, MARCA_ACESSO_LEMBRETE } from '../../plugins/connect/lib/render.mjs';
 import { ARQUIVO_REGRAS_SEMPRE_ATIVAS, textoRegrasSempreAtivas } from '../../plugins/connect/lib/regras.mjs';
+import { BLOCOS_POR_HOST, CAPACIDADES, EVENTOS_COBERTOS, HOSTS_PARIDADE, gerarDocParidade } from './paridade.mjs';
+import { publicarGovernanca } from '../../plugins/connect/lib/governanca.mjs';
 
 const MARCA_ACESSO_COWORK = 'acesso de pasta (faca isto primeiro)';
 
@@ -635,6 +637,126 @@ export function checarArtefatoGerado(pacote, harness) {
 }
 
 // ---------------------------------------------------------------------------
+// PARIDADE ENTRE HARNESSES (tests/architecture/paridade.mjs -> docs/paridade-harness.md)
+// ---------------------------------------------------------------------------
+export const ARQUIVO_DOC_PARIDADE = 'docs/paridade-harness.md';
+
+// Eventos de hook que um host declara, em minusculas (sessionStart/SessionStart sao o mesmo).
+function eventosDeHook(pacote, harness) {
+  const h = HARNESSES[harness];
+  const json = tentarJson(resolverNoPacote(pacote, h.hooks(lerManifesto(pacote, harness, []) || {})), [], '');
+  if (!json) return [];
+  const chaves = json.hooks && typeof json.hooks === 'object'
+    ? Object.keys(json.hooks)
+    : Object.values(json).flatMap((grupo) => Object.keys(grupo || {}).filter((k) => k !== 'enabled'));
+  return [...new Set(chaves.map((k) => k.toLowerCase()))];
+}
+
+export function checarParidade() {
+  const v = [];
+  const esperados = Object.keys(HARNESSES).sort();
+  if (JSON.stringify([...HOSTS_PARIDADE].sort()) !== JSON.stringify(esperados)) {
+    v.push(`paridade: hosts da tabela [${HOSTS_PARIDADE}] diferem dos harnesses do contrato [${esperados}]`);
+  }
+  const ids = new Set(CAPACIDADES.map((c) => c.id));
+  for (const [evento, capacidade] of Object.entries(EVENTOS_COBERTOS)) if (!ids.has(capacidade)) v.push(`paridade: o evento ${evento} aponta para a capacidade "${capacidade}", que nao existe`);
+  for (const b of BLOCOS_POR_HOST) if (!ids.has(b.capacidade)) v.push(`paridade: bloco por host aponta para a capacidade "${b.capacidade}", que nao existe`);
+  for (const c of CAPACIDADES) {
+    for (const h of esperados) {
+      const s = c.hosts?.[h];
+      if (!s) { v.push(`paridade: "${c.id}" sem decisao para ${h}`); continue; }
+      if (!['igual', 'limiar'].includes(s.status)) v.push(`paridade: "${c.id}"/${h} com status "${s.status}"`);
+      if (s.status === 'limiar' && String(s.detalhe || '').trim().length < 30) v.push(`paridade: "${c.id}"/${h} e limiar sem detalhar a diferenca, o porque e a mitigacao`);
+    }
+    for (const f of c.features) if (!FEATURES[f]) v.push(`paridade: "${c.id}" cita a feature "${f}", que o contrato nao tem`);
+    for (const t of c.testes) if (!fs.existsSync(path.join(RAIZ, t))) v.push(`paridade: "${c.id}" cita o teste ${t}, que nao existe`);
+    if (!c.features.length && !c.testes.length) v.push(`paridade: "${c.id}" sem nenhuma prova (feature ou teste)`);
+  }
+  // Superficie nova em QUALQUER host sem decisao de paridade.
+  for (const pacote of Object.keys(PACOTES)) {
+    for (const harness of Object.keys(HARNESSES)) {
+      for (const evento of eventosDeHook(pacote, harness)) {
+        if (!EVENTOS_COBERTOS[evento]) v.push(`paridade: ${pacote}/${harness} declara o hook "${evento}" sem capacidade na tabela de paridade (tests/architecture/paridade.mjs)`);
+      }
+    }
+  }
+  const doc = path.join(RAIZ, ARQUIVO_DOC_PARIDADE);
+  const norm = (t) => t.replace(/\r\n/g, '\n');
+  if (!fs.existsSync(doc) || norm(fs.readFileSync(doc, 'utf8')) !== norm(gerarDocParidade())) {
+    v.push(`paridade: ${ARQUIVO_DOC_PARIDADE} fora de sincronia com a tabela (npm run gerar:paridade)`);
+  }
+  return v;
+}
+
+// FUNCIONAMENTO: os quatro hooks, no MESMO estado de maquina (matriz configurada e
+// governada, perfil do operador provisionado), entregam o MESMO contexto — salvo os
+// blocos que paridade.mjs declara especificos de host. Envelope diferente e esperado;
+// conteudo diferente fora desses blocos e regressao de paridade.
+function normalizarContexto(texto, idSessao) {
+  const saida = [];
+  let pulando = false;
+  for (const linha of String(texto).replaceAll(idSessao, '<sessao>').split(/\r?\n/)) {
+    const ehCabecalho = /^#{2,3} /.test(linha);
+    if (ehCabecalho) pulando = BLOCOS_POR_HOST.some((b) => b.cabecalho?.test(linha));
+    if (pulando) continue;
+    if (BLOCOS_POR_HOST.some((b) => b.linha?.test(linha))) continue;
+    saida.push(linha.trimEnd());
+  }
+  return saida.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+export function checarParidadeDeComportamento(pacote) {
+  const sb = sandboxComRuntime(`arch-paridade-${pacote}-`);
+  try {
+    const matriz = path.join(sb.raiz, 'Matriz');
+    fs.mkdirSync(path.join(matriz, '_cerebro'), { recursive: true });
+    fs.writeFileSync(path.join(matriz, '_cerebro', 'vault-config.md'), '# Config do Vault\n## Identidade\n- tipo-vault: matriz\n- contexto: "paridade"\n');
+    fs.writeFileSync(path.join(matriz, '_cerebro', 'camada-1.md'), '---\ntipo-artefato: camada-1\nvault: Matriz de paridade\n---\n\n# Camada 1\n\n## O que e este vault\nMatriz de teste.\n');
+    publicarGovernanca(matriz, { vault: 'matriz', agora: new Date('2026-01-01T00:00:00Z') });
+    const home = sb.env.CONNECT_HOME;
+    fs.mkdirSync(path.join(home, 'operador', '_cerebro'), { recursive: true });
+    fs.writeFileSync(path.join(home, 'operador', '_cerebro', 'meu-config.md'), '# Minha Config\n## Identidade (cross-cliente)\n- nome: "Operadora de Paridade"\n- emails: "paridade@exemplo.com"\n- papeis-estaveis: ["Dev"]\n');
+    fs.writeFileSync(path.join(home, 'operador', 'CLAUDE.md'), '# Camada 0 da operadora\n\nPreferencia pessoal de teste.\n');
+    fs.writeFileSync(path.join(home, 'connect.config.json'), JSON.stringify({ vaultMatriz: matriz }));
+
+    const rodar = (harness, id) => {
+      const h = HARNESSES[harness];
+      const script = entrypointDoHook(pacote, harness);
+      const payload = { ...h.payload() };
+      for (const k of ['session_id', 'conversationId']) if (k in payload) payload[k] = id;
+      const r = spawnSync(process.execPath, [script], { cwd: dirPacote(pacote), env: sb.env, input: JSON.stringify(payload), encoding: 'utf8', timeout: 30_000, windowsHide: true });
+      try { return h.lerSaida(r.stdout) || ''; } catch { return ''; }
+    };
+    // Aquecimento: a 1a sessao da maquina pode emitir avisos de uma vez so (ex.: fixar a matriz).
+    rodar('claude', 'aquecimento');
+
+    const contextos = Object.keys(HARNESSES).map((harness) => {
+      const id = `paridade-${harness}`;
+      const bruto = rodar(harness, id);
+      return { harness, bruto, normal: normalizarContexto(bruto, id) };
+    });
+    const v = [];
+    for (const c of contextos) {
+      if (!c.bruto.includes('Operadora de Paridade')) v.push(`${pacote}/${c.harness}: o contexto nao trouxe a identidade do operador`);
+      if (!c.bruto.includes('Preferencia pessoal de teste')) v.push(`${pacote}/${c.harness}: o contexto nao trouxe a camada 0 do operador`);
+      if (!/CNCT-GOV-matriz/.test(c.bruto)) v.push(`${pacote}/${c.harness}: o contexto nao cita a governanca da matriz`);
+    }
+    const [ref, ...outros] = contextos;
+    for (const o of outros) {
+      if (o.normal === ref.normal) continue;
+      const a = ref.normal.split('\n');
+      const b = o.normal.split('\n');
+      const i = a.findIndex((l, k) => l !== b[k]);
+      const k = i === -1 ? Math.min(a.length, b.length) : i;
+      v.push(`${pacote}: o contexto de ${o.harness} diverge do de ${ref.harness} fora dos blocos por host — linha ${k + 1}: "${a[k] ?? '(fim)'}" x "${b[k] ?? '(fim)'}"`);
+    }
+    return v;
+  } finally {
+    sb.limpar();
+  }
+}
+
+// ---------------------------------------------------------------------------
 // MARKETPLACE: pacotes x marketplaces x settings do Copilot
 // ---------------------------------------------------------------------------
 export function checarMarketplaces() {
@@ -693,9 +815,9 @@ export const FEATURES = {
 };
 
 export function verificarTudo() {
-  const v = [...checarMarketplaces()];
+  const v = [...checarMarketplaces(), ...checarParidade()];
   for (const pacote of Object.keys(PACOTES)) {
-    v.push(...checarSkills(pacote), ...checarInventario(pacote), ...checarLauncherMcp(pacote));
+    v.push(...checarSkills(pacote), ...checarInventario(pacote), ...checarLauncherMcp(pacote), ...checarParidadeDeComportamento(pacote));
     for (const harness of Object.keys(HARNESSES)) {
       for (const fn of Object.values(FEATURES)) v.push(...fn(pacote, harness));
     }

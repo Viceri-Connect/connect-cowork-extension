@@ -37,6 +37,20 @@ Entregar o `connect.plugin`; no Cowork, abrir o arquivo e aceitar a instalação
 > `claude plugin install connect@impulsa`. É a CLI do Claude Code, **não** o Cowork —
 > serve para desenvolver/testar o mecanismo, não é o caminho de entrega da v1.
 
+## Paridade entre harnesses
+
+Claude/Cowork, Codex, Copilot e Antigravity são pares. O Connect nasceu no Cowork, e na
+migração o Cowork é a referência do que já funcionava, mas não é dependência: cada
+capacidade é descrita pelo resultado que o operador recebe, e cada host entrega igual ou
+declara um **limiar** (o quanto fica aquém, o porquê e a mitigação), inclusive o Cowork.
+A tabela está em [`docs/paridade-harness.md`](docs/paridade-harness.md), gerada de
+`tests/architecture/paridade.mjs` por `npm run gerar:paridade`. O teste de arquitetura prova:
+- **funcionalidade:** toda capacidade tem decisão em todo host, com a prova citada, e todo
+  evento de hook de qualquer host é coberto por uma capacidade;
+- **funcionamento:** os quatro hooks, no mesmo estado de máquina (matriz governada e perfil
+  do operador), entregam o mesmo contexto, salvo os blocos declarados como específicos de
+  host.
+
 ## Runtime em todos os hosts
 
 Nenhum host depende de `node` no PATH. MCP e hooks de Cowork, Codex, Copilot e

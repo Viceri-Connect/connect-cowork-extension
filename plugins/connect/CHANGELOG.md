@@ -36,6 +36,14 @@ nova é somente leitura.
 - **Guarda de varredura (regra dura 4)** no Codex e no Antigravity. Busca recursiva dentro de um vault
   do Connect deixa marca em `CONNECT_HOME/logs/varredura.jsonl`. O Antigravity pede confirmação ao
   operador; o Codex segue, entrega a regra ao agente e avisa o operador.
+- **Paridade entre harnesses declarada e testada** (`docs/paridade-harness.md`). Os quatro hosts são
+  pares, e o Cowork é a referência da migração, não uma dependência.
+  - Cada capacidade é descrita pelo resultado que o operador recebe. Cada host está "igual" ou
+    declara o limiar, inclusive o Cowork (por exemplo, não reinjeta o contexto depois de compactar).
+  - O teste prova a funcionalidade: há decisão para cada host e todo evento de hook de qualquer host
+    está coberto.
+  - O teste prova também o funcionamento: os quatro hooks, no mesmo estado de máquina, entregam o
+    mesmo contexto fora dos blocos declarados por host.
 - **Skills utilizáveis fora do Cowork.**
   - A description da `cnct-nucleo-sessao` passava de 1.024 caracteres, e os hosts do Agent Skills
     descartavam em silêncio a skill de onboarding.

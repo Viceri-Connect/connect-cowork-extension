@@ -15,6 +15,7 @@
     "build:copilot": "node scripts/build-copilot.mjs",
     "build:connect-http": "node scripts/build-connect-http.mjs",
     "gerar:regras": "node scripts/gerar-regras.mjs",
+    "gerar:paridade": "node scripts/gerar-paridade.mjs",
     "test:ci": "vitest run --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml"
   },
   "devDependencies": {

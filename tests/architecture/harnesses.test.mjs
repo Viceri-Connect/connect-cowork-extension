@@ -17,7 +17,7 @@
 import { describe, it, expect } from 'vitest';
 import { HARNESSES, PACOTES } from './harness-contract.mjs';
 import {
-  FEATURES, checarInventario, checarLauncherMcp, checarMarketplaces, checarSkills,
+  FEATURES, checarInventario, checarLauncherMcp, checarMarketplaces, checarParidade, checarParidadeDeComportamento, checarSkills,
 } from './harness-checks.mjs';
 
 const pacotes = Object.keys(PACOTES);
@@ -28,6 +28,11 @@ describe('arquitetura: marketplace', () => {
   it('todo pacote em plugins/ esta no contrato e listado em todos os marketplaces', async () => {
     await ceder();
     expect(checarMarketplaces()).toEqual([]);
+  });
+
+  it('tudo que o Cowork faz tem decisao de paridade em cada host (igual ou limiar declarado)', async () => {
+    await ceder();
+    expect(checarParidade()).toEqual([]);
   });
 });
 
@@ -45,6 +50,11 @@ describe.each(pacotes)('arquitetura: pacote %s', (pacote) => {
   it('o launcher do MCP sobe pelo runtime portatil', async () => {
     await ceder();
     expect(checarLauncherMcp(pacote)).toEqual([]);
+  });
+
+  it('os quatro hosts entregam o mesmo contexto no mesmo estado de maquina', async () => {
+    await ceder();
+    expect(checarParidadeDeComportamento(pacote)).toEqual([]);
   });
 
   describe.each(harnesses)('harness %s', (harness) => {
