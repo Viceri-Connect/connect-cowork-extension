@@ -12,7 +12,7 @@ da camada 1**. Sub-vaults descem **sob demanda**, resolvidos por conceito — a
 governança que mora na matriz desce para todos os sub-vaults.
 
 > Conceituação, ADRs e backlog canônicos vivem no vault matriz (`projetos/ativos/Connect/`).
-> O banco de provas anterior (plugin CLI do lab) fica em `D:\Impulsa\lab\lab\connect`.
+> O banco de provas anterior (plugin CLI do lab) fica fora deste repositório.
 
 ## Instalação no Cowork
 
