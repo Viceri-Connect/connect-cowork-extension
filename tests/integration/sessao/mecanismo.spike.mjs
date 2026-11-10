@@ -34,8 +34,8 @@ fs.writeFileSync(path.join(matriz, '_cerebro', 'vault-config.md'), [
   '- cliente: "Viceri (interno)"',
   '- contexto: "interno-viceri"',
   '## Ponto Focal',
-  '- vault-focal-nome: "Gabriel Vasconcelos Guilhem"',
-  '- vault-focal-email: "gabriel.guilhem@viceri.com.br"',
+  '- vault-focal-nome: "Operador Exemplo"',
+  '- vault-focal-email: "operador@exemplo.com"',
 ].join('\n'));
 fs.writeFileSync(path.join(matriz, '_cerebro', 'modelo-roteamento.md'), '# roteamento\n');
 fs.writeFileSync(path.join(matriz, '_inteligencia', 'convencao-skills.md'), '# skills\n');
@@ -71,8 +71,8 @@ fs.mkdirSync(path.join(pessoal, '_cerebro'), { recursive: true });
 fs.writeFileSync(path.join(pessoal, '_cerebro', 'meu-config.md'), [
   '# Minha Config — Gabriel',
   '## Identidade (cross-cliente)',
-  '- nome: "Gabriel Vasconcelos Guilhem"',
-  '- emails: "gabriel.guilhem@viceri.com.br"',
+  '- nome: "Operador Exemplo"',
+  '- emails: "operador@exemplo.com"',
   '- papeis-estaveis: ["Tech Lead", "Arquiteto"]',
 ].join('\n'));
 
@@ -109,8 +109,8 @@ const conteudo = fs.existsSync(viaAtalho) ? fs.readFileSync(viaAtalho, 'utf8') :
 check('conteudo lido pelo atalho confere', conteudo.includes('Viceri Seidor'));
 
 // 4. identidade restaurada
-check('identidade: nome', r.identidade && r.identidade.nome === 'Gabriel Vasconcelos Guilhem');
-check('identidade: email', r.identidade && r.identidade.email === 'gabriel.guilhem@viceri.com.br');
+check('identidade: nome', r.identidade && r.identidade.nome === 'Operador Exemplo');
+check('identidade: email', r.identidade && r.identidade.email === 'operador@exemplo.com');
 check('identidade: papeis', r.identidade && r.identidade.papeis.join(',') === 'Tech Lead,Arquiteto');
 
 // 5. L1 da matriz — identidade do vault + carta de navegacao DECLARADA pelo vault

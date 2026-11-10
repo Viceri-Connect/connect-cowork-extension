@@ -25,16 +25,16 @@ fs.writeFileSync(path.join(matriz, '_cerebro', 'vault-config.md'), '---\nempresa
 fs.mkdirSync(path.join(home, 'operador', '_cerebro'), { recursive: true });
 fs.writeFileSync(path.join(home, 'operador', '_cerebro', 'meu-config.md'), [
   '---', 'plugin: dois-cerebros', '---', '# Minha Config',
-  '- nome: "Gabriel Vasconcelos Guilhem"',
-  '- emails: "gabriel.guilhem@viceri.com.br"',
+  '- nome: "Operador Exemplo"',
+  '- emails: "operador@exemplo.com"',
   '- papeis-estaveis: [Tech Lead, Arquiteto]',
 ].join('\n'));
 
 // sessao SEM cerebroPessoal
 const r = iniciarSessao({ sessionId: 'sem-pessoal', home, vaultMatriz: matriz });
 
-ok(r.identidade && r.identidade.nome === 'Gabriel Vasconcelos Guilhem', 'identidade restaurada do CONNECT_HOME (sem vault pessoal)');
-ok(r.identidade && r.identidade.email === 'gabriel.guilhem@viceri.com.br', 'email do perfil gerido');
+ok(r.identidade && r.identidade.nome === 'Operador Exemplo', 'identidade restaurada do CONNECT_HOME (sem vault pessoal)');
+ok(r.identidade && r.identidade.email === 'operador@exemplo.com', 'email do perfil gerido');
 ok(r.identidade && r.identidade.papeis.join(',') === 'Tech Lead,Arquiteto', 'papeis do perfil gerido');
 ok(!r.avisos.some(a => /nao provisionado|nao restaurada/.test(a)), 'sem aviso de identidade ausente');
 ok(!r.mounts.some(m => m.alias === 'pessoal'), 'nenhum ./pessoal montado (vault pessoal opcional, ausente)');

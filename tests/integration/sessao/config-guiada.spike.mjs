@@ -20,7 +20,7 @@ fs.writeFileSync(path.join(matriz, '_cerebro', 'vault-config.md'),
   '## Identidade\n- empresa: "Viceri Seidor"\n- contexto: "interno-viceri"\n');
 fs.mkdirSync(path.join(pessoal, '_cerebro'), { recursive: true });
 fs.writeFileSync(path.join(pessoal, '_cerebro', 'meu-config.md'),
-  '- nome: "Gabriel Vasconcelos Guilhem"\n- emails: "gabriel.guilhem@viceri.com.br"\n');
+  '- nome: "Operador Exemplo"\n- emails: "operador@exemplo.com"\n');
 
 // isola: sem env apontando paths; so CONNECT_HOME
 process.env.CONNECT_HOME = home;
@@ -56,7 +56,7 @@ check('ainda nao montado nesta sessao', e1.montadoNestaSessao === false);
 // 6. iniciar_sessao usa a config gravada (sem env)
 const r = iniciarSessao({ sessionId: 'S1' });
 check('matriz montada a partir da config', (r.mounts || []).some((m) => m.alias === 'matriz' && (m.status === 'mounted' || m.status === 'exists')));
-check('identidade restaurada', r.identidade && r.identidade.nome === 'Gabriel Vasconcelos Guilhem');
+check('identidade restaurada', r.identidade && r.identidade.nome === 'Operador Exemplo');
 check('sem avisos de config', !(r.avisos || []).some((a) => /nao definido/.test(a)));
 
 // 7. estado reflete montado
