@@ -83,6 +83,10 @@ nova é somente leitura.
   `tests/integration/<domínio>/`, incluindo os da 0.39/0.40 (`instancia` e `sessao-nuvem`).
 - **Fim de linha normalizado para LF.** Alguns arquivos tinham entrado com CRLF antes do
   `.gitattributes`, e o `build-plugin.sh` em CRLF não roda no bash.
+- **Documentação do repositório** em `docs/` (arquitetura, conceitos e guias, uma página por
+  assunto) e `AGENTS.md` na raiz para agentes de código. Não vai no pacote do plugin.
+- **Repositório sem dado de instância.** Nomes de cliente, caminhos de máquina e o operador real dos
+  spikes viraram exemplos fictícios.
 
 ## 0.40.0 — 2026-11-07
 
