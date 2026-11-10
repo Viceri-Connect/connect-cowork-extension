@@ -1,6 +1,10 @@
 # connect-cowork-extension
 
-Marketplace da extensão **Connect** (programa Impulsa / Viceri Seidor) para o Claude **Cowork**.
+Marketplace da extensão **Connect** (programa Impulsa / Viceri Seidor) para Claude **Cowork**,
+**Codex**, **Copilot** e **Antigravity**.
+
+> 📚 Arquitetura, conceitos e guias: [`docs/README.md`](docs/README.md). Para agentes de código
+> trabalhando neste repositório: [`AGENTS.md`](AGENTS.md).
 
 No início de cada sessão o Connect **restaura a identidade do operador**, monta a
 **matriz de contexto** como atalho *flat* no workspace e carrega o **contexto lazy
@@ -179,7 +183,8 @@ plugins/connect/                     # o plugin instalável (stdio)
   └── config/                        # contratos + connect.config.example.json
 plugins/connect-http/                # variante HTTP local — GERADA por scripts/build-connect-http.mjs
 scripts/                             # build-plugin.sh (.plugin), build-copilot.mjs, build-connect-http.mjs
-docs/                                # SPEC, notas do POC, fronteira de controle do host
+docs/                                # arquitetura/, conceitos/, guias/, paridade (gerada), histórico do POC
+AGENTS.md, CLAUDE.md                 # instruções para agentes de código neste repositório
 tests/                               # architecture/ (contrato de harnesses), unit/, integration/, e2e/
 ```
 
