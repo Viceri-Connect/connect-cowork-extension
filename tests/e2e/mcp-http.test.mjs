@@ -7,7 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-const serverPath = path.join(root, 'plugins', 'connect-http', 'mcp', 'connect-mcp.mjs');
+const serverPath = path.join(root, 'plugins', 'connect', 'mcp', 'connect-mcp.mjs');
 
 async function portaLivre() {
   const probe = createServer();

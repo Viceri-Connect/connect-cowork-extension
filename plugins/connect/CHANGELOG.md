@@ -55,11 +55,11 @@ nova é somente leitura.
   lugar; cada host muda só o envelope. A regra da 0.40.0 vale em todos eles: sessão na nuvem sem
   configuração local orienta e não diagnostica "1º uso". Antes, os hooks de Codex e Copilot chamavam
   `iniciarSessao` direto e perdiam essa regra.
-- **Variante `connect-http`** nos marketplaces, para host que não consegue iniciar MCP stdio. O
-  servidor sobe com `--transport=http` (ou `CONNECT_MCP_TRANSPORT=http`) e só escuta em
-  `127.0.0.1:3737`. Ele recusa Host e Origin externos e corpo acima de 1 MiB. stdio continua padrão.
-  O pacote é gerado por `scripts/build-connect-http.mjs`, com o hook do Claude em exec form, como o
-  do pacote stdio desde a 0.39.0. Não instale as duas variantes no mesmo host.
+- **Transporte HTTP local opcional no servidor MCP.** Com `--transport=http` (ou
+  `CONNECT_MCP_TRANSPORT=http`), o servidor só escuta em `127.0.0.1:3737` e recusa Host e Origin
+  externos e corpo acima de 1 MiB. stdio continua padrão e é o que os quatro hosts usam. Não há
+  pacote separado: um `connect-http` chegou a ser montado, mas exigia o operador subir o servidor à
+  mão a cada sessão e nenhum host precisava dele. Quem quiser HTTP configura o host à mão (README).
 - **Tool `ambiente_connect`.** Relatório somente leitura de runtime, plataforma e acessibilidade do
   `CONNECT_HOME`. O que não dá para confirmar sem efeito colateral (persistência, suporte a links)
   sai como desconhecido.

@@ -1,5 +1,5 @@
 // tests/architecture/harnesses.test.mjs
-// Testes de ARQUITETURA do marketplace: todo pacote (connect, connect-http) precisa
+// Testes de ARQUITETURA do marketplace: todo pacote (hoje so o connect) precisa
 // entregar, em todo harness (Claude/Cowork, Codex, Antigravity, Copilot), as mesmas
 // features — identidade/versao, servidor MCP, hook de SessionStart que de fato injeta o
 // bootstrap, skills canonicas — no formato nativo de cada host.

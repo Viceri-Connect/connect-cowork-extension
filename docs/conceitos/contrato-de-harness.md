@@ -8,7 +8,7 @@ O **contrato** é a declaração do que cada host precisa ter em cada pacote. Mo
 | Feature | Exige |
 |---|---|
 | identidade | manifesto com nome do pacote, versão canônica e `$schema` certo |
-| mcp | servidor `connect` no transporte da variante (stdio ou HTTP) |
+| mcp | servidor `connect` em stdio, lançado por um script do pacote |
 | hook declarado | SessionStart cobrindo startup/resume, executando um `.mjs`; exec form no Claude |
 | referencias | todo caminho citado em manifesto, MCP e hooks existe no pacote |
 | isolamento | cada host só usa a própria variável de raiz; ninguém fixa `CONNECT_HOME` |

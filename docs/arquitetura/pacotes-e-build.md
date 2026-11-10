@@ -1,21 +1,18 @@
 # Pacotes e build
 
-## Pacotes do marketplace
+## O pacote do marketplace
 
-| Pacote | Transporte do MCP | Como nasce |
-|---|---|---|
-| `plugins/connect` | stdio (padrão) | **fonte** — edite aqui |
-| `plugins/connect-http` | Streamable HTTP em `127.0.0.1:3737` | **gerado** por `scripts/build-connect-http.mjs` |
+Um pacote só, `plugins/connect`, com MCP em **stdio**, para os quatro hosts. É a fonte: edite aqui.
 
-O `connect-http` só muda o que é de transporte (configs de MCP de cada host e os nomes). Hooks,
-skills, `lib/` e `scripts/` são os mesmos. O servidor HTTP sobe com
-`scripts/connect-mcp --transport=http --port=3737` (ou `.cmd` no Windows).
+O servidor também fala **Streamable HTTP local** (`--transport=http`, ou
+`CONNECT_MCP_TRANSPORT=http`; só escuta em `127.0.0.1:3737`), para quem precisar configurar um host
+à mão. Não há pacote separado para isso: os quatro hosts sobem stdio, e um pacote HTTP exigiria
+o operador subir o servidor à mão a cada sessão.
 
 ## O que é gerado (não edite à mão)
 
 | Arquivo | Gerado por | Fonte |
 |---|---|---|
-| `plugins/connect-http/**` | `npm run build:connect-http -- plugins/connect-http` (apague a pasta antes) | `plugins/connect` |
 | `plugins/connect/rules/AGENTS.md` | `npm run gerar:regras` | `lib/regras.mjs` |
 | `docs/paridade-harness.md` | `npm run gerar:paridade` | `tests/architecture/paridade.mjs` |
 
@@ -27,7 +24,6 @@ O teste de arquitetura compara cada um com o gerado. Divergência quebra o build
 |---|---|---|
 | `connect.plugin` (Cowork, um clique) | `bash scripts/build-plugin.sh <pasta-absoluta>` | zip de `plugins/connect` |
 | Copilot Agent Plugin | `npm run build:copilot -- <pasta>` | `plugins/connect` sem a superfície dos outros hosts |
-| `connect-http` de distribuição | `npm run build:connect-http -- <pasta>` | igual ao versionado |
 
 `dist/` é ignorado pelo git.
 
@@ -35,4 +31,4 @@ O teste de arquitetura compara cada um com o gerado. Divergência quebra o build
 
 - `.gitattributes`: tudo LF, exceto `*.bat`, `*.cmd` e `*.ps1` em CRLF.
 - `scripts/connect-mcp`, `run-node.sh` e `run-node.bat` com modo 755 no git
-  (`git update-index --chmod=+x`), nos dois pacotes.
+  (`git update-index --chmod=+x`).

@@ -14,7 +14,6 @@ const plugin = path.join(RAIZ, 'plugins', 'connect');
 const manifesto = JSON.parse(fs.readFileSync(path.join(plugin, '.claude-plugin', 'plugin.json'), 'utf8'));
 const manifestoAgente = JSON.parse(fs.readFileSync(path.join(plugin, 'plugin.json'), 'utf8'));
 const manifestoAntigravity = JSON.parse(fs.readFileSync(path.join(plugin, '.antigravity-plugin', 'plugin.json'), 'utf8'));
-const manifestoHttp = JSON.parse(fs.readFileSync(path.join(RAIZ, 'plugins', 'connect-http', 'plugin.json'), 'utf8'));
 const changelog = fs.readFileSync(path.join(plugin, 'CHANGELOG.md'), 'utf8');
 const primeira = changelog.match(/^## (\d+\.\d+\.\d+)\b/m)?.[1];
 
@@ -36,17 +35,12 @@ describe('release', () => {
     expect(manifestoAntigravity.version).toBe(manifesto.version);
   });
 
-  it('a variante HTTP acompanha a versao e tem identidade distinta', () => {
-    expect(manifestoHttp.version).toBe(manifesto.version);
-    expect(manifestoHttp.name).toBe('connect-http');
-  });
-
   it('o marketplace aponta para o plugin que existe', () => {
     const mk = JSON.parse(fs.readFileSync(path.join(RAIZ, '.claude-plugin', 'marketplace.json'), 'utf8'));
     for (const p of mk.plugins) {
       const destino = path.join(RAIZ, p.source);
       expect(fs.existsSync(path.join(destino, '.claude-plugin', 'plugin.json')), `fonte ${p.source}`).toBe(true);
     }
-    expect(mk.plugins.map((p) => p.name)).toEqual(['connect', 'connect-http']);
+    expect(mk.plugins.map((p) => p.name)).toEqual(['connect']);
   });
 });

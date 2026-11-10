@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 // Gera plugins/connect/rules/AGENTS.md (regra sempre ativa do Antigravity) a partir de
-// lib/regras.mjs — fonte unica das regras duras. Rode depois de editar REGRAS_DURAS e
-// regenere o connect-http (npm run build:connect-http). O teste de arquitetura falha se
+// lib/regras.mjs — fonte unica das regras duras. Rode depois de editar REGRAS_DURAS. O teste de arquitetura falha se
 // o arquivo versionado divergir do gerado.
 import fs from 'node:fs';
 import path from 'node:path';

@@ -95,7 +95,7 @@ Instale `dist/copilot` pela tela **Chat: Open Customizations > Plugins > Install
 
 Com o **sandbox de sessão** do Copilot CLI ligado, inclua `~/Connect` (e as pastas da matriz) em `sandbox.userPolicy` nas configurações do Copilot. Sem isso, o hook não grava a sessão no `CONNECT_HOME`.
 
-O marketplace do repositório também lista **connect-http** como alternativa. `.github/copilot/settings.json` registra o marketplace `impulsa` e habilita somente `connect` por padrão; selecione `connect-http` manualmente quando necessário.
+`.github/copilot/settings.json` registra o marketplace `impulsa` e habilita o `connect`.
 
 O plugin Copilot não configura nem substitui o Windows MCP. PowerShell e controle da
 máquina permanecem no servidor MCP do host, separado e sujeito às aprovações dele.
@@ -103,14 +103,12 @@ Consulte `docs/host-control-boundary.md` antes de habilitar ferramentas de host.
 
 ## Codex e ChatGPT Work
 
-O marketplace local em `.agents/plugins/marketplace.json` oferece **Connect** (STDIO,
-padrão) e **Connect HTTP (Local)**. As configurações da OpenAI ficam em
+O marketplace local em `.agents/plugins/marketplace.json` oferece **Connect** (MCP em
+stdio). As configurações da OpenAI ficam em
 `plugin.json > extensions.com.openai`: hooks, nome de exibição, prompts sugeridos e a
 skill de primeiro uso (`cnct-nucleo-sessao`, que o Codex roda no setup depois da
 instalação). `.codex-plugin/plugin.json` espelha o mesmo para versões antigas do Codex.
-Para gerar uma cópia de distribuição em `dist/connect-http`, execute
-`npm run build:connect-http -- dist/connect-http`. No ChatGPT Desktop, adicione este
-repositório como marketplace e instale somente uma das variantes.
+No ChatGPT Desktop, adicione este repositório como marketplace e instale o **connect**.
 
 Onde roda:
 - Codex CLI e Codex/ChatGPT Work no app desktop, em execução local: skills, MCP e hooks.
@@ -123,27 +121,26 @@ Os hooks do plugin precisam ser revisados e aprovados no Codex (`/hooks` na CLI 
 **Review hooks** no app) antes de rodar. A aprovação vale para o conteúdo exato: a cada
 versão que mude um hook ou script, o Codex pede a revisão de novo.
 
-Use a variante HTTP somente se o host não conseguir iniciar um MCP stdio. Inicie o
-servidor e deixe-o em execução (o launcher garante o Node portátil):
+**HTTP local (opcional, configuração manual).** Os quatro hosts sobem o MCP em stdio. Se um
+host só aceitar URL, suba o servidor e aponte o host para `http://127.0.0.1:3737/mcp`
+(o launcher garante o Node portátil):
 
 ```
-plugins/connect-http/scripts/connect-mcp --transport=http --port=3737          # macOS/Linux
-plugins\connect-http\scripts\connect-mcp.cmd --transport=http --port=3737     # Windows
+plugins/connect/scripts/connect-mcp --transport=http --port=3737          # macOS/Linux
+plugins\connect\scripts\connect-mcp.cmd --transport=http --port=3737     # Windows
 ```
 
-O endpoint fica em `http://127.0.0.1:3737/mcp`; a porta pode ser alterada por
-`--port` ou `CONNECT_MCP_PORT`. `--transport=http` também pode ser substituído por
-`CONNECT_MCP_TRANSPORT=http`. O servidor só escuta em loopback. Não instale as duas
-variantes simultaneamente no mesmo host: ambas expõem as mesmas tools.
+A porta pode ser alterada por `--port` ou `CONNECT_MCP_PORT`, e `--transport=http` por
+`CONNECT_MCP_TRANSPORT=http`. O servidor só escuta em loopback. Não configure HTTP e stdio
+no mesmo host: os dois expõem as mesmas tools.
 
 ## Antigravity App
 
-Os pacotes `plugins/connect` e `plugins/connect-http` incluem o overlay
+O pacote `plugins/connect` inclui o overlay
 `.antigravity-plugin/plugin.json`, a configuração MCP e o hook `SessionStart` no
 formato nativo do Antigravity: uma entrada por SO, caminho relativo à raiz do plugin.
-Instale a variante desejada a partir do diretório local (`agy plugin install ./plugins/connect`
-ou `agy plugin install ./plugins/connect-http`) ou coloque-a em `.agents/plugins/`.
-Para validar, execute `agy plugin validate --strict` no diretório escolhido.
+Instale a partir do diretório local (`agy plugin install ./plugins/connect`) ou coloque-o em
+`.agents/plugins/`. Para validar, execute `agy plugin validate --strict` no diretório.
 
 O SessionStart do Antigravity roda uma vez por conversa, sem resume nem compact. Por isso
 as regras duras do Connect também vão como **regra sempre ativa** (`rules/AGENTS.md`),
@@ -163,8 +160,8 @@ genérica de shell/PowerShell nem controle de desktop. O Windows MCP segue separ
 ## Estrutura (marketplace + plugin)
 
 ```
-.claude-plugin/marketplace.json     # marketplace "impulsa" (Claude/Cowork/Copilot): connect + connect-http
-.agents/plugins/marketplace.json    # marketplace Codex/Antigravity: connect + connect-http
+.claude-plugin/marketplace.json     # marketplace "impulsa" (Claude/Cowork/Copilot): connect
+.agents/plugins/marketplace.json    # marketplace Codex/Antigravity: connect
 .github/copilot/settings.json       # registra o marketplace "impulsa" no VS Code
 plugins/connect/                     # o plugin instalável (stdio)
   ├── .claude-plugin/plugin.json     # ← fonte da VERSÃO (amarrada ao CHANGELOG)
@@ -181,8 +178,7 @@ plugins/connect/                     # o plugin instalável (stdio)
   ├── scripts/run-node.*             # runtime Node portátil de TODOS os hosts: .ps1 Windows, .sh POSIX, .bat fonte única
   ├── scripts/connect-mcp(.cmd)      # entrada do MCP nos hosts do formato portável
   └── config/                        # contratos + connect.config.example.json
-plugins/connect-http/                # variante HTTP local — GERADA por scripts/build-connect-http.mjs
-scripts/                             # build-plugin.sh (.plugin), build-copilot.mjs, build-connect-http.mjs
+scripts/                             # build-plugin.sh (.plugin), build-copilot.mjs
 docs/                                # arquitetura/, conceitos/, guias/, paridade (gerada), histórico do POC
 AGENTS.md, CLAUDE.md                 # instruções para agentes de código neste repositório
 tests/                               # architecture/ (contrato de harnesses), unit/, integration/, e2e/
@@ -211,7 +207,6 @@ npm run test:e2e
 npm run test:watch
 npm run check:harnesses     # contrato de harnesses sem Vitest (diagnóstico)
 npm run build:copilot
-npm run build:connect-http
 npm run gerar:regras        # rules/AGENTS.md do Antigravity, a partir de lib/regras.mjs
 ```
 
@@ -219,5 +214,5 @@ Ver `docs/POC-NOTES.md` para o spike das premissas 1–3 no host Windows/Cowork.
 
 - `tests/unit/*.test.mjs` — testes nativos do Vitest, um arquivo por módulo de `plugins/connect/lib/`.
 - `tests/integration/<domínio>/*.spike.mjs` — os spikes originais, agrupados por domínio (`sessao`, `vault`, `sincronizacao`, `plataforma`, `mcp`). O `tests/integration/spikes.test.mjs` roda cada um como subprocesso **em um perfil de usuário descartável** (`HOME`, `USERPROFILE` e `CONNECT_HOME` apontam para um diretório temporário em `.test-tmp/`; variáveis `CONNECT_*` do seu ambiente são removidas), então nenhum teste toca o seu `~/Connect` nem seus vaults reais. Migrar um spike para teste nativo = mover a lógica para `tests/unit/` e apagar o `.spike.mjs`.
-- `tests/architecture/` — **contrato de harnesses do marketplace**. `harness-contract.mjs` declara, para cada pacote (`connect`, `connect-http`) e cada host (Claude/Cowork, Codex, Antigravity, Copilot), o que precisa existir: manifesto com nome/versão canônicos, servidor MCP `connect` no transporte da variante, hook de SessionStart cobrindo `startup|resume` que **de fato** injeta o bootstrap no formato do host, skills canônicas, variável de raiz própria do host e nenhum arquivo de host sem dono no contrato. Qualquer alteração em arquivo específico de harness que quebre isso falha o build (`npm run test:architecture`; diagnóstico sem Vitest: `npm run check:harnesses`). Harness ou pacote novo = declarar no contrato primeiro.
+- `tests/architecture/` — **contrato de harnesses do marketplace**. `harness-contract.mjs` declara, para o pacote `connect` e cada host (Claude/Cowork, Codex, Antigravity, Copilot), o que precisa existir: manifesto com nome/versão canônicos, servidor MCP `connect` em stdio, hook de SessionStart cobrindo `startup|resume` que **de fato** injeta o bootstrap no formato do host, skills canônicas, variável de raiz própria do host e nenhum arquivo de host sem dono no contrato. Qualquer alteração em arquivo específico de harness que quebre isso falha o build (`npm run test:architecture`; diagnóstico sem Vitest: `npm run check:harnesses`). Harness ou pacote novo = declarar no contrato primeiro.
 - CI (`.github/workflows/ci.yml`): job `architecture` roda primeiro e bloqueia os demais; Windows e Linux (Node 20.11.1 — o do runtime embarcado — e 22), macOS informativo, e checagens dos bundles Cowork e Agent Plugins.

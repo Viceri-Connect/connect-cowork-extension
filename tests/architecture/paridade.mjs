@@ -204,14 +204,6 @@ export const CAPACIDADES = [
     },
   },
   {
-    id: 'variante-http',
-    resultado: 'Variante connect-http (MCP em HTTP local) para host que nao sobe stdio.',
-    origem: 'migracao',
-    features: ['mcp'],
-    testes: ['tests/e2e/mcp-http.test.mjs', 'tests/integration/agent-harnesses.test.mjs'],
-    hosts: { claude: igual(), codex: igual(), copilot: igual(), antigravity: igual() },
-  },
-  {
     id: 'instalacao-atualizacao',
     resultado: 'Instala pelo marketplace (ou pacote) e atualiza sem passo manual do operador.',
     origem: 'cowork',

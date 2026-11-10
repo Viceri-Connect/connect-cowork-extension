@@ -35,4 +35,4 @@ quatro hosts e só tolera os blocos declarados.
 ## Fechando
 
 - Atualize a linha em `tests/architecture/paridade.mjs` e rode `npm run gerar:paridade`.
-- Regenere o `connect-http` e rode `npm test`.
+- Rode `npm test`.

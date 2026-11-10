@@ -2,8 +2,8 @@
 // CONTRATO DE ARQUITETURA DOS HARNESSES — fonte unica do que cada host precisa ter.
 //
 // O Connect e UM mecanismo (lib/ + mcp/ + skills/) distribuido para varios hosts
-// (Claude/Cowork, Codex, Antigravity, Copilot), em mais de uma variante de transporte
-// (stdio, http). Cada host le arquivos proprios (manifesto, config de MCP, hook de
+// (Claude/Cowork, Codex, Antigravity, Copilot). O contrato ainda sabe validar uma variante
+// de transporte http, mas o marketplace so entrega stdio desde que o connect-http saiu. Cada host le arquivos proprios (manifesto, config de MCP, hook de
 // SessionStart) e cada um desses arquivos pode divergir em silencio: o host instala,
 // mas fica sem MCP, sem bootstrap de sessao ou com versao errada.
 //
@@ -38,7 +38,6 @@ export const VARIANTES = {
 
 export const PACOTES = {
   connect: { dir: 'plugins/connect', variante: 'stdio' },
-  'connect-http': { dir: 'plugins/connect-http', variante: 'http', geradoPor: 'scripts/build-connect-http.mjs' },
 };
 
 // Marketplaces que listam os pacotes. `fonte(entry)` devolve o caminho relativo a raiz.

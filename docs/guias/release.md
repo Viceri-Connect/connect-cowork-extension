@@ -9,16 +9,15 @@
    ```
    npm run gerar:regras
    npm run gerar:paridade
-   # apague plugins/connect-http antes
-   npm run build:connect-http -- plugins/connect-http
    ```
 4. **Testes:** `npm test`. Rodar num checkout limpo pega o que o diretório de trabalho esconde
-   (fim de linha, modo 755).
+   (fim de linha, modo 755). No Windows, o checkout limpo tem de ficar fora de `AppData`: um
+   teste garante que o `CONNECT_HOME` padrão nunca cai lá, e o sandbox dos testes fica dentro do
+   repositório.
 5. **Pacotes** em `dist/` (ignorado pelo git):
    ```
    bash scripts/build-plugin.sh "$(pwd)/dist/release-X.Y.Z"
    npm run build:copilot -- dist/release-X.Y.Z/copilot
-   npm run build:connect-http -- dist/release-X.Y.Z/connect-http
    ```
    O `build-plugin.sh` precisa de caminho absoluto.
 6. **Commits:** um por pacote de mudança, cada um verde sozinho; mensagem em português, no

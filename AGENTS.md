@@ -19,14 +19,12 @@ Os hosts são pares; o Cowork é a referência da migração, não uma dependên
 | `plugins/connect/hooks/`, `copilot/` | Entrada de cada host (só envelope) |
 | `plugins/connect/scripts/` | Runtime portátil (`run-node.*`, `connect-mcp`) |
 | `plugins/connect/skills/` | Skills `cnct-*` |
-| `plugins/connect-http/` | **Gerado** — não edite |
 | `tests/architecture/` | Contrato de harness e paridade entre hosts |
 | `docs/` | Arquitetura, conceitos e guias |
 
 ## Regras
 
 1. **Nunca edite à mão o que é gerado.** Regenere:
-   - `plugins/connect-http/`: apague a pasta e rode `npm run build:connect-http -- plugins/connect-http`;
    - `plugins/connect/rules/AGENTS.md`: `npm run gerar:regras`;
    - `docs/paridade-harness.md`: `npm run gerar:paridade`.
 2. **Lógica no núcleo, nunca no hook.** Hook só lê o payload e embrulha a saída

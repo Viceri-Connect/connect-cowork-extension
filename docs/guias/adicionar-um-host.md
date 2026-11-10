@@ -17,11 +17,9 @@ Roteiro para suportar um harness novo sem quebrar a paridade.
 5. **Ensine o render**, se o host não tem pasta conectada: inclua o host em
    `HOSTS_FORA_DO_COWORK` (`lib/render.mjs`) com a dica de como liberar pasta, e em
    `HOSTS_COM_MEMORIA_DE_ACESSO` (`lib/bootstrap.mjs`) se ele guarda a permissão.
-6. **Ajuste o marketplace** do host e o `scripts/build-connect-http.mjs`, se a variante HTTP
-   precisar de config própria.
+6. **Ajuste o marketplace** do host.
 7. **Decida a paridade:** coluna nova em `tests/architecture/paridade.mjs` com `igual` ou
    `limiar` para cada capacidade. Rode `npm run gerar:paridade`.
-8. **Regenere e teste:** apague `plugins/connect-http`, rode `npm run build:connect-http -- plugins/connect-http`
-   e `npm test`.
+8. **Teste:** `npm test`.
 9. **Teste no host real** ([roteiro](teste-em-host-real.md)) e documente em
    [hosts e superfície](../arquitetura/hosts.md).

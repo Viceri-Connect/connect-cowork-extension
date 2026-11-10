@@ -10,7 +10,7 @@ Páginas curtas, uma por assunto. Comece pela visão geral.
 | [Hosts e superfície](arquitetura/hosts.md) | Que arquivo cada host lê, por formato |
 | [Bootstrap da sessão](arquitetura/bootstrap.md) | O que o hook injeta e como cada host recebe |
 | [Runtime portátil](arquitetura/runtime-node.md) | Como tudo roda sem Node no PATH |
-| [Pacotes e build](arquitetura/pacotes-e-build.md) | `connect`, `connect-http`, bundles e o que é gerado |
+| [Pacotes e build](arquitetura/pacotes-e-build.md) | O pacote `connect`, bundles e o que é gerado |
 | [Testes](arquitetura/testes.md) | Camadas de teste, contrato de harness e CI |
 
 ## Conceitos

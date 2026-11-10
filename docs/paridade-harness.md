@@ -30,7 +30,6 @@ O teste de arquitetura prova duas coisas:
 | guarda-varredura | nova | LIMIAR | LIMIAR | LIMIAR | igual |
 | sessao-nuvem | cowork | igual | LIMIAR | LIMIAR | LIMIAR |
 | briefing-agendado | cowork | igual | LIMIAR | LIMIAR | LIMIAR |
-| variante-http | migracao | igual | igual | igual | igual |
 | instalacao-atualizacao | cowork | igual | LIMIAR | igual | igual |
 
 Origem: `cowork` = nasceu no Cowork; `nova` = nasceu fora dele; `migracao` = garantia criada para a migracao.
@@ -179,17 +178,6 @@ Provado por: feature "bootstrap na nuvem", `tests/integration/sessao/sessao-nuve
 - **Antigravity — LIMIAR.** Ferramenta schedule do Antigravity; a persistencia fora da conversa nao foi verificada.
 
 Provado por: `tests/unit/skills-hosts.test.mjs`.
-
-### variante-http
-
-**Resultado:** Variante connect-http (MCP em HTTP local) para host que nao sobe stdio.
-
-- **Claude/Cowork — igual.**
-- **Codex — igual.**
-- **Copilot — igual.**
-- **Antigravity — igual.**
-
-Provado por: feature "mcp", `tests/e2e/mcp-http.test.mjs`, `tests/integration/agent-harnesses.test.mjs`.
 
 ### instalacao-atualizacao
 
