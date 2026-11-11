@@ -8,14 +8,15 @@ Ferramental na raiz (Vitest), fora do bundle.
 | `tests/unit/` | Módulos de `lib/`, anotações das tools, render por host, skills por host | `npm run test:unit` |
 | `tests/integration/` | Spikes por domínio (em perfil descartável), adaptadores, runtime em sandbox | `npm run test:integration` |
 | `tests/e2e/` | MCP real (stdio e HTTP), bundle do Copilot, hooks dos hosts | `npm run test:e2e` |
-| `tests/regressao/` | O Cowork recebe o mesmo que na 0.40.0 (ver abaixo) | `npm run test:regressao` |
+| `tests/regressao/` | O Cowork recebe o mesmo que na referência aceita (ver abaixo) | `npm run test:regressao` |
 
 Tudo: `npm test`. Diagnóstico do contrato sem Vitest: `npm run check:harnesses`.
 
 ## Regressão do Cowork
 
-`tests/regressao/referencia-0.40.0/` guarda o que o Cowork recebia na 0.40.0, a última versão
-antes do multi-harness, gerado pelo pacote da main daquela versão num estado de máquina fixo:
+`tests/regressao/referencia/` guarda o que o Cowork recebe, num estado de máquina fixo. A
+primeira referência veio da main na 0.40.0, a última versão antes do multi-harness
+(`referencia/origem.md`). O teste compara o pacote atual com ela:
 
 - o texto do hook de SessionStart (sessão normal e na nuvem sem configuração);
 - o contrato das tools do MCP (nome, descrição e parâmetros; tool nova pode entrar);
@@ -26,9 +27,14 @@ O mesmo teste prova o runtime portátil no caso do Cowork: Node no `CONNECT_HOME
 `CLAUDE_PLUGIN_DATA` definido, e `CONNECT_HOME` não definido caindo no perfil do usuário. Com
 `CONNECT_TESTE_DOWNLOAD=1`, baixa o Node de verdade e confere que ele vai para o `CONNECT_HOME/bin`.
 
-Mudança **decidida** no Cowork: regenere a referência contra o pacote da versão anterior
-(`node tests/regressao/gerar-referencia.mjs <plugins/connect da versão anterior>`) e registre no
-CHANGELOG. Regenerar contra o pacote atual apaga a proteção.
+### Quando o teste falha
+
+- **Mudança sem querer** (refatoração, outro host): corrija o código. É para isso que o teste existe.
+- **Mudança decidida no Cowork** (texto novo no hook, tool com parâmetro novo, timeout do hook):
+  no mesmo PR, rode `node tests/regressao/gerar-referencia.mjs plugins/connect` e registre no
+  CHANGELOG. O diff de `referencia/` mostra ao revisor exatamente o que muda para o operador.
+
+Regenerar só para o teste voltar a passar, sem decisão, apaga a proteção.
 
 ## Isolamento
 

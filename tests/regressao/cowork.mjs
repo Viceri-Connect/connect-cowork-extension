@@ -1,7 +1,7 @@
 // tests/regressao/cowork.mjs
-// O que o Cowork recebia na 0.40.0 (ultima versao antes do multi-harness), medido num
-// estado de maquina fixo. Serve ao teste de regressao (cowork.test.mjs) e ao gerador da
-// referencia (gerar-referencia.mjs), que roda contra o pacote de uma versao ANTERIOR.
+// O que o Cowork recebe, medido num estado de maquina fixo. Serve ao teste de regressao
+// (cowork.test.mjs) e ao gerador da referencia (gerar-referencia.mjs). A referencia
+// versionada e a ultima versao ACEITA do Cowork (origem em referencia/origem.md).
 //
 // Sem dependencia de Vitest: o gerador roda com `node` puro contra um checkout da main.
 
@@ -12,7 +12,7 @@ import { createHash } from 'node:crypto';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 export const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-export const REFERENCIA = path.join(RAIZ, 'tests', 'regressao', 'referencia-0.40.0');
+export const REFERENCIA = path.join(RAIZ, 'tests', 'regressao', 'referencia');
 export const PACOTE_ATUAL = path.join(RAIZ, 'plugins', 'connect');
 const ID_SESSAO = 'regressao-cowork';
 

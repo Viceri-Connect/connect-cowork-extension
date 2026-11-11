@@ -1,16 +1,17 @@
 // tests/regressao/cowork.test.mjs
 // REGRESSAO DO COWORK: o multi-harness (0.41.0) nao pode mudar o que o Cowork recebia.
 //
-// A referencia (referencia-0.40.0/) foi gerada pelo pacote da main na 0.40.0, a ultima
-// versao antes do multi-harness (ver gerar-referencia.mjs). Cada teste compara o pacote
-// atual com ela no mesmo estado de maquina:
+// A referencia (referencia/) e a ultima versao ACEITA do que o Cowork recebe; a primeira
+// veio da main na 0.40.0, antes do multi-harness (referencia/origem.md). Cada teste
+// compara o pacote atual com ela no mesmo estado de maquina:
 //   - o texto que o hook de SessionStart do Cowork injeta (sessao normal e na nuvem);
-//   - o contrato das tools do MCP (as da 0.40.0 continuam iguais; tool nova pode entrar);
+//   - o contrato das tools do MCP (as da referencia continuam iguais; tool nova pode entrar);
 //   - os arquivos que so o Cowork le para subir hook e MCP;
 //   - o runtime portatil (run-node.*) no caso do Cowork: Node no CONNECT_HOME/bin, mesmo
 //     com a pasta de dados do plugin definida.
 //
-// Mudanca decidida no Cowork = regenerar a referencia e registrar no CHANGELOG.
+// Mudanca DECIDIDA no Cowork = regenerar a referencia com o pacote atual, no mesmo PR
+// (o diff de referencia/ e a revisao do que muda para o operador), e registrar no CHANGELOG.
 
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
@@ -23,14 +24,14 @@ const WIN = process.platform === 'win32';
 const NODE = WIN ? 'node.exe' : 'node';
 const SCRIPTS = path.join(PACOTE_ATUAL, 'scripts');
 
-describe('regressao do Cowork contra a 0.40.0', () => {
+describe('regressao do Cowork contra a referencia', () => {
   it('o hook de SessionStart injeta o mesmo texto (sessao normal e na nuvem)', async () => {
     const { sessao, nuvem } = await contextosDoCowork(PACOTE_ATUAL);
     expect(sessao).toBe(ler('contexto-sessao.md'));
     expect(nuvem).toBe(ler('contexto-nuvem.md'));
   });
 
-  it('as tools da 0.40.0 mantem nome, descricao e parametros', async () => {
+  it('as tools da referencia mantem nome, descricao e parametros', async () => {
     const antes = JSON.parse(ler('mcp-tools.json'));
     const agora = new Map((await toolsDoMcp(PACOTE_ATUAL)).map((t) => [t.name, t]));
     for (const t of antes) {

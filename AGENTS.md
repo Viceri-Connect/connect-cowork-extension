@@ -39,6 +39,9 @@ Os hosts são pares; o Cowork é a referência da migração, não uma dependên
 8. **Fim de linha e modo:** LF em tudo, CRLF em `*.bat`, `*.cmd`, `*.ps1`. `scripts/connect-mcp`,
    `run-node.sh` e `run-node.bat` com modo 755 no git (`git update-index --chmod=+x`).
 9. **Versão:** os três manifests iguais e a 1ª entrada do `CHANGELOG.md`.
+10. **Regressão do Cowork:** se `test:regressao` falhar, corrija o código. Só regenere a
+    referência (`node tests/regressao/gerar-referencia.mjs plugins/connect`) quando a mudança no
+    Cowork tiver sido pedida, no mesmo commit da mudança e com entrada no CHANGELOG.
 
 ## Comandos
 
@@ -46,7 +49,7 @@ Os hosts são pares; o Cowork é a referência da migração, não uma dependên
 npm ci                      # uma vez
 npm test                    # tudo
 npm run test:architecture   # contrato e paridade
-npm run test:regressao      # o Cowork recebe o mesmo que na 0.40.0
+npm run test:regressao      # o Cowork recebe o mesmo que a referência aceita
 npm run check:harnesses     # contrato sem Vitest (diagnóstico rápido)
 npm run test:unit | test:integration | test:e2e
 ```
