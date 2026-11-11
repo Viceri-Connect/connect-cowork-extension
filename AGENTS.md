@@ -46,6 +46,7 @@ Os hosts são pares; o Cowork é a referência da migração, não uma dependên
 npm ci                      # uma vez
 npm test                    # tudo
 npm run test:architecture   # contrato e paridade
+npm run test:regressao      # o Cowork recebe o mesmo que na 0.40.0
 npm run check:harnesses     # contrato sem Vitest (diagnóstico rápido)
 npm run test:unit | test:integration | test:e2e
 ```

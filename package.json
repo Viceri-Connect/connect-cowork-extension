@@ -11,6 +11,7 @@
     "test:integration": "vitest run tests/integration",
     "test:e2e": "vitest run tests/e2e",
     "test:architecture": "vitest run tests/architecture",
+    "test:regressao": "vitest run tests/regressao",
     "check:harnesses": "node tests/architecture/harness-checks.mjs",
     "build:copilot": "node scripts/build-copilot.mjs",
     "gerar:regras": "node scripts/gerar-regras.mjs",

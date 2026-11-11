@@ -60,6 +60,27 @@ jobs:
           path: reports/junit.xml
           if-no-files-found: ignore
 
+  # Regressao do Cowork com o download REAL do Node portatil (nodejs.org). Fora do job
+  # `test` porque baixa ~30-70 MB por SO; a parte sem rede ja roda la.
+  cowork-runtime:
+    name: cowork + download do runtime (${{ matrix.os }})
+    needs: architecture
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+          cache: npm
+      - run: npm ci
+      - run: npm run test:regressao
+        env:
+          CONNECT_TESTE_DOWNLOAD: '1'
+
   bundle:
     name: bundle .plugin
     needs: architecture

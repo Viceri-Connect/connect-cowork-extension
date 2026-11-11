@@ -8,8 +8,27 @@ Ferramental na raiz (Vitest), fora do bundle.
 | `tests/unit/` | Módulos de `lib/`, anotações das tools, render por host, skills por host | `npm run test:unit` |
 | `tests/integration/` | Spikes por domínio (em perfil descartável), adaptadores, runtime em sandbox | `npm run test:integration` |
 | `tests/e2e/` | MCP real (stdio e HTTP), bundle do Copilot, hooks dos hosts | `npm run test:e2e` |
+| `tests/regressao/` | O Cowork recebe o mesmo que na 0.40.0 (ver abaixo) | `npm run test:regressao` |
 
 Tudo: `npm test`. Diagnóstico do contrato sem Vitest: `npm run check:harnesses`.
+
+## Regressão do Cowork
+
+`tests/regressao/referencia-0.40.0/` guarda o que o Cowork recebia na 0.40.0, a última versão
+antes do multi-harness, gerado pelo pacote da main daquela versão num estado de máquina fixo:
+
+- o texto do hook de SessionStart (sessão normal e na nuvem sem configuração);
+- o contrato das tools do MCP (nome, descrição e parâmetros; tool nova pode entrar);
+- o hash dos arquivos que só o Cowork lê (`hooks/hooks.json`, `.mcp.json`, `mcp/launcher.bat`,
+  `scripts/run-node.ps1`).
+
+O mesmo teste prova o runtime portátil no caso do Cowork: Node no `CONNECT_HOME/bin` mesmo com
+`CLAUDE_PLUGIN_DATA` definido, e `CONNECT_HOME` não definido caindo no perfil do usuário. Com
+`CONNECT_TESTE_DOWNLOAD=1`, baixa o Node de verdade e confere que ele vai para o `CONNECT_HOME/bin`.
+
+Mudança **decidida** no Cowork: regenere a referência contra o pacote da versão anterior
+(`node tests/regressao/gerar-referencia.mjs <plugins/connect da versão anterior>`) e registre no
+CHANGELOG. Regenerar contra o pacote atual apaga a proteção.
 
 ## Isolamento
 
@@ -31,7 +50,8 @@ event loop antes de rodar, ou o Vitest acusa "Timeout calling onTaskUpdate" no W
 
 1. `architecture` (Ubuntu) roda primeiro e bloqueia os demais.
 2. `test`: Windows e Linux × Node 20.11.1 e 22; macOS informativo.
-3. `bundle` (.plugin) e `copilot-bundle`.
+3. `cowork-runtime`: regressão do Cowork com download real do Node, em Windows e Linux.
+4. `bundle` (.plugin) e `copilot-bundle`.
 
 ## Tempo
 

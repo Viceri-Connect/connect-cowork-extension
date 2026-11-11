@@ -83,6 +83,11 @@ nova é somente leitura.
   `tests/integration/<domínio>/`, incluindo os da 0.39/0.40 (`instancia` e `sessao-nuvem`).
 - **Fim de linha normalizado para LF.** Alguns arquivos tinham entrado com CRLF antes do
   `.gitattributes`, e o `build-plugin.sh` em CRLF não roda no bash.
+- **Regressão do Cowork contra a 0.40.0** (`tests/regressao/`). O texto do hook de SessionStart,
+  o contrato das 18 tools e os arquivos que só o Cowork lê são comparados com o que a 0.40.0
+  entregava, no mesmo estado de máquina. O runtime portátil no caso do Cowork também: Node no
+  `CONNECT_HOME/bin` com `CLAUDE_PLUGIN_DATA` definido, e o download real no CI. Medido em 11/11:
+  igual nos três, em Windows e Linux.
 - **Documentação do repositório** em `docs/` (arquitetura, conceitos e guias, uma página por
   assunto) e `AGENTS.md` na raiz para agentes de código. Não vai no pacote do plugin.
 - **Repositório sem dado de instância.** Nomes de cliente, caminhos de máquina e o operador real dos
