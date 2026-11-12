@@ -11,6 +11,10 @@ Ferramental na raiz (Vitest), fora do bundle.
 | `tests/regressao/` | O Cowork recebe o mesmo que na referência aceita (ver abaixo) | `npm run test:regressao` |
 
 Tudo: `npm test`. Diagnóstico do contrato sem Vitest: `npm run check:harnesses`.
+Ambos exigem `npm ci`: o diagnóstico usa o parser `yaml`, dependência apenas de desenvolvimento,
+para validar a sintaxe real do frontmatter das skills, além de nome e description no padrão
+Agent Skills. YAML inválido, chave duplicada ou description que não seja texto reprova o contrato.
+Descrições com `:` seguido de espaço precisam de aspas ou de um bloco `>`/`>-`.
 
 ## Regressão do Cowork
 

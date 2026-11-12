@@ -11,6 +11,7 @@ um `CONNECT_HOME` novo, para exercitar o download do runtime.
 | 1 | Instalar o `connect` pelo marketplace do host | Plugin listado; no Codex, revisar e aprovar os hooks |
 | 2 | Abrir uma sessão nova | Bloco "Connect — ..." no contexto; `~/Connect/bin/node` baixado na 1ª vez |
 | 3 | Pedir ao agente para listar as tools do Connect | Todas as tools; nenhuma de shell |
+| 3a | Pedir ao agente para listar as skills do Connect | As 9 skills de `plugins/connect/skills/`, incluindo `cnct-fabrica-navegacao`; nenhum erro de YAML no log do host |
 | 4 | Dizer "primeiro uso" com um código `CNCT1-...` | Matriz configurada pelo código |
 | 5 | Seguir até o perfil do operador | `~/Connect/operador/_cerebro/meu-config.md` criado |
 | 6 | Pedir o briefing diário | Agendado (Cowork, VS Code, Antigravity) ou prompt entregue (Codex) |

@@ -45,6 +45,11 @@ nova é somente leitura.
   - O teste prova também o funcionamento: os quatro hooks, no mesmo estado de máquina, entregam o
     mesmo contexto fora dos blocos declarados por host.
 - **Skills utilizáveis fora do Cowork.**
+  - Corrigido o YAML da `cnct-fabrica-navegacao`: a description usa bloco dobrado,
+    preservando o texto e permitindo os dois-pontos que faziam o Copilot rejeitar a skill.
+  - O contrato agora usa um parser YAML completo para validar o frontmatter de todas as skills,
+    incluindo chaves duplicadas e description textual. A dependência é só de desenvolvimento;
+    o runtime do plugin continua sem dependências novas.
   - A description da `cnct-nucleo-sessao` passava de 1.024 caracteres, e os hosts do Agent Skills
     descartavam em silêncio a skill de onboarding.
   - Os passos que só existem no Cowork (conectar pasta ao projeto, concessão, briefing no projeto)

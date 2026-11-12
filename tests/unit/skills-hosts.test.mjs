@@ -8,9 +8,37 @@ import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { checarSkill } from '../architecture/harness-checks.mjs';
 
 const SKILLS = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'plugins', 'connect', 'skills');
 const ler = (s) => fs.readFileSync(path.join(SKILLS, s, 'SKILL.md'), 'utf8');
+
+describe('frontmatter das skills', () => {
+  const skill = (campos) => `---\nname: cnct-teste\n${campos}\n---\n\n# Teste`;
+
+  it.each([
+    'description: Carta do vault: por onde entrar',
+    'description: Carta do vault\nname: cnct-outro',
+    'description: Carta do vault\nmetadata:\n  versao: [incompleta',
+  ])('recusa YAML invalido antes de anunciar a skill: %s', (campos) => {
+    expect(checarSkill('cnct-teste', skill(campos))).toEqual([
+      expect.stringContaining('cnct-teste/SKILL.md com YAML invalido'),
+    ]);
+  });
+
+  it.each([
+    'description: >\n  Carta do vault: por onde entrar.\n  Completa por delta.',
+    'description: "Carta do vault: por onde entrar"',
+  ])('aceita descricoes YAML validas com dois-pontos: %s', (campos) => {
+    expect(checarSkill('cnct-teste', skill(campos))).toEqual([]);
+  });
+
+  it('recusa description que YAML interpreta como mapa em vez de texto', () => {
+    expect(checarSkill('cnct-teste', skill('description:\n  resumo: Carta do vault'))).toEqual([
+      'cnct-teste/SKILL.md sem description textual',
+    ]);
+  });
+});
 
 describe('skills fora do Cowork', () => {
   it('onboarding: pular "conectar a pasta ao projeto" fora do Cowork e usar o workspace da sessao', () => {

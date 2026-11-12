@@ -2,20 +2,21 @@
 // Verificacoes do contrato de harnesses (harness-contract.mjs).
 //
 // Cada funcao devolve uma LISTA DE VIOLACOES (strings legiveis) — vazia = conforme.
-// Nao depende do Vitest: roda tambem com `node tests/architecture/harness-checks.mjs`,
-// o que permite diagnosticar o contrato em maquina sem node_modules.
+// Nao depende do runner Vitest: apos npm ci, roda tambem com
+// `node tests/architecture/harness-checks.mjs`.
 
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { parseDocument } from 'yaml';
 import {
   ENTRADA_MCP, ENV_NUVEM, EVENTOS_OBRIGATORIOS, FONTE_SKILLS, FONTE_VERSAO, HARNESSES, MARCADOR_BOOTSTRAP, MARCADOR_NUVEM,
   MARKETPLACES, COPILOT_SETTINGS, NUCLEO_COMPARTILHADO, PACOTES, SERVIDOR_MCP, SESSION_ID, VARIANTES,
   ehSuperficieDeHost,
 } from './harness-contract.mjs';
-import { parseFrontmatter } from '../../plugins/connect/lib/frontmatter.mjs';
+import { extrairFrontmatter } from '../../plugins/connect/lib/frontmatter.mjs';
 import { MARCA_ACESSO_COMPLETO, MARCA_ACESSO_LEMBRETE } from '../../plugins/connect/lib/render.mjs';
 import { ARQUIVO_REGRAS_SEMPRE_ATIVAS, textoRegrasSempreAtivas } from '../../plugins/connect/lib/regras.mjs';
 import { BLOCOS_POR_HOST, CAPACIDADES, EVENTOS_COBERTOS, HOSTS_PARIDADE, gerarDocParidade } from './paridade.mjs';
@@ -581,32 +582,36 @@ export function checarSkills(pacote) {
     const arq = path.join(dir, s, 'SKILL.md');
     if (!fs.existsSync(arq)) { v.push(`${pacote}: ${s}/SKILL.md ausente`); continue; }
     const texto = fs.readFileSync(arq, 'utf8');
-    const meta = parseFrontmatter(texto);
-    if (meta.name !== s) v.push(`${pacote}: ${s}/SKILL.md declara name="${meta.name}"`);
-    if (!meta.description) v.push(`${pacote}: ${s}/SKILL.md sem description`);
-    // Agent Skills (Codex, Copilot, Antigravity): name kebab-case ate 64, description de 1 a
-    // 1.024 caracteres. Fora disso o host descarta a skill — o Cowork aceita, e por isso a
-    // cnct-nucleo-sessao (1.297) carregava so nele, sem sinal nenhum nos outros.
-    if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(s) || s.length > 64) v.push(`${pacote}: ${s} fora do padrao de nome do Agent Skills`);
-    const descricao = descricaoDoFrontmatter(texto);
-    if (descricao.length < 1 || descricao.length > LIMITE_DESCRICAO_SKILL) {
-      v.push(`${pacote}: ${s}/SKILL.md com description de ${descricao.length} caracteres (Agent Skills aceita 1 a ${LIMITE_DESCRICAO_SKILL}) — os hosts fora do Cowork descartam a skill`);
-    }
+    v.push(...checarSkill(s, texto).map((erro) => `${pacote}: ${erro}`));
   }
   return v;
 }
 
 const LIMITE_DESCRICAO_SKILL = 1024;
 
-// `description` do frontmatter como o host le: escalar simples, aspeado ou bloco `>`/`|`
-// dobrado em uma linha. (lib/frontmatter.mjs nao interpreta bloco dobrado, de proposito.)
-export function descricaoDoFrontmatter(texto) {
-  const fm = String(texto).replace(/\r\n/g, '\n').match(/^---\n([\s\S]*?)\n---/)?.[1] || '';
-  const m = fm.match(/^description:([^\n]*)\n?((?:[ \t]+[^\n]*\n?|\n)*)/m);
-  if (!m) return '';
-  const cabeca = m[1].trim();
-  const corpo = /^[>|][-+]?$/.test(cabeca) ? m[2] : `${cabeca}\n${m[2]}`;
-  return corpo.split('\n').map((l) => l.trim()).filter(Boolean).join(' ').replace(/^["'](.*)["']$/, '$1');
+export function checarSkill(nome, texto) {
+  const arquivo = `${nome}/SKILL.md`;
+  const { bruto, presente } = extrairFrontmatter(texto);
+  if (!presente) return [`${arquivo} sem frontmatter YAML delimitado`];
+  const documento = parseDocument(bruto);
+  if (documento.errors.length) {
+    return documento.errors.map((erro) => `${arquivo} com YAML invalido: ${erro.message}`);
+  }
+  const meta = documento.toJS();
+  if (!meta || typeof meta !== 'object' || Array.isArray(meta)) {
+    return [`${arquivo} deve declarar um mapa YAML`];
+  }
+  const v = [];
+  if (meta.name !== nome) v.push(`${arquivo} declara name="${meta.name}"`);
+  if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(nome) || nome.length > 64) {
+    v.push(`${nome} fora do padrao de nome do Agent Skills`);
+  }
+  if (typeof meta.description !== 'string') {
+    v.push(`${arquivo} sem description textual`);
+  } else if (meta.description.length < 1 || meta.description.length > LIMITE_DESCRICAO_SKILL) {
+    v.push(`${arquivo} com description de ${meta.description.length} caracteres (Agent Skills aceita 1 a ${LIMITE_DESCRICAO_SKILL}) — os hosts fora do Cowork descartam a skill`);
+  }
+  return v;
 }
 
 export function checarInventario(pacote) {
