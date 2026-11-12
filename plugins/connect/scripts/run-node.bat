@@ -44,6 +44,21 @@ if not "%CONNECT_HOME:${=%"=="%CONNECT_HOME%" set "CONNECT_HOME="
 :home_padrao
 if not defined CONNECT_HOME set "CONNECT_HOME=%USERPROFILE%\Connect"
 set "BIN_DIR=%CONNECT_HOME%\bin"
+
+:: 0.41.0 - Host em SANDBOX (Copilot CLI com sandbox de sessao, Codex): sem runtime ja
+:: instalado e sem escrita no CONNECT_HOME, o Node portatil vai para a pasta de dados
+:: que o host da ao plugin (PLUGIN_DATA, COPILOT_PLUGIN_DATA, CLAUDE_PLUGIN_DATA).
+if exist "%BIN_DIR%\node.exe" goto :bin_escolhido
+if not exist "%BIN_DIR%" mkdir "%BIN_DIR%" 2>nul
+(echo.>"%BIN_DIR%\.connect-escrita") 2>nul && (del /q "%BIN_DIR%\.connect-escrita" 2>nul & goto :bin_escolhido)
+set "ALT="
+if defined PLUGIN_DATA set "ALT=%PLUGIN_DATA%"
+if not defined ALT if defined COPILOT_PLUGIN_DATA set "ALT=%COPILOT_PLUGIN_DATA%"
+if not defined ALT if defined CLAUDE_PLUGIN_DATA set "ALT=%CLAUDE_PLUGIN_DATA%"
+if not defined ALT goto :bin_escolhido
+if not "%ALT:${=%"=="%ALT%" goto :bin_escolhido
+set "BIN_DIR=%ALT%\bin"
+:bin_escolhido
 set "NODE_EXE=%BIN_DIR%\node.exe"
 set "NODE_LEGADO=%PLUGIN_DIR%\bin\node.exe"
 set "NODE_URL=https://nodejs.org/dist/v20.11.1/win-x64/node.exe"

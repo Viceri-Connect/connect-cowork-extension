@@ -1,0 +1,35 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "connect",
+  "version": "0.41.0",
+  "description": "Connect knowledge, session, and governance tools for compatible agent harnesses.",
+  "author": {
+    "name": "Impulsa / Viceri"
+  },
+  "repository": "https://github.com/Viceri-Connect/connect-cowork-extension",
+  "keywords": [
+    "connect",
+    "knowledge",
+    "mcp",
+    "skills"
+  ],
+  "extensions": {
+    "com.openai": {
+      "hooks": "./hooks/codex-hooks.json",
+      "onboardingSkill": "./skills/cnct-nucleo-sessao/SKILL.md",
+      "interface": {
+        "displayName": "Connect",
+        "shortDescription": "Contexto coletivo, sessao e governanca do Connect",
+        "longDescription": "Restaura a identidade do operador e o contexto da matriz no inicio de cada sessao, resolve conceitos em sub-vaults sob demanda e aplica a governanca que desce da matriz.",
+        "developerName": "Impulsa / Viceri",
+        "category": "Productivity",
+        "capabilities": ["Read", "Write"],
+        "defaultPrompt": [
+          "Inicie uma sessao do Connect e restaure meu contexto",
+          "Resolva este conceito na base de conhecimento coletiva",
+          "Audite a saude dos vaults conectados"
+        ]
+      }
+    }
+  }
+}

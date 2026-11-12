@@ -20,7 +20,7 @@ instalado-em: {{DATA_INSTALACAO}}
 ## Vínculos ativos
 
 > Um registro por coletivo (cliente, tribo, área) — schema `vinculos-v1`. Lido **antes** da carta de
-> navegação do coletivo. O **coletivo ativo é ditado pelo Projeto Cowork** — resolvido casando o vault
+> navegação do coletivo. O **coletivo ativo é ditado pelo vault montado na sessão** (no Cowork, o do projeto) — resolvido casando o vault
 > montado (o que tem `_cerebro/vault-config.md`) com o registro em `_cerebro/vinculos/{coletivo}/`.
 
 - registro: "_cerebro/vinculos/"

@@ -13,7 +13,7 @@ description: >
   Roda no estado zero — não exige coletivo montado. Estado zero é gatilho de
   nascimento, não erro.
 metadata:
-  version: "0.5.0"
+  version: "0.5.1"
   eixo: nucleo
   program: "Impulsa / Viceri"
   camada: "L2 — fábrica por tipo"
@@ -64,8 +64,9 @@ O **destino padrão é o perfil gerido pelo Connect**: `{CONNECT_HOME}/operador`
 2026-08-17 — ver `CONCEITOS.md` §5). É ele que torna o **vault pessoal Obsidian opcional**:
 o mecanismo lê a identidade daí, sem exigir vault do usuário. Resolver `{CONNECT_HOME}` via
 `estado_sessao` (campo `home`) e usar `{CONNECT_HOME}/operador` como `{DESTINO}`. Pasta
-inexistente é o **caso normal** (estado zero), não erro. No Cowork, **conceder acesso** antes
-de escrever.
+inexistente é o **caso normal** (estado zero), não erro. **Garantir acesso de escrita** antes de
+escrever: no Cowork, pela concessão de pasta; no Codex, no Copilot e no Antigravity, pela liberação que
+o bloco de acesso do hook descreve (pedida uma vez por host).
 
 > Se o operador **também** mantém um vault Obsidian próprio (com protocolos/`CLAUDE.md`
 > próprios), ele **coexiste** como enriquecimento opcional — registrado à parte via
@@ -169,6 +170,22 @@ fino** e nunca carrega lógica, para não envelhecer contra a forma.
    Se a ferramenta não estiver disponível ou a sessão não estiver nesse projeto, **dizer exatamente
    isso** ao operador e entregar o prompt do template para ele criar pela interface — nunca
    improvisar um prompt alternativo.
+   **Fora do Cowork** vale a mesma regra (prompt verbatim, gatilho fino), com o agendador de cada
+   host:
+   - **VS Code (Agents window / Copilot):** o agente cria a **automação** pela ferramenta do próprio
+     host, no fluxo normal de aprovação. Local (o briefing lê arquivos da máquina), no workspace que
+     alcança o `CONNECT_HOME` e a matriz, gatilho **Daily** ou **Weekly** no horário da rotina (cron
+     só com Agent Host local), salva **desabilitada** para o operador revisar e habilitar em
+     **Automations**. Sem a ferramenta (chat fora do Agents window), gerar um `.automation.md` com o
+     prompt verbatim e o horário (`version: 1`, `id`, `name`, `schedule`) e pedir ao operador
+     **Import Automation**. Automação local só roda com a máquina ligada e o VS Code (ou o Agent
+     Host) aberto — dizer isso ao operador.
+   - **Antigravity:** a ferramenta `schedule` (expressão cron + o prompt).
+   - **Codex/ChatGPT:** a automação recorrente é criada pela interface do host — entregar ao operador
+     o prompt e o horário, prontos para colar.
+
+   Em qualquer host, a tarefa precisa rodar com acesso ao `CONNECT_HOME` e à matriz; sem isso o
+   briefing sai vazio.
 4. **Rodar uma vez na hora** (ou pedir ao operador que dispare) e conferir que o briefing saiu
    lendo os vínculos — é o teste de que as alocações estão certas.
 
@@ -206,4 +223,4 @@ fosse podada). Protocolo:
   fábrica genérica**: a versão do coletivo era a da instância de referência; a forma
   sobe para o produto.
 
-<!-- SKILL-END cnct-fabrica-operador v0.5.0 · L2 · ref. FRAMEWORK.md §4 -->
+<!-- SKILL-END cnct-fabrica-operador v0.5.1 · L2 · ref. FRAMEWORK.md §4 -->

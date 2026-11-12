@@ -1,0 +1,424 @@
+[
+  {
+    "name": "catalogo_sync",
+    "description": "Caminho inverso da `origem` declarada: le o que o cliente OneDrive desta maquina sincroniza e cruza com as entidades do registro, POR ID. Devolve, por entidade, se tem `origem` e onde mora aqui; e as pastas sincronizadas que nenhum manifesto declara, com `origemSugerida` completa (e `yaml` pronto) para o curador confirmar a entidade e gravar no manifesto. Com `registrar: true`, grava o caminho local de toda entidade achada (operador que ja sincroniza tudo). Cruzamento por nome nunca registra — so aparece como `candidatoPorNome`. Windows e macOS (em validacao): `diagnostico` diz onde o catalogo foi procurado e o que se achou em cada raiz — catalogo nao encontrado no Mac = devolver o `diagnostico` ao time do Connect.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "registrar": {
+          "type": "boolean",
+          "description": "Grava em connect.config.json o caminho de toda entidade achada por id.",
+          "default": false
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "name": "configurar",
+    "description": "Grava os caminhos locais do Connect em connect.config.json (configuracao guiada do 1o uso). No 1o uso so a matriz e necessaria (cerebro_pessoal e opcional). Atualizacao parcial: informe vault_matriz e/ou cerebro_pessoal; so grava os que existirem como diretorio, e reporta os invalidos para re-perguntar. Depois, chame iniciar_sessao.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "vault_matriz": {
+          "type": "string",
+          "description": "Caminho local da matriz (pasta que contem _cerebro/vault-config.md)."
+        },
+        "cerebro_pessoal": {
+          "type": "string",
+          "description": "OPCIONAL — so se o operador disser que ja mantem um vault Obsidian proprio (enriquecimento, montado como ./pessoal). NAO e a identidade: o perfil do operador e gerido pelo Connect em {CONNECT_HOME}/operador e nasce pela cnct-fabrica-operador. Nunca pergunte por ele no 1o uso."
+        },
+        "home": {
+          "type": "string",
+          "description": "Pasta fixa do Connect (fora do OneDrive). Opcional; default por SO."
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "name": "configurar_por_codigo",
+    "description": "PRIMEIRO USO por codigo de instancia (CNCT1-...): o operador cola no pedido inicial o codigo que vem no guia da empresa, e o Connect acha, sincroniza e configura a Matriz sozinho — sem perguntar caminho. Passe o codigo (ou o texto do pedido; o codigo e extraido). Ordem: valida o codigo SEM efeito colateral; se a Matriz ja esta sincronizada (catalogo do OneDrive, por id), so configura; senao exige UMA conta OneDrive do dominio da instancia, dispara o sync, espera a pasta aparecer, confere que e uma Matriz (_cerebro/vault-config.md), fixa no dispositivo e grava. Status: configurado | ja-configurado (chame iniciar_sessao) · aguardando (sync lento OU sem permissao — devolve `governanca` a quem pedir acesso; repita) · codigo-invalido · onedrive-sem-conta · conta-de-outro-dominio · ambigua-conta (pergunte e repita com `email`) · outra-matriz-configurada (pergunte; `substituir: true`) · caminho-nao-traduzido · plataforma-nao-suportada. Nunca registra caminho que o OneDrive nao listou.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "codigo": {
+          "type": "string",
+          "description": "O codigo de instancia (CNCT1-...) ou o texto que o contem."
+        },
+        "email": {
+          "type": "string",
+          "description": "E-mail da conta OneDrive (so quando houver mais de uma conta do dominio). Opcional."
+        },
+        "substituir": {
+          "type": "boolean",
+          "description": "Troca uma Matriz ja configurada por esta. So com confirmacao do operador.",
+          "default": false
+        },
+        "aguardar_segundos": {
+          "type": "number",
+          "description": "Quanto esperar a pasta aparecer no catalogo (default 120)."
+        }
+      },
+      "required": [
+        "codigo"
+      ]
+    }
+  },
+  {
+    "name": "estado_operador",
+    "description": "Le o registro de VINCULO do operador com um coletivo (`operador/_cerebro/vinculos/{coletivo}/`): a leitura pessoal dele sobre aquele contexto — estado, ambientes locais, particularidades de repo por-maquina. Pela curadoria-pessoal-coletivo isso vale ANTES da carta de navegacao do coletivo. O `resolver` ja entrega esse recorte junto quando resolve; use esta tool quando precisar do vinculo SEM resolver o coletivo, ou para listar com quais coletivos o operador tem vinculo. Status \"ausente\" e o estado normal do primeiro contato, nunca erro.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "coletivo": {
+          "type": "string",
+          "description": "Coletivo (cliente, tribo ou area). Omita para listar todos os vinculos existentes."
+        },
+        "home": {
+          "type": "string",
+          "description": "Pasta fixa do Connect. Opcional; default por SO."
+        }
+      }
+    }
+  },
+  {
+    "name": "estado_sessao",
+    "description": "Checagem leve (sem montar nada): o Connect ja esta configurado (matriz definida e existente)? A sessao ja foi montada nesta janela? Use antes de iniciar_sessao para decidir se precisa configurar (1o uso), iniciar, ou apenas seguir. Nao tem efeito colateral.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session_id": {
+          "type": "string",
+          "description": "Identificador da sessao (para checar se ja esta montada)."
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "name": "gerar_codigo_instancia",
+    "description": "Para QUEM GOVERNA a instancia: gera o codigo de instancia (CNCT1-...) que vai no guia de instalacao, a partir da Matriz ja configurada e sincronizada nesta maquina (origem lida do catalogo do OneDrive). O codigo nao e segredo e nao concede acesso (a permissao segue no SharePoint), mas carrega ids internos: so em material interno. Status: ok · matriz-nao-configurada · origem-nao-encontrada · origem-maior (sincronize a Matriz sozinha) · dominio-indefinido (repita com `dominio`).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "dominio": {
+          "type": "string",
+          "description": "Dominio de e-mail da instancia (ex.: empresa.com.br). Opcional se houver uma so conta OneDrive."
+        },
+        "instancia": {
+          "type": "string",
+          "description": "Nome de exibicao da instancia (ex.: nome da empresa). Opcional."
+        },
+        "governanca": {
+          "type": "string",
+          "description": "A quem pedir acesso quando o sync ficar aguardando (papel ou pessoa). Recomendado."
+        },
+        "pasta": {
+          "type": "string",
+          "description": "Caminho da pasta na biblioteca (ex.: \"Documentos/Connect/Matriz\"). Opcional: o catalogo so tem o nome, e quem localiza e o id."
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "name": "iniciar_sessao",
+    "description": "Inicia uma sessao do Connect: cria o scaffold da sessao fora do OneDrive, monta a matriz de contexto como atalho flat \"./matriz\", restaura a identidade do operador e carrega o contexto lazy da camada 1 da matriz. Chamado automaticamente pelo hook de SessionStart; pode ser chamado manualmente para reiniciar o contexto. Retorna um bloco markdown de contexto da sessao.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session_id": {
+          "type": "string",
+          "description": "Identificador unico da sessao (nomeia o scaffold). Se ausente, um id e gerado."
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "name": "list_mounts",
+    "description": "Lista os aliases (junctions/symlinks) atualmente montados no workspace.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "workspace_dir": {
+          "type": "string",
+          "description": "Diretorio de trabalho da sessao."
+        }
+      },
+      "required": [
+        "workspace_dir"
+      ]
+    }
+  },
+  {
+    "name": "listar_repos",
+    "description": "Lista a tabela local de repositorios (conceito, coletivo, caminho, existe, tem .git) para o operador conferir ou curar. `semColetivo` traz as entradas em formato legado (sem escopo) — sao as que ainda podem colidir entre clientes.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "medir_navegacao",
+    "description": "Roda as sete metricas do interior de um vault (M1 cobertura/orfas · M2 grau de padrao · M3 massa da carta em tokens, separada em delta local x carta de processo · M4 massa do caminho de entrada · M5 ponteiro morto, inclusive os ponteiros herdados resolvidos NESTE vault · M6 fronteiras nomeiam conceito · M7 conformidade de heranca) — contrato-navegacao.md §9.4. Resolve a HERANCA antes de medir: e precondicao dura da M1, porque medir cobertura sem resolver o processo herdado produz orfa falsa em massa. Use no modo AUDIT do cnct-nucleo-audit, ao podar uma carta, e sempre que o operador pedir o custo de contexto de um vault. Nao corrige nada — mede e reporta.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "vault_dir": {
+          "type": "string",
+          "description": "Diretorio raiz do vault a medir (a origem real, nao o alias)."
+        },
+        "alias": {
+          "type": "string",
+          "description": "Alias do vault na sessao, so para rotular a saida (default: \"vault\")."
+        },
+        "pouso": {
+          "type": "string",
+          "description": "Caminho relativo do ponto de pouso declarado no manifesto (M4). Se ausente, e derivado da secao de ordem de entrada da carta."
+        }
+      },
+      "required": [
+        "vault_dir"
+      ]
+    }
+  },
+  {
+    "name": "mount_junction",
+    "description": "Monta uma junction (Windows) ou symlink (POSIX) dentro do workspace da sessao, expondo um diretorio de origem como um alias flat. Primitivo de mount; a origem pode estar sincronizada com SharePoint/OneDrive. Nao concede acesso de leitura por si so.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "workspace_dir": {
+          "type": "string",
+          "description": "Diretorio de trabalho da sessao."
+        },
+        "alias": {
+          "type": "string",
+          "description": "Nome do atalho a criar (nome simples, sem separadores)."
+        },
+        "source_dir": {
+          "type": "string",
+          "description": "Diretorio de origem a expor."
+        },
+        "replace": {
+          "type": "boolean",
+          "description": "Se true, substitui um alias existente que aponte para outro destino.",
+          "default": false
+        }
+      },
+      "required": [
+        "workspace_dir",
+        "alias",
+        "source_dir"
+      ]
+    }
+  },
+  {
+    "name": "publicar_governanca",
+    "description": "Materializa `{vault}/CLAUDE.md` — o arquivo de GOVERNANCA na raiz de um vault de conhecimento: declara que o acervo e governado, carrega as regras duras e APONTA para `_cerebro/camada-1.md`. Nao copia o conteudo da carta. O harness carrega esse arquivo sozinho da raiz de pasta conectada e o rotula como *override* — e o slot de maior precedencia do contexto, e sem isto ele fica sob autoria nao governada. WRITE-ONCE: republicar sem mudanca devolve \"inalterado\" e NAO toca o arquivo (e o que impede a copia de conflito em vault sincronizado). RECUSA sobrescrever CLAUDE.md sem marcador do Connect, sempre: pode ser Camada 0 de operador, sonda ou conteudo de terceiro. Use na cnct-fabrica-navegacao, depois de materializar a carta. NUNCA escrever esse arquivo a mao — o marcador CNCT-GOV e gerado aqui.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "vault_dir": {
+          "type": "string",
+          "description": "Diretorio absoluto da raiz do vault de conhecimento. Nunca o perfil do operador (la CLAUDE.md e a Camada 0)."
+        },
+        "vault": {
+          "type": "string",
+          "description": "Nome/conceito do vault, usado no marcador (ex.: \"Tribo X\")."
+        },
+        "nome_exibicao": {
+          "type": "string",
+          "description": "Titulo legivel do vault no arquivo (opcional; default = vault)."
+        }
+      },
+      "required": [
+        "vault_dir",
+        "vault"
+      ]
+    }
+  },
+  {
+    "name": "registrar_repo_local",
+    "description": "Grava, em connect.config.json (tabela `repos`), o diretorio LOCAL onde um repositorio de codigo mora nesta maquina. Use depois de `resolver_repo` devolver \"local-nao-configurado\" (tendo perguntado ao operador) ou apos um clone conduzido na sessao. Substitui o antigo `repos.md` no vault pessoal — path e por-maquina, nunca conteudo de vault.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "conceito": {
+          "type": "string",
+          "description": "Nome/conceito do repo (chave estavel)."
+        },
+        "caminho": {
+          "type": "string",
+          "description": "Diretorio absoluto da raiz do repo nesta maquina."
+        },
+        "coletivo": {
+          "type": "string",
+          "description": "Coletivo dono do repo. Informe SEMPRE que souber: sem escopo, dois coletivos com repo homonimo colidem."
+        },
+        "escopo": {
+          "type": "string",
+          "description": "Escopo dentro do coletivo (produto, squad). Opcional."
+        },
+        "home": {
+          "type": "string",
+          "description": "Pasta fixa do Connect. Opcional; default por SO."
+        }
+      },
+      "required": [
+        "conceito",
+        "caminho"
+      ]
+    }
+  },
+  {
+    "name": "registrar_subvault_local",
+    "description": "Grava, em connect.config.json (subVaults), o diretorio LOCAL (nesta maquina) onde um `conceito` mora — sub-vault ou diretorio de output (Delivery Hub). Nunca vai pro vault — e por-operador, por-maquina. Use depois que o `resolver` devolver \"local-nao-configurado\" (pergunte o caminho ao operador antes de chamar) ou quando uma fabrica acabou de materializar um sub-vault e ja sabe o path. SEMPRE informe `coletivo` quando souber: sem ele a chave nasce sem escopo e reabre a colisao entre coletivos que o escopo por coletivo fechou.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "conceito": {
+          "type": "string",
+          "description": "Conceito devolvido pelo resolver (ver status local-nao-configurado)."
+        },
+        "caminho": {
+          "type": "string",
+          "description": "Diretorio absoluto, nesta maquina, onde o acervo mora."
+        },
+        "coletivo": {
+          "type": "string",
+          "description": "Coletivo dono (o cliente, tribo ou area). Escopa a chave — informe sempre que souber."
+        },
+        "escopo": {
+          "type": "string",
+          "description": "Escopo dentro do coletivo (squad ou area). Use quando o mesmo conceito varia por squad, como o Delivery Hub."
+        },
+        "home": {
+          "type": "string",
+          "description": "Pasta fixa do Connect. Opcional; default por SO."
+        }
+      },
+      "required": [
+        "conceito",
+        "caminho"
+      ]
+    }
+  },
+  {
+    "name": "resolver",
+    "description": "Resolve um CONCEITO numa entidade do registro derivado (varredura de manifestos — frontmatter `tipo` do cerebro pessoal e da matriz; contrato em config/contrato-manifesto.md). O manifesto NUNCA guarda caminho local — declara `externo` (tem acervo fora da matriz?), opcionalmente `origem` (onde mora na nuvem — ver sincronizar_subvault) e `criado-por`/`criado-em` (ja foi materializado?); o proprio `conceito` (chave de casamento) tambem indexa o path local. O path fica so em connect.config.json (subVaults). Nunca pergunta nada nem advinha path — devolve `status` pra skill decidir: nao-encontrado (o registro so indexa conceito com casa fora — projeto e conteudo da matriz ou de vault ja montado vao pela carta e por wikilink), pendente-criacao (aciona fabrica), local-nao-configurado (pergunte o diretorio e grave com registrar_subvault_local), origem-ausente, ou resolvido (monta, injeta a CARTA DE NAVEGACAO do sub-vault verbatim e devolve `entradaResolvida.caminhoRelativo` — o ponto de pouso ja resolvido a caminho real, nunca nome de nota a caçar). Entidade resolvida cujo manifesto NAO declara `origem` traz `origemCapturavel`: o bloco lido do catalogo do OneDrive desta maquina e o manifesto a editar — ofereca gravar, pelo protocolo de escrita, nunca em silencio. Resolve TAMBEM diretorio de output (Delivery Hub) quando o manifesto declara tipo de diretorio: nesse caso devolve `classe: \"diretorio\"`, monta e entrega a concessao, e NAO cobra carta de navegacao nem heranca de processo. Devolve tambem `vinculo` — a leitura do operador sobre este coletivo, que pela curadoria-pessoal-coletivo vale ANTES da carta. `ambigua` significa PERGUNTE (ou repita com `coletivo`), nunca escolha.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "conceito": {
+          "type": "string",
+          "description": "Conceito ou gatilho a resolver (ex.: \"gestao-financeira\", \"delivery-hub\")."
+        },
+        "workspace_dir": {
+          "type": "string",
+          "description": "Diretorio de trabalho da sessao (estado_sessao.workspace)."
+        },
+        "alias": {
+          "type": "string",
+          "description": "Sobrescreve o alias declarado no registro (opcional)."
+        },
+        "coletivo": {
+          "type": "string",
+          "description": "Desempate por coletivo (o cliente, tribo ou area dona). Informe quando o conceito puder existir em mais de um coletivo — o mecanismo nunca adivinha por estado da sessao."
+        },
+        "escopo": {
+          "type": "string",
+          "description": "Estreita mais o desempate (a squad ou area dentro do coletivo). Opcional."
+        },
+        "replace": {
+          "type": "boolean",
+          "description": "Se true, substitui um alias existente que aponte para outro destino.",
+          "default": false
+        }
+      },
+      "required": [
+        "conceito",
+        "workspace_dir"
+      ]
+    }
+  },
+  {
+    "name": "resolver_repo",
+    "description": "Resolve o CAMINHO LOCAL de um repositorio de codigo declarado (analogo do `resolver`, para codigo). Repo NAO e montado como junction: devolve o caminho real da maquina para o agente pedir acesso ao Cowork / usar como cwd. Path mora so em connect.config.json (tabela `repos`), nunca no vault. Nunca advinha: status \"local-nao-configurado\" significa PERGUNTE ao operador (ou ofereca clonar) e grave com registrar_repo_local — jamais procurar o repo por varredura de disco. NAO use para Delivery Hub nem para pasta de entregaveis — isso e `resolver` (classe diretorio). Aqui, \"sem-git\" quer dizer que a pasta provavelmente nao e um repo. Status \"ambigua\" traz candidatos qualificados por coletivo: PERGUNTE ao operador ou repita informando `coletivo`. O casamento aqui e proposital mais estrito que o do `resolver`: repo e superficie de escrita, e termo mais longo que a chave significa repo AUSENTE.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "conceito": {
+          "type": "string",
+          "description": "Nome/conceito do repo (ex.: \"connect-site\", \"connect\")."
+        },
+        "coletivo": {
+          "type": "string",
+          "description": "Desempate por coletivo (o cliente, tribo ou area dona). Informe quando dois coletivos puderem ter repo de mesmo nome."
+        },
+        "escopo": {
+          "type": "string",
+          "description": "Estreita mais o desempate (squad, produto). Opcional."
+        }
+      },
+      "required": [
+        "conceito"
+      ]
+    }
+  },
+  {
+    "name": "sincronizar_subvault",
+    "description": "Sincroniza no OneDrive desta maquina o acervo de um CONCEITO cujo manifesto declara `origem` (declarada no manifesto) e registra o caminho local — sem perguntar nada ao operador. Use quando o `resolver` devolver `sincronizavel: true` (local-nao-configurado ou origem-ausente) e no onboarding. Ordem: se a pasta ja esta sincronizada (catalogo do cliente OneDrive, casado por id), so registra; senao dispara o link de sync e espera a pasta aparecer no catalogo. `classe: vault` e fixado no dispositivo (\"Manter sempre neste dispositivo\"); `diretorio` (Delivery Hub) fica sob demanda. Status: sincronizado (chame `resolver` em seguida) · aguardando (sync lento OU sem permissao — devolve `governanca` a quem pedir acesso; nunca registra caminho que nao apareceu) · sem-origem (fluxo antigo: perguntar o caminho) · origem-invalida · plataforma-nao-suportada (devolve `link` para o operador abrir) · ambigua · nao-encontrado.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "conceito": {
+          "type": "string",
+          "description": "Conceito da entidade (ex.: \"marketing\", \"vendas\")."
+        },
+        "coletivo": {
+          "type": "string",
+          "description": "Desempate e escopo da chave local. Informe quando souber."
+        },
+        "escopo": {
+          "type": "string",
+          "description": "Escopo dentro do coletivo (squad ou area). Opcional."
+        },
+        "email": {
+          "type": "string",
+          "description": "E-mail da conta OneDrive do operador (ajuda quando ha mais de uma conta). Opcional."
+        },
+        "aguardar_segundos": {
+          "type": "number",
+          "description": "Quanto esperar a pasta aparecer no catalogo (default 90)."
+        }
+      },
+      "required": [
+        "conceito"
+      ]
+    }
+  },
+  {
+    "name": "unmount_junction",
+    "description": "Desmonta uma junction/symlink do workspace. Remove apenas o atalho — a origem nunca e apagada. Recusa remover diretorios reais.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "workspace_dir": {
+          "type": "string",
+          "description": "Diretorio de trabalho da sessao."
+        },
+        "alias": {
+          "type": "string",
+          "description": "Nome do atalho a remover."
+        }
+      },
+      "required": [
+        "workspace_dir",
+        "alias"
+      ]
+    }
+  }
+]

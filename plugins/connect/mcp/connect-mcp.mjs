@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // connect/mcp/connect-mcp.mjs
-// Servidor MCP do Connect — transporte stdio, JSON-RPC 2.0 delimitado por linha.
+// Servidor MCP do Connect — stdio por padrao, Streamable HTTP local opcional.
 // Zero dependencias externas (Node embarcado, sem npm install).
 //
 // Superficie (decisao 2026-08-14 — sem entidade "cliente"):
@@ -21,6 +21,8 @@
 // IMPORTANTE: stdout e reservado para o protocolo. Todo log vai para stderr.
 
 import readline from 'node:readline';
+import { AsyncLocalStorage } from 'node:async_hooks';
+import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
 import { mount, unmount, listMounts } from '../lib/mount.mjs';
 import { iniciarSessao, gravarConfig, estadoSessao, registrarSubVaultLocal, resolveConfig } from '../lib/session.mjs';
@@ -32,6 +34,7 @@ import { resolverRepo, registrarRepoLocal, listarRepos } from '../lib/repos.mjs'
 import { publicarGovernanca } from '../lib/governanca.mjs';
 import { sincronizarSubvault, catalogoSync } from '../lib/sincronizar.mjs';
 import { configurarPorCodigo, gerarCodigoInstancia } from '../lib/instancia.mjs';
+import { inspectEnvironment } from '../lib/environment.mjs';
 
 const log = (...a) => process.stderr.write(`[connect-mcp] ${a.join(' ')}\n`);
 
@@ -42,8 +45,14 @@ const log = (...a) => process.stderr.write(`[connect-mcp] ${a.join(' ')}\n`);
 // e resposta honesta; numero errado nao e.
 function versaoDoPacote() {
   try {
-    const p = new URL('../.claude-plugin/plugin.json', import.meta.url);
-    return JSON.parse(readFileSync(p, 'utf8')).version || 'desconhecida';
+    for (const arquivo of ['../plugin.json', '../version.json', '../.claude-plugin/plugin.json']) {
+      try {
+        const p = new URL(arquivo, import.meta.url);
+        const versao = JSON.parse(readFileSync(p, 'utf8')).version;
+        if (versao) return versao;
+      } catch { /* tenta a proxima fonte */ }
+    }
+    return 'desconhecida';
   } catch {
     return 'desconhecida';
   }
@@ -53,6 +62,14 @@ const SERVER_INFO = { name: 'connect', version: versaoDoPacote() };
 let protocolVersion = '2025-06-18';
 
 const TOOLS = [
+  {
+    name: 'ambiente_connect',
+    description:
+      'Relatorio somente de leitura do runtime, plataforma e acessibilidade atual do CONNECT_HOME. ' +
+      'Persistencia e suporte a links ficam explicitamente como desconhecidos quando nao podem ser ' +
+      'confirmados sem efeitos colaterais. Nao executa comandos nem controla a maquina.',
+    inputSchema: { type: 'object', properties: {} },
+  },
   {
     name: 'iniciar_sessao',
     description:
@@ -396,9 +413,52 @@ const TOOLS = [
   },
 ];
 
-function send(msg) { process.stdout.write(JSON.stringify(msg) + '\n'); }
-function ok(id, result) { send({ jsonrpc: '2.0', id, result }); }
-function fail(id, code, message) { send({ jsonrpc: '2.0', id, error: { code, message } }); }
+// ---------------------------------------------------------------------------
+// ANOTACOES — o que cada tool faz com o mundo (MCP `annotations`, 0.41.0).
+//
+// Os hosts usam isto para decidir quando pedir aprovacao: leitura pura passa sem
+// friccao; escrita destrutiva (sobrescreve config, arquivo de vault ou atalho) pede
+// confirmacao. Classificacao conservadora — na duvida, conta como escrita/destrutiva:
+//   readOnlyHint    nao altera nada (nem config, nem atalho, nem arquivo)
+//   destructiveHint pode SOBRESCREVER ou REMOVER algo existente
+//   idempotentHint  repetir com os mesmos argumentos nao muda o resultado
+//   openWorldHint   fala com algo fora desta maquina (OneDrive/SharePoint)
+// tests/unit/mcp-anotacoes.test.mjs exige anotacao em toda tool.
+// ---------------------------------------------------------------------------
+const LEITURA = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
+const ESCRITA = { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false };
+const SOBRESCREVE = { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false };
+const ANOTACOES = {
+  ambiente_connect: { title: 'Ambiente do Connect', ...LEITURA },
+  iniciar_sessao: { title: 'Iniciar sessao Connect', ...ESCRITA }, // cria o workspace e monta atalhos
+  estado_sessao: { title: 'Estado da sessao', ...LEITURA },
+  configurar: { title: 'Configurar caminhos locais', ...SOBRESCREVE }, // troca a matriz configurada
+  resolver: { title: 'Resolver conceito', ...ESCRITA }, // monta o atalho do sub-vault
+  registrar_subvault_local: { title: 'Registrar sub-vault local', ...ESCRITA },
+  publicar_governanca: { title: 'Publicar governanca no vault', ...SOBRESCREVE }, // reescreve arquivo do vault compartilhado
+  resolver_repo: { title: 'Resolver repositorio', ...LEITURA },
+  registrar_repo_local: { title: 'Registrar repositorio local', ...ESCRITA },
+  listar_repos: { title: 'Listar repositorios', ...LEITURA },
+  estado_operador: { title: 'Vinculo do operador', ...LEITURA },
+  medir_navegacao: { title: 'Medir navegacao do vault', ...LEITURA },
+  mount_junction: { title: 'Montar atalho', ...SOBRESCREVE }, // `replace` troca um atalho existente
+  unmount_junction: { title: 'Remover atalho', ...SOBRESCREVE },
+  sincronizar_subvault: { title: 'Sincronizar sub-vault (OneDrive)', ...ESCRITA, openWorldHint: true },
+  catalogo_sync: { title: 'Catalogo do OneDrive', ...ESCRITA }, // `registrar: true` grava caminhos
+  configurar_por_codigo: { title: 'Configurar pelo codigo de instancia', ...SOBRESCREVE, openWorldHint: true },
+  gerar_codigo_instancia: { title: 'Gerar codigo de instancia', ...LEITURA },
+  list_mounts: { title: 'Listar atalhos', ...LEITURA },
+};
+for (const tool of TOOLS) tool.annotations = ANOTACOES[tool.name];
+
+const responseContext = new AsyncLocalStorage();
+function send(msg) {
+  const sink = responseContext.getStore();
+  if (sink) sink(msg);
+  else process.stdout.write(JSON.stringify(msg) + '\n');
+}
+function ok(id, result) { if (id !== undefined) send({ jsonrpc: '2.0', id, result }); }
+function fail(id, code, message) { if (id !== undefined) send({ jsonrpc: '2.0', id, error: { code, message } }); }
 function toolText(obj) {
   const text = typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2);
   return { content: [{ type: 'text', text }] };
@@ -414,6 +474,8 @@ function handleToolCall(id, params) {
   const args = params?.arguments || {};
   try {
     switch (name) {
+      case 'ambiente_connect':
+        return ok(id, toolText(inspectEnvironment()));
       case 'iniciar_sessao': {
         const report = iniciarSessao({ sessionId: args.session_id });
         // Bloco legivel + relatorio estruturado com os textos longos INTEIROS na
@@ -590,13 +652,178 @@ function handle(msg) {
   }
 }
 
-const rl = readline.createInterface({ input: process.stdin, terminal: false });
-rl.on('line', (line) => {
-  const s = line.trim();
-  if (!s) return;
-  let msg;
-  try { msg = JSON.parse(s); } catch { log('JSON invalido ignorado:', s.slice(0, 120)); return; }
-  try { handle(msg); } catch (e) { log('erro ao tratar mensagem:', e.message); }
-});
+function lerOpcoes(argv, env) {
+  const options = {
+    transport: env.CONNECT_MCP_TRANSPORT || 'stdio',
+    port: Number(env.CONNECT_MCP_PORT || 3737),
+  };
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === '--transport' || arg === '--port') {
+      const value = argv[index + 1];
+      if (!value) throw new Error(`valor ausente para ${arg}`);
+      if (arg === '--transport') options.transport = value;
+      else options.port = Number(value);
+      index += 1;
+    } else if (arg.startsWith('--transport=')) {
+      options.transport = arg.slice('--transport='.length);
+    } else if (arg.startsWith('--port=')) {
+      options.port = Number(arg.slice('--port='.length));
+    } else {
+      throw new Error(`opcao desconhecida: ${arg}`);
+    }
+  }
+  if (!['stdio', 'http'].includes(options.transport)) {
+    throw new Error(`transporte invalido: ${options.transport}; use stdio ou http`);
+  }
+  if (!Number.isInteger(options.port) || options.port < 1 || options.port > 65535) {
+    throw new Error('CONNECT_MCP_PORT/--port deve ser um inteiro entre 1 e 65535');
+  }
+  return options;
+}
 
-log(`servidor pronto (stdio) — plataforma=${process.platform}`);
+function erroJsonRpc(id, code, message) {
+  return { jsonrpc: '2.0', id, error: { code, message } };
+}
+
+function processarHttp(messages) {
+  const respostas = [];
+  const validas = [];
+  for (const msg of messages) {
+    const isObject = msg && typeof msg === 'object' && !Array.isArray(msg);
+    if (isObject && msg.method === undefined && ('result' in msg || 'error' in msg)) continue;
+    if (isObject && msg.jsonrpc === '2.0' && typeof msg.method === 'string') {
+      validas.push(msg);
+      continue;
+    }
+    respostas.push(erroJsonRpc(isObject && msg.id !== undefined ? msg.id : null, -32600, 'Invalid Request'));
+  }
+
+  const esperadas = validas.filter((msg) => msg.id !== undefined).length + respostas.length;
+  if (esperadas === 0) {
+    for (const msg of validas) responseContext.run(() => {}, () => handle(msg));
+    return Promise.resolve(null);
+  }
+
+  return new Promise((resolve) => {
+    const enviar = (resposta) => {
+      respostas.push(resposta);
+      if (respostas.length === esperadas) resolve(respostas);
+    };
+    const iniciais = respostas.splice(0, respostas.length);
+    for (const resposta of iniciais) enviar(resposta);
+    for (const msg of validas) {
+      responseContext.run(enviar, () => {
+        try { handle(msg); } catch (error) { enviar(erroJsonRpc(msg.id ?? null, -32603, error.message)); }
+      });
+    }
+  });
+}
+
+function hostLocalValido(value, port) {
+  try {
+    const parsed = new URL(`http://${value}`);
+    return ['127.0.0.1', 'localhost'].includes(parsed.hostname.toLowerCase()) && parsed.port === String(port);
+  } catch {
+    return false;
+  }
+}
+
+function origemLocalValida(value, port) {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'http:'
+      && ['127.0.0.1', 'localhost'].includes(parsed.hostname.toLowerCase())
+      && parsed.port === String(port);
+  } catch {
+    return false;
+  }
+}
+
+async function lerCorpo(req, limiteBytes = 1_048_576) {
+  const chunks = [];
+  let bytes = 0;
+  for await (const chunk of req) {
+    bytes += chunk.length;
+    if (bytes > limiteBytes) {
+      const error = new Error('request body exceeds 1 MiB');
+      error.statusCode = 413;
+      throw error;
+    }
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks).toString('utf8');
+}
+
+function iniciarHttp(port) {
+  const server = createServer(async (req, res) => {
+    const respond = (status, body, contentType = 'text/plain; charset=utf-8') => {
+      res.writeHead(status, { 'Content-Type': contentType, 'Cache-Control': 'no-store' });
+      res.end(body);
+    };
+
+    if (!hostLocalValido(req.headers.host || '', port)) return respond(403, 'Invalid Host header');
+    const origin = req.headers.origin;
+    if (origin && !origemLocalValida(origin, port)) return respond(403, 'Invalid Origin header');
+    if (req.url !== '/mcp') return respond(404, 'Not found');
+    if (req.method === 'GET') {
+      res.setHeader('Allow', 'POST');
+      return respond(405, 'Server-Sent Events are not supported');
+    }
+    if (req.method !== 'POST') {
+      res.setHeader('Allow', 'POST, GET');
+      return respond(405, 'Method not allowed');
+    }
+    if (!/^application\/json(?:\s*;|$)/i.test(req.headers['content-type'] || '')) {
+      return respond(415, 'Content-Type must be application/json');
+    }
+    const accept = req.headers.accept || '';
+    if (!accept.includes('application/json') && !accept.includes('*/*')) {
+      return respond(406, 'Accept must include application/json');
+    }
+
+    try {
+      const body = await lerCorpo(req);
+      const parsed = JSON.parse(body);
+      const batch = Array.isArray(parsed);
+      const messages = batch ? parsed : [parsed];
+      if (!messages.length) return respond(400, JSON.stringify(erroJsonRpc(null, -32600, 'Invalid Request')), 'application/json');
+      const result = await processarHttp(messages);
+      if (result === null) return respond(202, '', 'application/json');
+      const output = batch ? result : result[0];
+      return respond(200, JSON.stringify(output), 'application/json');
+    } catch (error) {
+      const status = error.statusCode || 400;
+      const message = status === 400 ? 'Parse error' : error.message;
+      return respond(status, JSON.stringify(erroJsonRpc(null, -32700, message)), 'application/json');
+    }
+  });
+
+  server.on('error', (error) => {
+    log('falha no servidor HTTP:', error.message);
+    process.exitCode = 1;
+  });
+  server.listen(port, '127.0.0.1', () => {
+    log(`servidor pronto (Streamable HTTP) — http://127.0.0.1:${port}/mcp — loopback somente`);
+  });
+}
+
+try {
+  const options = lerOpcoes(process.argv.slice(2), process.env);
+  if (options.transport === 'http') {
+    iniciarHttp(options.port);
+  } else {
+    const rl = readline.createInterface({ input: process.stdin, terminal: false });
+    rl.on('line', (line) => {
+      const s = line.trim();
+      if (!s) return;
+      let msg;
+      try { msg = JSON.parse(s); } catch { log('JSON invalido ignorado:', s.slice(0, 120)); return; }
+      try { handle(msg); } catch (error) { log('erro ao tratar mensagem:', error.message); }
+    });
+    log(`servidor pronto (stdio) — plataforma=${process.platform}`);
+  }
+} catch (error) {
+  log(error.message);
+  process.exitCode = 1;
+}

@@ -158,8 +158,8 @@ Setup (5) pode correr em paralelo — é doc e prompt, não toca o mecanismo.
 
 ## Limites honestos
 
-**Cobre o que estiver conectado, não o grafo.** Sub-vault é lazy e numeroso (MAPFRE, Yamaha,
-cliente futuro) e ninguém conecta pasta de cada cliente à mão. O canal serve a matriz e o que
+**Cobre o que estiver conectado, não o grafo.** Sub-vault é lazy e numeroso (cliente A,
+cliente B, cliente futuro) e ninguém conecta pasta de cada cliente à mão. O canal serve a matriz e o que
 for conectado; o resto continua dependendo do mecanismo — mesmo teto que o espelho tinha.
 
 **As regras duras chegam duas vezes** em sessão com pasta conectada: pelo `CLAUDE.md` injetado e
@@ -187,7 +187,7 @@ mecanismo (1.844 tok, 34% do piso) virando lazy, e orçamento por camada.
 1. **Emenda à ADR-17 ou ADR-18 substituindo?** — Gabriel.
 2. **Duplicação das regras duras** — aceitar os ~200 tok ou antecipar a supressão?
 3. **Dono da P144** agora que ela perdeu o detector de lambuja.
-4. **Vault legado somente-leitura** (MAPFRE) — confirma que não recebe o arquivo, ou recebe na
+4. **Vault legado somente-leitura** (de um cliente) — confirma que não recebe o arquivo, ou recebe na
    migração?
 
 <!-- fim: PLANO-camada-1-canal-injetado.md · 7ª sessão de 26/08 -->

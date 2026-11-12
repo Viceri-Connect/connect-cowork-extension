@@ -1,0 +1,20 @@
+{
+  "name": "connect-local",
+  "interface": {
+    "displayName": "Connect"
+  },
+  "plugins": [
+    {
+      "name": "connect",
+      "source": {
+        "source": "local",
+        "path": "./plugins/connect"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}
