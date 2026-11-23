@@ -154,7 +154,7 @@ export const HARNESSES = {
     arquivos: ['.antigravity-plugin/plugin.json', 'mcp_config.json', 'hooks.json', 'hooks/session-start-antigravity.mjs', 'rules/AGENTS.md'],
     // SessionStart do Antigravity roda uma vez por conversa (sem resume/compact): as regras
     // duras tambem vao como regra sempre ativa, gerada de lib/regras.mjs.
-    regrasSempreAtivas: true,
+    regrasSempreAtivas: 'rules/AGENTS.md',
     mcp: () => './mcp_config.json',
     hooks: () => './hooks.json',
     lerHooks: (j) => Object.values(j).flatMap((grupo) => (grupo?.SessionStart || []).map((h) => handler(h, h.matcher, porPrimeiroToken(linha(h))))),
@@ -184,7 +184,10 @@ export const HARNESSES = {
     manifesto: 'plugin.json',
     exigeVersao: true,
     schema: 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json',
-    arquivos: ['plugin.json', 'mcp.json', 'com.github.copilot/hooks/hooks.json', 'copilot/session-start.mjs'],
+    arquivos: ['plugin.json', 'mcp.json', 'com.github.copilot/hooks/hooks.json', 'copilot/session-start.mjs', 'com.github.copilot/rules/connect.md'],
+    // O CLAUDE.md de governanca so entra sozinho no Cowork: no Copilot, regras duras e a
+    // ordem de ler a carta vao como regra do plugin (com.github.copilot/rules/).
+    regrasSempreAtivas: 'com.github.copilot/rules/connect.md',
     mcp: () => './mcp.json',
     hooks: () => './com.github.copilot/hooks/hooks.json',
     lerHooks: (j) => {

@@ -148,8 +148,8 @@ export const CAPACIDADES = [
     testes: ['tests/unit/render-hosts.test.mjs'],
     hosts: {
       claude: igual('Entra sozinha pela pasta conectada ao projeto; o hook confere o marcador.'),
-      codex: limiar('Nao ha pasta conectada: o arquivo nao entra sozinho. O hook manda ler {workspace}/matriz/CLAUDE.md e a carta pelo caminho completo — depende de o agente seguir a instrucao.'),
-      copilot: limiar('Nao ha pasta conectada: o arquivo nao entra sozinho. O hook manda ler {workspace}/matriz/CLAUDE.md e a carta pelo caminho completo.'),
+      codex: limiar('Nao ha pasta conectada: o arquivo nao entra sozinho. O hook manda ler {workspace}/matriz/CLAUDE.md e a carta pelo caminho completo; o AGENTS.md espelho da raiz do vault entra quando a sessao roda dentro dele.'),
+      copilot: igual('O mesmo texto vai como regra do plugin (com.github.copilot/rules/connect.md), sem depender de pasta aberta; o hook traz o caminho da carta, e o AGENTS.md espelho entra quando o vault e pasta aberta.'),
       antigravity: limiar('Nao ha pasta conectada: o arquivo nao entra sozinho. O hook manda le-lo pelo caminho completo; as regras duras ja entram como regra sempre ativa.'),
     },
   },
@@ -162,7 +162,7 @@ export const CAPACIDADES = [
     hosts: {
       claude: igual('Bloco injetado e CLAUDE.md de governanca.'),
       codex: igual('Bloco injetado em todo inicio, retomada e compactacao.'),
-      copilot: igual('Bloco injetado em todo inicio e retomada.'),
+      copilot: igual('Bloco injetado em todo inicio e retomada, e regra do plugin (com.github.copilot/rules/connect.md).'),
       antigravity: igual('Bloco injetado e regra sempre ativa (rules/AGENTS.md).'),
     },
   },

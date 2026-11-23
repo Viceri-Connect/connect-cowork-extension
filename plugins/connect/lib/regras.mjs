@@ -38,6 +38,11 @@ export const REGRAS_DURAS = [
 // scripts/gerar-regras.mjs; o teste de arquitetura exige o arquivo em sincronia.
 // ---------------------------------------------------------------------------
 export const ARQUIVO_REGRAS_SEMPRE_ATIVAS = 'rules/AGENTS.md';
+// Quarto consumidor (0.41.0): regra do plugin no Copilot (`com.github.copilot/rules/`).
+// O CLAUDE.md de governanca da matriz so entra sozinho no Cowork (pasta conectada); no
+// Copilot, o mesmo texto vai como regra do plugin, sem depender de pasta aberta.
+export const ARQUIVO_REGRAS_COPILOT = 'com.github.copilot/rules/connect.md';
+export const ARQUIVOS_REGRAS_SEMPRE_ATIVAS = [ARQUIVO_REGRAS_SEMPRE_ATIVAS, ARQUIVO_REGRAS_COPILOT];
 
 export function textoRegrasSempreAtivas() {
   return [
@@ -49,6 +54,9 @@ export function textoRegrasSempreAtivas() {
     'inicio da sessao ja ficou distante. Sao nao negociaveis.',
     '',
     ...REGRAS_DURAS,
+    '',
+    'Antes de navegar num vault, leia a carta de navegacao dele (`_cerebro/camada-1.md`); o bloco de',
+    'inicio da sessao da o caminho completo da carta da matriz e o do arquivo de governanca.',
     '',
     'Contexto distante, ou carta de navegacao inalcancavel: chame a tool `iniciar_sessao` do Connect.',
     '',

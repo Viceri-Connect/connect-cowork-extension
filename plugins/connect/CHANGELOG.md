@@ -79,6 +79,12 @@ SessionStart. Os outros hosts não tinham por onde entrar. A única tool nova é
   - **`resolver` com `pista` (CONNECT-E6-09).** Com um ID do pedido (card, ticket), um conceito
     ambíguo resolve pelo vínculo do operador que registra o ID; em dois ou em nenhum, pergunta. A
     ambiguidade vem em ordem alfabética e marca os candidatos em que o operador tem vínculo.
+- **Governança fora do Cowork.** O `CLAUDE.md` de governança só entra sozinho no Cowork (pasta
+  conectada). Agora o mesmo conteúdo chega aos outros hosts por dois caminhos: **regra do plugin no
+  Copilot** (`com.github.copilot/rules/connect.md`, como já era no Antigravity), com as regras duras e
+  a ordem de ler a carta; e **`AGENTS.md` espelho** na raiz de cada vault, gerado junto com o
+  `CLAUDE.md`, para Codex e Copilot quando o vault é pasta aberta. É cópia, não `@CLAUDE.md`: a
+  importação por `@` não chega pelo canal do Cowork. Nunca sobrescreve `AGENTS.md` alheio.
 - **Tool `ambiente_connect`.** Relatório somente leitura de runtime, plataforma e acessibilidade do
   `CONNECT_HOME`. O que não dá para confirmar sem efeito colateral (persistência, suporte a links)
   sai como desconhecido.

@@ -476,13 +476,15 @@ export function checarExtensaoOpenAI(pacote, harness) {
 
 // FEATURE (Antigravity): regras duras como regra sempre ativa, em sincronia com lib/regras.mjs.
 export function checarRegrasSempreAtivas(pacote, harness) {
-  if (!HARNESSES[harness].regrasSempreAtivas) return [];
-  const alvo = resolverNoPacote(pacote, ARQUIVO_REGRAS_SEMPRE_ATIVAS);
-  if (!fs.existsSync(alvo)) return [`${pacote}/${harness}: ${ARQUIVO_REGRAS_SEMPRE_ATIVAS} ausente (npm run gerar:regras)`];
+  const decl = HARNESSES[harness].regrasSempreAtivas;
+  if (!decl) return [];
+  const rel = typeof decl === 'string' ? decl : ARQUIVO_REGRAS_SEMPRE_ATIVAS;
+  const alvo = resolverNoPacote(pacote, rel);
+  if (!fs.existsSync(alvo)) return [`${pacote}/${harness}: ${rel} ausente (npm run gerar:regras)`];
   const norm = (t) => t.replace(/\r\n/g, '\n');
   return norm(fs.readFileSync(alvo, 'utf8')) === norm(textoRegrasSempreAtivas())
     ? []
-    : [`${pacote}/${harness}: ${ARQUIVO_REGRAS_SEMPRE_ATIVAS} diverge de lib/regras.mjs (npm run gerar:regras)`];
+    : [`${pacote}/${harness}: ${rel} diverge de lib/regras.mjs (npm run gerar:regras)`];
 }
 
 // FEATURE: guarda de varredura (regra dura 4) nos hosts que tem PreToolUse. Busca dentro

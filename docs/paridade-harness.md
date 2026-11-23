@@ -25,7 +25,7 @@ O teste de arquitetura prova duas coisas:
 | onboarding-1o-uso | cowork | igual | igual | igual | igual |
 | perfil-operador | cowork | igual | igual | igual | igual |
 | acesso-pastas | cowork | igual | igual | igual | igual |
-| governanca-matriz | cowork | igual | LIMIAR | LIMIAR | LIMIAR |
+| governanca-matriz | cowork | igual | LIMIAR | igual | LIMIAR |
 | regras-duras | cowork | igual | igual | igual | igual |
 | guarda-varredura | nova | LIMIAR | LIMIAR | LIMIAR | igual |
 | sessao-nuvem | cowork | igual | LIMIAR | LIMIAR | LIMIAR |
@@ -129,8 +129,8 @@ Provado por: feature "acesso no ritmo do host", `tests/unit/render-hosts.test.mj
 **Resultado:** A governanca da matriz (CLAUDE.md com marcador CNCT-GOV) e a carta de navegacao chegam ao contexto no inicio da sessao.
 
 - **Claude/Cowork — igual.** Entra sozinha pela pasta conectada ao projeto; o hook confere o marcador.
-- **Codex — LIMIAR.** Nao ha pasta conectada: o arquivo nao entra sozinho. O hook manda ler {workspace}/matriz/CLAUDE.md e a carta pelo caminho completo — depende de o agente seguir a instrucao.
-- **Copilot — LIMIAR.** Nao ha pasta conectada: o arquivo nao entra sozinho. O hook manda ler {workspace}/matriz/CLAUDE.md e a carta pelo caminho completo.
+- **Codex — LIMIAR.** Nao ha pasta conectada: o arquivo nao entra sozinho. O hook manda ler {workspace}/matriz/CLAUDE.md e a carta pelo caminho completo; o AGENTS.md espelho da raiz do vault entra quando a sessao roda dentro dele.
+- **Copilot — igual.** O mesmo texto vai como regra do plugin (com.github.copilot/rules/connect.md), sem depender de pasta aberta; o hook traz o caminho da carta, e o AGENTS.md espelho entra quando o vault e pasta aberta.
 - **Antigravity — LIMIAR.** Nao ha pasta conectada: o arquivo nao entra sozinho. O hook manda le-lo pelo caminho completo; as regras duras ja entram como regra sempre ativa.
 
 Provado por: `tests/unit/render-hosts.test.mjs`.
@@ -141,7 +141,7 @@ Provado por: `tests/unit/render-hosts.test.mjs`.
 
 - **Claude/Cowork — igual.** Bloco injetado e CLAUDE.md de governanca.
 - **Codex — igual.** Bloco injetado em todo inicio, retomada e compactacao.
-- **Copilot — igual.** Bloco injetado em todo inicio e retomada.
+- **Copilot — igual.** Bloco injetado em todo inicio e retomada, e regra do plugin (com.github.copilot/rules/connect.md).
 - **Antigravity — igual.** Bloco injetado e regra sempre ativa (rules/AGENTS.md).
 
 Provado por: feature "bootstrap", feature "regras sempre ativas".

@@ -25,7 +25,9 @@ fs.cpSync(plugin, output, {
   recursive: true,
   filter(source) {
     const relative = path.relative(plugin, source).replaceAll('\\', '/');
-    return !/(^|\/)(\.claude-plugin|\.codex-plugin|\.antigravity-plugin|bin|sessions|rules)(\/|$)/.test(relative)
+    // `rules/` da raiz e do Antigravity; o do Copilot mora em com.github.copilot/rules/.
+    return !/(^|\/)(\.claude-plugin|\.codex-plugin|\.antigravity-plugin|bin|sessions)(\/|$)/.test(relative)
+      && !/^rules(\/|$)/.test(relative)
       && !/^hooks\/[^/]+\.json$/.test(relative)
       && !/(^|\/)(\.mcp\.json|mcp_config\.json|hooks\.json|connect\.config\.json)$/.test(relative)
       && !/(^|\/)(launcher\.bat|spike-junction\.ps1)$/.test(relative);

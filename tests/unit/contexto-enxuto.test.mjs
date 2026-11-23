@@ -11,6 +11,8 @@ import { lerMapa, TETO_MAPA } from '../../plugins/connect/lib/resolver.mjs';
 import { clienteLeTexto, compactarParaTexto } from '../../plugins/connect/lib/entrega.mjs';
 import { semHistorico, SKILLS_DO_CONNECT, renderResolucao, renderContextoCurto } from '../../plugins/connect/lib/render.mjs';
 import { idsDoVinculo, coletivosDaPista, resumoDosVinculos } from '../../plugins/connect/lib/vinculo.mjs';
+import { publicarGovernanca } from '../../plugins/connect/lib/governanca.mjs';
+import { ARQUIVO_REGRAS_COPILOT, textoRegrasSempreAtivas } from '../../plugins/connect/lib/regras.mjs';
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -104,6 +106,36 @@ describe('vinculos do operador: IDs e pista', () => {
     expect(texto).toMatch(/`cliente-x` — IDs registrados: 145215, 146127, 149073, 15236/);
     expect(texto).toMatch(/pista: "<ID>"/);
     expect(renderContextoCurto(report, { host: 'claude' })).not.toMatch(/### Seus vinculos/);
+  });
+});
+
+describe('governanca: AGENTS.md espelho do CLAUDE.md', () => {
+  it('publica os dois com o mesmo texto e o marcador', () => {
+    const vault = fs.mkdtempSync(path.join(os.tmpdir(), 'gov-'));
+    const r = publicarGovernanca(vault, { vault: 'matriz', agora: new Date('2026-01-01T00:00:00Z') });
+    expect(r.status).toBe('publicado');
+    expect(r.espelho.status).toBe('publicado');
+    const claude = fs.readFileSync(path.join(vault, 'CLAUDE.md'), 'utf8');
+    expect(fs.readFileSync(path.join(vault, 'AGENTS.md'), 'utf8')).toBe(claude);
+    expect(claude).toMatch(/CNCT-GOV-matriz/);
+    expect(publicarGovernanca(vault, { vault: 'matriz', agora: new Date('2026-02-01T00:00:00Z') }).espelho.status).toBe('inalterado');
+  });
+
+  it('nunca sobrescreve um AGENTS.md alheio (sem marcador do Connect)', () => {
+    const vault = fs.mkdtempSync(path.join(os.tmpdir(), 'gov-'));
+    fs.writeFileSync(path.join(vault, 'AGENTS.md'), '# instrucoes de outro time\n');
+    const r = publicarGovernanca(vault, { vault: 'matriz' });
+    expect(r.status).toBe('publicado');
+    expect(r.espelho.status).toBe('recusado');
+    expect(fs.readFileSync(path.join(vault, 'AGENTS.md'), 'utf8')).toBe('# instrucoes de outro time\n');
+  });
+});
+
+describe('regras sempre ativas no Copilot', () => {
+  it('o arquivo do plugin do Copilot existe e e igual ao gerado de lib/regras.mjs', () => {
+    const f = path.join(RAIZ, 'plugins', 'connect', ARQUIVO_REGRAS_COPILOT);
+    expect(fs.readFileSync(f, 'utf8').replace(/\r\n/g, '\n')).toBe(textoRegrasSempreAtivas());
+    expect(textoRegrasSempreAtivas()).toMatch(/_cerebro\/camada-1\.md/);
   });
 });
 

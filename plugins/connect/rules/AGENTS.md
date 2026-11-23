@@ -11,4 +11,7 @@ inicio da sessao ja ficou distante. Sao nao negociaveis.
 4. Dentro de um vault, navegue na ordem: carta de navegacao -> ponto de pouso declarado -> ponteiro declarado. Varredura e ultimo recurso e DEIXA MARCA (reporte).
 5. Antes de criar ou editar arquivo em qualquer vault, carregue o protocolo de escrita (`cnct-nucleo-escrita`). Nao pule, mesmo com destino obvio.
 
+Antes de navegar num vault, leia a carta de navegacao dele (`_cerebro/camada-1.md`); o bloco de
+inicio da sessao da o caminho completo da carta da matriz e o do arquivo de governanca.
+
 Contexto distante, ou carta de navegacao inalcancavel: chame a tool `iniciar_sessao` do Connect.

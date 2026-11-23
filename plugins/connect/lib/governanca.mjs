@@ -223,7 +223,7 @@ export function publicarGovernanca(vaultRoot, { vault, nomeExibicao, agora } = {
     if (!precisaAtualizar(mdAtual, novo)) {
       // Caminho normal em regime: nada muda, nada e escrito, o OneDrive nao ve
       // evento nenhum. E o que torna "write-once" verdade na pratica.
-      return { status: 'inalterado', caminho: alvo, marcador: atual.marcador };
+      return { status: 'inalterado', caminho: alvo, marcador: atual.marcador, espelho: publicarEspelhoAgents(vaultRoot, novo) };
     }
   }
 
@@ -240,5 +240,35 @@ export function publicarGovernanca(vaultRoot, { vault, nomeExibicao, agora } = {
     caminho: alvo,
     bytes: Buffer.byteLength(novo, 'utf8'),
     marcador: lerMarcador(novo),
+    espelho: publicarEspelhoAgents(vaultRoot, novo),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Espelho `{vault}/AGENTS.md` (0.41.0) — o mesmo texto do CLAUDE.md, para os hosts que
+// leem AGENTS.md (Codex, Copilot) quando o vault e pasta aberta.
+//
+// Copia gerada, nunca `@CLAUDE.md`/`@AGENTS.md`: a importacao por `@arquivo` so o Claude
+// Code resolve, e mesmo ela nao chega pelo canal de pasta conectada do Cowork (o CLAUDE.md
+// entra literal). Um ponteiro faria o marcador CNCT-GOV sumir de um dos lados. Mesmas
+// regras do CLAUDE.md: so escreve sobre arquivo com marcador do Connect, e so se mudou.
+// ---------------------------------------------------------------------------
+export const NOME_ARQUIVO_ESPELHO = 'AGENTS.md';
+
+export function publicarEspelhoAgents(vaultRoot, texto) {
+  const alvo = path.join(vaultRoot, NOME_ARQUIVO_ESPELHO);
+  let atual = null;
+  try { atual = fs.readFileSync(alvo, 'utf8'); } catch (e) { if (e.code !== 'ENOENT') return { status: 'recusado', caminho: alvo, motivo: `${NOME_ARQUIVO_ESPELHO} existente nao pode ser lido` }; }
+  if (atual !== null && !lerMarcador(atual)) {
+    return { status: 'recusado', caminho: alvo, motivo: `ja existe um ${NOME_ARQUIVO_ESPELHO} sem marcador do Connect na raiz — nao sobrescrever; reportar ao operador` };
+  }
+  if (atual !== null && !precisaAtualizar(atual, texto)) return { status: 'inalterado', caminho: alvo };
+  try {
+    const tmp = `${alvo}.tmp`;
+    fs.writeFileSync(tmp, texto, 'utf8');
+    fs.renameSync(tmp, alvo);
+  } catch (e) {
+    return { status: 'falhou', caminho: alvo, motivo: e.message };
+  }
+  return { status: atual === null ? 'publicado' : 'atualizado', caminho: alvo };
 }
