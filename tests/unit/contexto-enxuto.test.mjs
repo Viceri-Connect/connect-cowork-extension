@@ -12,6 +12,7 @@ import { clienteLeTexto, compactarParaTexto } from '../../plugins/connect/lib/en
 import { semHistorico, SKILLS_DO_CONNECT, renderResolucao, renderContextoCurto } from '../../plugins/connect/lib/render.mjs';
 import { idsDoVinculo, coletivosDaPista, resumoDosVinculos } from '../../plugins/connect/lib/vinculo.mjs';
 import { publicarGovernanca } from '../../plugins/connect/lib/governanca.mjs';
+import { montarL1 } from '../../plugins/connect/lib/matriz.mjs';
 import { ARQUIVO_REGRAS_COPILOT, textoRegrasSempreAtivas } from '../../plugins/connect/lib/regras.mjs';
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -119,6 +120,16 @@ describe('governanca: AGENTS.md espelho do CLAUDE.md', () => {
     expect(fs.readFileSync(path.join(vault, 'AGENTS.md'), 'utf8')).toBe(claude);
     expect(claude).toMatch(/CNCT-GOV-matriz/);
     expect(publicarGovernanca(vault, { vault: 'matriz', agora: new Date('2026-02-01T00:00:00Z') }).espelho.status).toBe('inalterado');
+  });
+
+  it('montar um vault ja governado cria o espelho que falta, copiando o CLAUDE.md como esta', () => {
+    const vault = fs.mkdtempSync(path.join(os.tmpdir(), 'gov-'));
+    publicarGovernanca(vault, { vault: 'matriz' });
+    fs.rmSync(path.join(vault, 'AGENTS.md'));
+    const l1 = montarL1(vault, 'matriz');
+    expect(l1.governanca.espelho.status).toBe('publicado');
+    expect(fs.readFileSync(path.join(vault, 'AGENTS.md'), 'utf8')).toBe(fs.readFileSync(path.join(vault, 'CLAUDE.md'), 'utf8'));
+    expect(montarL1(vault, 'matriz').governanca.espelho.status).toBe('inalterado');
   });
 
   it('nunca sobrescreve um AGENTS.md alheio (sem marcador do Connect)', () => {
