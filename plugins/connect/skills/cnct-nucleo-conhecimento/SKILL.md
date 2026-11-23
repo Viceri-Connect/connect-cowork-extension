@@ -31,9 +31,9 @@ demanda (MCP).
    relativo ao workspace (ex.: `./matriz/_cerebro/vault-config.md`), jamais por
    caminho absoluto de máquina (`C:\Users\...`). Mantém a leitura portável.
 2. **Mount não é acesso.** A junction dá um caminho estável; ela **não** concede
-   permissão de leitura. Se o host pedir (no Cowork, a concessão de pasta), conceda acesso
-   ao diretório de ORIGEM correspondente. Fora do Cowork, o alias relativo vale a partir do
-   workspace da sessão (`{workspace}/matriz/...`), não do diretório do projeto.
+   permissão de leitura. Se o Cowork pedir, conceda acesso ao diretório de ORIGEM
+   correspondente. Fora do Cowork, o host pede a liberação da pasta, e o alias relativo vale a
+   partir do workspace da sessão (`{workspace}/matriz/...`), não do diretório do projeto.
 3. **Lazy antes de tudo.** No boot só a camada 1 vem inline; o resto é ponteiro.
    Leia sob demanda, seguindo os ponteiros que o bloco de contexto lista.
 4. **A camada 1 é do vault, não do produto.** O que carregar e quando vem da **carta de

@@ -41,10 +41,10 @@ delega sempre.
 Tasks pessoais (novas, concluídas, mudança de status) e delta de identidade vão em
 `./operador/TASKS.md` e `./operador/_cerebro/meu-config.md` — **direto**, sem passar por
 `cnct-nucleo-escrita` (não é conteúdo de vault, é estado gerido pelo Connect). Se
-`./operador` não estiver acessível ainda (o host não liberou a origem — no Cowork, a concessão de
-pasta), solicitar o acesso antes de escrever — nunca pular o passo silenciosamente. Fora do Cowork o
-diretório de trabalho é o do projeto: use o caminho dentro do workspace da sessão que o bloco informa
-(`{workspace}/operador/...`).
+`./operador` não estiver acessível ainda (Cowork não concedeu acesso à origem), solicitar
+o acesso antes de escrever — nunca pular o passo silenciosamente. Fora do Cowork, o host libera
+a pasta pelo bloco de acesso, e o diretório de trabalho é o do projeto: use o caminho dentro do
+workspace da sessão que o bloco informa (`{workspace}/operador/...`).
 
 **Passo 4b — Persistir o estado de CADA vínculo tocado (obrigatório, não opcional).**
 Para **cada coletivo** que a sessão tocou (um por alias do Passo 1, exceto `./operador` e

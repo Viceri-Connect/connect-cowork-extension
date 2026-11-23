@@ -64,9 +64,9 @@ O **destino padrão é o perfil gerido pelo Connect**: `{CONNECT_HOME}/operador`
 2026-08-17 — ver `CONCEITOS.md` §5). É ele que torna o **vault pessoal Obsidian opcional**:
 o mecanismo lê a identidade daí, sem exigir vault do usuário. Resolver `{CONNECT_HOME}` via
 `estado_sessao` (campo `home`) e usar `{CONNECT_HOME}/operador` como `{DESTINO}`. Pasta
-inexistente é o **caso normal** (estado zero), não erro. **Garantir acesso de escrita** antes de
-escrever: no Cowork, pela concessão de pasta; no Codex, no Copilot e no Antigravity, pela liberação que
-o bloco de acesso do hook descreve (pedida uma vez por host).
+inexistente é o **caso normal** (estado zero), não erro. No Cowork, **conceder acesso** antes
+de escrever. No Codex, no Copilot e no Antigravity, garantir a liberação que o bloco de acesso do hook
+descreve (pedida uma vez por host).
 
 > Se o operador **também** mantém um vault Obsidian próprio (com protocolos/`CLAUDE.md`
 > próprios), ele **coexiste** como enriquecimento opcional — registrado à parte via
@@ -183,7 +183,6 @@ fino** e nunca carrega lógica, para não envelhecer contra a forma.
    - **Antigravity:** a ferramenta `schedule` (expressão cron + o prompt).
    - **Codex/ChatGPT:** a automação recorrente é criada pela interface do host — entregar ao operador
      o prompt e o horário, prontos para colar.
-
    Em qualquer host, a tarefa precisa rodar com acesso ao `CONNECT_HOME` e à matriz; sem isso o
    briefing sai vazio.
 4. **Rodar uma vez na hora** (ou pedir ao operador que dispare) e conferir que o briefing saiu

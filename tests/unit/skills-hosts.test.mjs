@@ -13,6 +13,28 @@ import { checarSkill } from '../architecture/harness-checks.mjs';
 const SKILLS = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'plugins', 'connect', 'skills');
 const ler = (s) => fs.readFileSync(path.join(SKILLS, s, 'SKILL.md'), 'utf8');
 
+// Gatilhos da descricao da cnct-nucleo-sessao na 0.40.0 (Cowork). A descricao foi
+// comprimida para caber nos 1.024 caracteres do padrao Agent Skills; nenhum gatilho podia
+// sair — e por ela que o modelo decide carregar a skill.
+const GATILHOS_SESSAO = [
+  'INÍCIO', 'tarefa', 'projeto', 'demanda', 'cliente', 'reunião', 'ticket',
+  '"trabalhar em"', '"continuar"', '"retomar"', 'iniciar_sessao', './matriz', 'camada 1',
+  '"consultar o vault"', '"onde está"', '"mais detalhe"', '"qual a norma/decisão"',
+  'recém-instalado', 'mesmo sem menção a projeto/tarefa', '"Personalizar"/"Customizar"', 'logo após a instalação',
+  '"configurar o Connect"', '"conectar minha matriz"', '"onde fica meu vault"', '"sou novo aqui"',
+  '"primeiro uso"', '"setup inicial"', 'CNCT1-', 'colado no pedido', 'configurar_por_codigo', 'OneDrive',
+  'cnct-fabrica-operador', 'acervos das', 'briefing diário', 'FALLBACK', 'SessionStart', 'sem disparar o hook',
+];
+
+describe('descricao da cnct-nucleo-sessao', () => {
+  it('cabe em 1.024 caracteres sem perder nenhum gatilho da 0.40.0', () => {
+    const m = ler('cnct-nucleo-sessao').match(/description: >\r?\n([\s\S]*?)\r?\nmetadata:/);
+    const descricao = m[1].split(/\r?\n/).map((l) => l.trim()).join(' ');
+    expect(descricao.length).toBeLessThanOrEqual(1024);
+    expect(GATILHOS_SESSAO.filter((g) => !descricao.includes(g))).toEqual([]);
+  });
+});
+
 describe('frontmatter das skills', () => {
   const skill = (campos) => `---\nname: cnct-teste\n${campos}\n---\n\n# Teste`;
 
