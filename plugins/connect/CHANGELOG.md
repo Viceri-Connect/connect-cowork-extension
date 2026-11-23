@@ -4,8 +4,8 @@
 
 **O Connect sai do Cowork: o mesmo mecanismo agora atende Codex/ChatGPT Work, Antigravity e
 GitHub Copilot.** Até a 0.40 só o Claude (Cowork/Claude Code) tinha manifesto, MCP e hook de
-SessionStart. Os outros hosts não tinham por onde entrar. Nenhuma tool muda de contrato. A única tool
-nova é somente leitura.
+SessionStart. Os outros hosts não tinham por onde entrar. A única tool nova é somente leitura; o
+`resolver` ganha um parâmetro opcional (`pista`), o resto do contrato das tools não muda.
 
 - **Adaptadores por host no mesmo pacote.** `lib/`, `mcp/` e `skills/` são compartilhados. Cada host
   ganha só a própria superfície:
@@ -65,6 +65,20 @@ nova é somente leitura.
   externos e corpo acima de 1 MiB. stdio continua padrão e é o que os quatro hosts usam. Não há
   pacote separado: um `connect-http` chegou a ser montado, mas exigia o operador subir o servidor à
   mão a cada sessão e nenhum host precisava dele. Quem quiser HTTP configura o host à mão (README).
+- **Contexto que cabe no host mais apertado** (medido no Copilot em 12, 13 e 16/11):
+  - **`resolver` menor para cliente que lê o texto.** A carta ia nos dois canais e somava 46,8 KB no
+    acervo de um cliente; o Copilot mandava a resposta para um arquivo, fora do contexto. Para
+    cliente que não é do Claude, o JSON leva só o resumo: 12,2 mil caracteres no mesmo acervo (−74%).
+    O Cowork recebe o mesmo de antes.
+  - **Carta de processo sem o "Histórico"** quando vai junto da resolução (~900 caracteres).
+  - **Mapa do Delivery Hub.** O `resolver` de um diretório de output devolve a seção `## Mapa` (ou
+    `## Estrutura interna`) do manifesto: onde gravar, sem carta nem herança. Sem a seção, manda
+    perguntar ao operador.
+  - **Skills do Connect e vínculos do operador no bloco de sessão** fora do Cowork. O Copilot cortava
+    5 das 9 skills da lista do prompt; e o agente não sabia de qual cliente era o card citado.
+  - **`resolver` com `pista` (CONNECT-E6-09).** Com um ID do pedido (card, ticket), um conceito
+    ambíguo resolve pelo vínculo do operador que registra o ID; em dois ou em nenhum, pergunta. A
+    ambiguidade vem em ordem alfabética e marca os candidatos em que o operador tem vínculo.
 - **Tool `ambiente_connect`.** Relatório somente leitura de runtime, plataforma e acessibilidade do
   `CONNECT_HOME`. O que não dá para confirmar sem efeito colateral (persistência, suporte a links)
   sai como desconhecido.

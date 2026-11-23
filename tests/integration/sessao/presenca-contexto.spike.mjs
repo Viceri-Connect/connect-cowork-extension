@@ -78,6 +78,20 @@ teste('bloco injetado fica abaixo do teto, com vault grande e camada 0 real', ()
   assert.ok(curto.length <= TETO_INJETADO, `bloco tem ${curto.length} caracteres`);
 });
 
+// 0.41.0 — fora do Cowork o bloco ganha os blocos por host (acesso, governanca, lista das
+// skills do Connect). Ele tem de caber no mesmo teto, e a camada 0 nao pode ser
+// expulsa por eles.
+for (const host of ['codex', 'copilot', 'antigravity']) {
+  for (const acesso of ['completo', 'lembrete']) {
+    teste(`bloco do ${host} (acesso ${acesso}) fica abaixo do teto e ainda leva a camada 0`, () => {
+      const c = renderContextoCurto(report, { host, acesso });
+      assert.ok(c.length <= TETO_INJETADO, `bloco do ${host} tem ${c.length} caracteres (teto ${TETO_INJETADO})`);
+      assert.ok(/### Skills do Connect/.test(c), 'lista das skills do Connect ausente');
+      assert.ok(c.includes('delta pessoal.'), 'camada 0 expulsa pelos blocos do host');
+    });
+  }
+}
+
 teste('a camada 0 do operador chega INTEIRA pelo canal injetado quando cabe', () => {
   assert.ok(curto.includes('delta pessoal.'), 'camada 0 ausente do canal injetado');
   assert.ok(/Perfil do operador — camada 0/.test(curto));

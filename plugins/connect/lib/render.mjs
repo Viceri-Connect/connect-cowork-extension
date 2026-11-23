@@ -71,8 +71,15 @@ export function blocoHeranca(heranca, rotulo = 'vault') {
   L.push(`> \`${cp?.caminhoRelativo}\`, injetada verbatim **uma vez nesta sessao** (vale para todo vault`);
   L.push('> que declare o mesmo processo; os proximos recebem so o ponteiro):');
   L.push('');
-  L.push(cp?.corpo ?? cp?.inline ?? '');
+  L.push(semHistorico(cp?.corpo ?? cp?.inline ?? ''));
   return L;
+}
+
+// O "## Histórico" de uma carta e registro de como ela chegou ali, nao instrucao de
+// navegacao: ~900 caracteres da carta do SDD que o agente nao usa (medido em 16/11).
+// Sai so do que e INJETADO; o arquivo continua com ele.
+export function semHistorico(texto) {
+  return String(texto || '').replace(/^##[ \t]+Hist[oó]rico\b[\s\S]*?(?=^##[ \t]|^<!--|(?![\s\S]))/m, '').replace(/\n{3,}/g, '\n\n');
 }
 
 // ---------------------------------------------------------------------------
@@ -262,6 +269,18 @@ export function renderResolucao(res, { cartaInline = true, cartaJaEntregue = fal
   }
   if (res.concessao?.necessaria) {
     L.push(`- 🔑 Acesso: se \`${res.caminhoRelativo}\` nao abrir, solicite ao operador a pasta \`${res.concessao.caminho}\` — montar nao e alcancar. Nao contorne por varredura.`);
+  }
+  // Diretorio de output (Delivery Hub): nao tem carta, mas tem MAPA — onde gravar,
+  // declarado no manifesto. Sem mapa, perguntar; nunca inventar estrutura.
+  if (res.classe === 'diretorio') {
+    if (res.mapa) {
+      L.push('');
+      L.push(`### Mapa de \`${res.caminhoRelativo}\` (declarado no manifesto — siga antes de criar pasta ou arquivo)`);
+      L.push('');
+      L.push(res.mapa);
+    } else {
+      L.push('- Mapa: o manifesto nao declara `## Mapa`. Antes de criar pasta ou arquivo aqui, pergunte ao operador onde gravar — nunca invente estrutura.');
+    }
   }
   L.push('');
   // Vinculo do operador com este coletivo: pela `curadoria-pessoal-coletivo` vale
@@ -517,6 +536,20 @@ export function camadaZeroInjetavel(texto) {
     .trim();
 }
 
+// As skills do pacote e o gatilho de cada uma, em uma linha. O teste de skills por
+// host confere que a lista bate com plugins/connect/skills/.
+export const SKILLS_DO_CONNECT = [
+  ['cnct-nucleo-sessao', 'inicio de trabalho, retomar tarefa, 1o uso, aprofundar contexto do vault'],
+  ['cnct-nucleo-escrita', 'ANTES de criar ou editar qualquer arquivo em vault (onde mora, forma)'],
+  ['cnct-nucleo-encerramento', 'encerrar a sessao, consolidar estado, diario de task'],
+  ['cnct-nucleo-conhecimento', 'duvida sobre junction, alias montado ou ordem de resolucao'],
+  ['cnct-nucleo-audit', 'saude de vault, auditoria, repair'],
+  ['cnct-fabrica', 'criar ou estruturar processo, papel, glossario, contexto novo'],
+  ['cnct-fabrica-navegacao', 'criar ou completar a carta de navegacao de um vault'],
+  ['cnct-fabrica-operador', 'perfil do operador, rotina, briefing diario'],
+  ['cnct-elicitacao', 'destilar o que se aprendeu construindo'],
+];
+
 export function renderContextoCurto(report, { teto = TETO_INJETADO, host = 'claude', acesso = 'completo' } = {}) {
   const L = [];
   L.push(...blocoAcionavel(report, { host, acesso }));
@@ -567,6 +600,29 @@ export function renderContextoCurto(report, { teto = TETO_INJETADO, host = 'clau
     L.push('  projeto; tambem em `./matriz/_cerebro/camada-1.md`). Leia antes de navegar no vault.');
     L.push('- Contexto distante, ou carta inalcancavel: chame a tool `iniciar_sessao` — ela devolve o');
     L.push('  protocolo do mecanismo, a carta verbatim e esta camada 0 pelo canal da tool.');
+    L.push('');
+  }
+
+  // Fora do Cowork o host pode cortar a lista de skills do prompt: medido em 12/11 no
+  // Copilot, 5 das 9 do Connect ficaram de fora (sessao, escrita, encerramento,
+  // conhecimento, fabrica-navegacao). Listadas aqui, o agente sabe que existem e as
+  // carrega pelo nome. No Cowork a lista do host vem inteira.
+  if (report.matrizConfigurada && HOSTS_FORA_DO_COWORK[host]) {
+    L.push('### Skills do Connect (carregue pelo nome quando o gatilho bater)');
+    for (const [nome, gatilho] of SKILLS_DO_CONNECT) L.push(`- \`${nome}\` — ${gatilho}`);
+    L.push('');
+  }
+
+  // Os coletivos do operador e os IDs registrados em cada vinculo: e o que liga um
+  // pedido ("card 149073") ao cliente sem perguntar. Medido em 16/11 no Copilot.
+  const vinculos = (report.vinculosResumo || []).filter((v) => v && v.coletivo);
+  if (HOSTS_FORA_DO_COWORK[host] && vinculos.length) {
+    L.push('### Seus vinculos (o ID do pedido diz o coletivo — confira aqui antes de perguntar)');
+    for (const v of vinculos) {
+      const ids = v.ids?.length ? `IDs registrados: ${v.ids.join(', ')}${v.mais ? ` (+${v.mais})` : ''}` : 'sem IDs registrados';
+      L.push(`- \`${v.coletivo}\` — ${ids}`);
+    }
+    L.push('- Pedido com ID: chame o `resolver` com `pista: "<ID>"` (ou com o `coletivo` acima). So pergunte se o ID nao estiver aqui.');
     L.push('');
   }
 

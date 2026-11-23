@@ -196,6 +196,8 @@ Provado por: feature "identidade", `tests/unit/release.test.mjs`.
 - `^## Connect — (confira o canal injetado|governanca da matriz)` — capacidade governanca-matriz
 - `^### Camada 1 e protocolo completo` — capacidade governanca-matriz
 - `^Neste host o diretorio de trabalho e o do projeto` — capacidade acesso-pastas
+- `^### Skills do Connect` — capacidade skills
+- `^### Seus vinculos` — capacidade perfil-operador
 
 ## Pendente de conferencia em host real
 

@@ -99,5 +99,51 @@ export function criarEntrega() {
   return { dedup, jaEntregue: (s) => entregues.has(hashBloco(s)), tamanho: () => entregues.size };
 }
 
+// ---------------------------------------------------------------------------
+// Canal da resposta por CLIENTE MCP.
+//
+// A carta vai nos dois canais (texto e structuredContent) porque o Cowork descarta o
+// texto e a sessao na nuvem descarta o JSON (ver render.mjs). Medido em 13/11 no
+// GitHub Copilot: ele entrega os DOIS ao modelo, e o `resolver` de um acervo de cliente
+// somou 46,8 KB — acima do limite dele, a resposta inteira foi para um arquivo, fora do
+// contexto. Para cliente que le o texto, o JSON leva so a estrutura: todo texto longo
+// vira marcador apontando para o texto da mesma resposta.
+//
+// Quem le o texto: todo cliente que nao e do Claude (o Cowork e o unico medido que
+// descarta o texto). CONNECT_MCP_CANAL=ambos|texto forca a escolha.
+// ---------------------------------------------------------------------------
+export function clienteLeTexto(nomeCliente, env = process.env) {
+  const forcado = String(env.CONNECT_MCP_CANAL || '').toLowerCase();
+  if (forcado === 'ambos') return false;
+  if (forcado === 'texto') return true;
+  if (!nomeCliente) return false; // sem identificacao: o comportamento de sempre
+  return !/claude/i.test(String(nomeCliente));
+}
+
+const TETO_CAMPO_COMPACTO = 400;
+
+// O que o JSON ainda carrega para cliente que le o texto: o necessario para o agente
+// agir sem reler o texto (status, onde montou, acesso, avisos). Carta, heranca,
+// alcance e vinculo ja estao no texto da mesma resposta.
+const CHAVES_DO_RESUMO = ['status', 'classe', 'conceito', 'tipo', 'papel', 'coletivo', 'alias', 'caminhoRelativo', 'entradaResolvida', 'concessao', 'mapa', 'origemCapturavel', 'candidatos', 'avisos'];
+
+export function resumoParaTexto(res) {
+  if (!res || typeof res !== 'object') return res;
+  const r = Object.fromEntries(CHAVES_DO_RESUMO.filter((k) => res[k] !== undefined).map((k) => [k, res[k]]));
+  r.contexto = 'carta, heranca de processo e vinculo do operador estao no texto desta resposta';
+  return compactarParaTexto(r);
+}
+
+export function compactarParaTexto(valor) {
+  if (typeof valor === 'string') {
+    return valor.length > TETO_CAMPO_COMPACTO ? `<no texto desta resposta (${valor.length} caracteres)>` : valor;
+  }
+  if (Array.isArray(valor)) return valor.map(compactarParaTexto);
+  if (valor && typeof valor === 'object') {
+    return Object.fromEntries(Object.entries(valor).map(([k, v]) => [k, compactarParaTexto(v)]));
+  }
+  return valor;
+}
+
 // Registro default do processo — e o que o servidor MCP usa.
 export const entregaDaSessao = criarEntrega();

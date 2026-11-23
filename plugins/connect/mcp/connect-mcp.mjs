@@ -138,7 +138,9 @@ const TOOLS = [
       'diretorio: nesse caso devolve `classe: "diretorio"`, monta e entrega a concessao, e NAO ' +
       'cobra carta de navegacao nem heranca de processo. ' +
       'Devolve tambem `vinculo` — a leitura do operador sobre este coletivo, que pela curadoria-pessoal-coletivo vale ' +
-      'ANTES da carta. `ambigua` significa PERGUNTE (ou repita com `coletivo`), nunca escolha.',
+      'ANTES da carta. `ambigua`: se o pedido cita um ID (card, ticket), repita com `pista` — o ' +
+      'mecanismo procura o ID nos vinculos do operador e resolve se ele estiver em um so coletivo; ' +
+      'senao PERGUNTE (ou repita com `coletivo`), nunca escolha.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -147,6 +149,7 @@ const TOOLS = [
         alias: { type: 'string', description: 'Sobrescreve o alias declarado no registro (opcional).' },
         coletivo: { type: 'string', description: 'Desempate por coletivo (o cliente, tribo ou area dona). Informe quando o conceito puder existir em mais de um coletivo — o mecanismo nunca adivinha por estado da sessao.' },
         escopo: { type: 'string', description: 'Estreita mais o desempate (a squad ou area dentro do coletivo). Opcional.' },
+        pista: { type: 'string', description: 'ID citado no pedido (card, ticket, PR — ex.: "149073"). Com conceito ambiguo, desempata pelo vinculo do operador que registra esse ID. Opcional.' },
         replace: { type: 'boolean', description: 'Se true, substitui um alias existente que aponte para outro destino.', default: false },
       },
       required: ['conceito', 'workspace_dir'],
@@ -466,8 +469,12 @@ function toolText(obj) {
 
 // Contrato de entrega de contexto (0.13.0). A regra e o
 // rationale vivem em lib/entrega.mjs; aqui o servidor so usa o registro do processo.
-import { entregaDaSessao } from '../lib/entrega.mjs';
+import { entregaDaSessao, clienteLeTexto, resumoParaTexto } from '../lib/entrega.mjs';
 const dedupInline = (obj) => entregaDaSessao.dedup(obj);
+
+// Cliente MCP desta sessao (clientInfo do initialize). Decide o canal da carta:
+// cliente que le o texto recebe o JSON compacto (lib/entrega.mjs, clienteLeTexto).
+let clienteMcp = null;
 
 function handleToolCall(id, params) {
   const name = params?.name;
@@ -493,6 +500,7 @@ function handleToolCall(id, params) {
           alias: args.alias,
           coletivo: args.coletivo || null,
           escopo: args.escopo || null,
+          pista: args.pista || null,
           replace: !!args.replace,
         });
         // Quando resolve, devolve TAMBEM o bloco de contexto do sub-vault (ponto
@@ -523,7 +531,8 @@ function handleToolCall(id, params) {
           cartaJaEntregue: typeof cartaTxt === 'string' && cartaTxt.trim() !== '' && !cartaNova,
           vinculoBlocos: vinculoNovo,
         });
-        const structured = bloco ? dedupInline(r) : r;
+        const deduplicado = bloco ? dedupInline(r) : r;
+        const structured = bloco && clienteLeTexto(clienteMcp) ? resumoParaTexto(deduplicado) : deduplicado;
         const text = bloco || JSON.stringify(r, null, 2);
         return ok(id, { content: [{ type: 'text', text }], structuredContent: structured });
       }
@@ -634,6 +643,7 @@ function handle(msg) {
   switch (method) {
     case 'initialize':
       if (params?.protocolVersion) protocolVersion = params.protocolVersion;
+      clienteMcp = params?.clientInfo?.name || null;
       ok(id, { protocolVersion, capabilities: { tools: {} }, serverInfo: SERVER_INFO });
       break;
     case 'notifications/initialized':

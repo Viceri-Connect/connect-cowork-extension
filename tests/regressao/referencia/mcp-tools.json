@@ -1,5 +1,13 @@
 [
   {
+    "name": "ambiente_connect",
+    "description": "Relatorio somente de leitura do runtime, plataforma e acessibilidade atual do CONNECT_HOME. Persistencia e suporte a links ficam explicitamente como desconhecidos quando nao podem ser confirmados sem efeitos colaterais. Nao executa comandos nem controla a maquina.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
     "name": "catalogo_sync",
     "description": "Caminho inverso da `origem` declarada: le o que o cliente OneDrive desta maquina sincroniza e cruza com as entidades do registro, POR ID. Devolve, por entidade, se tem `origem` e onde mora aqui; e as pastas sincronizadas que nenhum manifesto declara, com `origemSugerida` completa (e `yaml` pronto) para o curador confirmar a entidade e gravar no manifesto. Com `registrar: true`, grava o caminho local de toda entidade achada (operador que ja sincroniza tudo). Cruzamento por nome nunca registra — so aparece como `candidatoPorNome`. Windows e macOS (em validacao): `diagnostico` diz onde o catalogo foi procurado e o que se achou em cada raiz — catalogo nao encontrado no Mac = devolver o `diagnostico` ao time do Connect.",
     "inputSchema": {
@@ -308,7 +316,7 @@
   },
   {
     "name": "resolver",
-    "description": "Resolve um CONCEITO numa entidade do registro derivado (varredura de manifestos — frontmatter `tipo` do cerebro pessoal e da matriz; contrato em config/contrato-manifesto.md). O manifesto NUNCA guarda caminho local — declara `externo` (tem acervo fora da matriz?), opcionalmente `origem` (onde mora na nuvem — ver sincronizar_subvault) e `criado-por`/`criado-em` (ja foi materializado?); o proprio `conceito` (chave de casamento) tambem indexa o path local. O path fica so em connect.config.json (subVaults). Nunca pergunta nada nem advinha path — devolve `status` pra skill decidir: nao-encontrado (o registro so indexa conceito com casa fora — projeto e conteudo da matriz ou de vault ja montado vao pela carta e por wikilink), pendente-criacao (aciona fabrica), local-nao-configurado (pergunte o diretorio e grave com registrar_subvault_local), origem-ausente, ou resolvido (monta, injeta a CARTA DE NAVEGACAO do sub-vault verbatim e devolve `entradaResolvida.caminhoRelativo` — o ponto de pouso ja resolvido a caminho real, nunca nome de nota a caçar). Entidade resolvida cujo manifesto NAO declara `origem` traz `origemCapturavel`: o bloco lido do catalogo do OneDrive desta maquina e o manifesto a editar — ofereca gravar, pelo protocolo de escrita, nunca em silencio. Resolve TAMBEM diretorio de output (Delivery Hub) quando o manifesto declara tipo de diretorio: nesse caso devolve `classe: \"diretorio\"`, monta e entrega a concessao, e NAO cobra carta de navegacao nem heranca de processo. Devolve tambem `vinculo` — a leitura do operador sobre este coletivo, que pela curadoria-pessoal-coletivo vale ANTES da carta. `ambigua` significa PERGUNTE (ou repita com `coletivo`), nunca escolha.",
+    "description": "Resolve um CONCEITO numa entidade do registro derivado (varredura de manifestos — frontmatter `tipo` do cerebro pessoal e da matriz; contrato em config/contrato-manifesto.md). O manifesto NUNCA guarda caminho local — declara `externo` (tem acervo fora da matriz?), opcionalmente `origem` (onde mora na nuvem — ver sincronizar_subvault) e `criado-por`/`criado-em` (ja foi materializado?); o proprio `conceito` (chave de casamento) tambem indexa o path local. O path fica so em connect.config.json (subVaults). Nunca pergunta nada nem advinha path — devolve `status` pra skill decidir: nao-encontrado (o registro so indexa conceito com casa fora — projeto e conteudo da matriz ou de vault ja montado vao pela carta e por wikilink), pendente-criacao (aciona fabrica), local-nao-configurado (pergunte o diretorio e grave com registrar_subvault_local), origem-ausente, ou resolvido (monta, injeta a CARTA DE NAVEGACAO do sub-vault verbatim e devolve `entradaResolvida.caminhoRelativo` — o ponto de pouso ja resolvido a caminho real, nunca nome de nota a caçar). Entidade resolvida cujo manifesto NAO declara `origem` traz `origemCapturavel`: o bloco lido do catalogo do OneDrive desta maquina e o manifesto a editar — ofereca gravar, pelo protocolo de escrita, nunca em silencio. Resolve TAMBEM diretorio de output (Delivery Hub) quando o manifesto declara tipo de diretorio: nesse caso devolve `classe: \"diretorio\"`, monta e entrega a concessao, e NAO cobra carta de navegacao nem heranca de processo. Devolve tambem `vinculo` — a leitura do operador sobre este coletivo, que pela curadoria-pessoal-coletivo vale ANTES da carta. `ambigua`: se o pedido cita um ID (card, ticket), repita com `pista` — o mecanismo procura o ID nos vinculos do operador e resolve se ele estiver em um so coletivo; senao PERGUNTE (ou repita com `coletivo`), nunca escolha.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -331,6 +339,10 @@
         "escopo": {
           "type": "string",
           "description": "Estreita mais o desempate (a squad ou area dentro do coletivo). Opcional."
+        },
+        "pista": {
+          "type": "string",
+          "description": "ID citado no pedido (card, ticket, PR — ex.: \"149073\"). Com conceito ambiguo, desempata pelo vinculo do operador que registra esse ID. Opcional."
         },
         "replace": {
           "type": "boolean",

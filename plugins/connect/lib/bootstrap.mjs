@@ -19,6 +19,7 @@ import { createHash } from 'node:crypto';
 import { iniciarSessao, estadoSessao } from './session.mjs';
 import { renderContextoCurto, renderSessaoNuvem } from './render.mjs';
 import { execucaoNaNuvem } from './ambiente.mjs';
+import { resumoDosVinculos } from './vinculo.mjs';
 
 // Hosts cujo pedido de acesso e lembrado entre sessoes. O Cowork concede por sessao.
 const HOSTS_COM_MEMORIA_DE_ACESSO = new Set(['codex', 'copilot', 'antigravity']);
@@ -51,5 +52,10 @@ export function contextoDeInicio({ sessionId = null, env = process.env, host = '
   }
   const report = iniciarSessao({ sessionId });
   const acesso = registrarOrientacaoDeAcesso(report, host);
+  // Fora do Cowork: os coletivos do operador e os IDs que ele registrou em cada um,
+  // para o agente ligar "card 149073" ao coletivo antes de resolver (ver vinculo.mjs).
+  if (host !== 'claude' && report?.home) {
+    try { report.vinculosResumo = resumoDosVinculos(path.join(report.home, 'operador')); } catch { /* sem vinculos: nada a listar */ }
+  }
   return { nuvem: false, acesso, texto: renderContextoCurto(report, { host, acesso }) };
 }

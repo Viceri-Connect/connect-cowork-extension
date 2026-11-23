@@ -33,6 +33,8 @@ export const BLOCOS_POR_HOST = [
   { cabecalho: /^## Connect — (confira o canal injetado|governanca da matriz)/, capacidade: 'governanca-matriz' },
   { cabecalho: /^### Camada 1 e protocolo completo/, capacidade: 'governanca-matriz' },
   { linha: /^Neste host o diretorio de trabalho e o do projeto/, capacidade: 'acesso-pastas' },
+  { cabecalho: /^### Skills do Connect/, capacidade: 'skills' },
+  { cabecalho: /^### Seus vinculos/, capacidade: 'perfil-operador' },
 ];
 
 const igual = (detalhe = '') => ({ status: 'igual', detalhe });
