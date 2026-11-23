@@ -21,3 +21,8 @@ Thumbs.db
 
 # Runtime baixado em tempo de execucao
 plugins/connect/bin/
+
+# Ferramental de teste
+reports/
+coverage/
+.test-tmp/

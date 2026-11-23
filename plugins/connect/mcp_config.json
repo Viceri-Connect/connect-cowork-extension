@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "connect": {
+      "command": "${PLUGIN_ROOT}/scripts/connect-mcp"
+    }
+  }
+}

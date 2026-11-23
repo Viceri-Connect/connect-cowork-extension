@@ -1,8 +1,8 @@
 # Connect — notas do POC (fatia 1: iniciar_sessao)
 
-> ⚠️ **Notas internas de dogfooding.** Caminhos concretos (`D:\Impulsa`, nomes de vault,
-> e-mails) são da **máquina do autor** durante o POC — **exemplos**, não configuração do
-> produto. O produto é agnóstico à matriz; nada aqui é forçado para outra instância.
+> ⚠️ **Notas internas de dogfooding.** Caminhos e nomes de vault aqui são **exemplos
+> genéricos**, não configuração do produto. O produto é agnóstico à matriz; nada aqui é
+> forçado para outra instância.
 
 > Objetivo desta fatia: provar, na máquina real, que o bootstrap da sessão funciona
 > ponta a ponta no Cowork — restaura identidade, monta a matriz como atalho flat,
@@ -16,7 +16,7 @@
   mesma do Windows via junction.)
 - `tests/handshake-mcp.mjs` — o MCP sobe, lista `iniciar_sessao` e responde.
 - Rodado também contra os **dados reais** (cópia da matriz + second brain em
-  `D:\Impulsa`): identidade e L1 casaram com o formato real, zero avisos.
+  uma pasta local de trabalho): identidade e L1 casaram com o formato real, zero avisos.
 
 ## Premissas que só o host Windows + Cowork matam
 
@@ -29,9 +29,9 @@
 ### Passo A — spike da junction (premissa 2), não precisa do Cowork
 
 ```powershell
-cd D:\Workspaces\github\Viceri-Connect\connect-cowork-extension\plugins\connect\scripts
+cd CAMINHO\DO\SEU\CLONE\connect-cowork-extension\plugins\connect\scripts
 powershell -ExecutionPolicy Bypass -File .\spike-junction.ps1 `
-  -Matriz "CAMINHO\DA\SUA\viceri-vault"
+  -Matriz "CAMINHO\DA\SUA\matriz"
 ```
 
 Espera-se duas linhas "OK" (leitura pela junction + origem intacta).
@@ -76,6 +76,6 @@ Install **nativo do Cowork** (não é a CLI do Claude Code):
   fatia), acionado pelo protocolo compartilhado das skills.
 - **Camada 1 hoje é um conjunto sensato hardcoded** (`lib/matriz.mjs`). A definição
   canônica de camadas por **tipo de vault** é o trilho de tipologia (manifesto de
-  vault + molde da matriz), aterrado no vault MAPFRE — entra aqui depois.
+  vault + molde da matriz), aterrado no vault de um cliente piloto — entra aqui depois.
 - **Identidade lida na origem** (não pela junction) durante o boot, para não
   depender da premissa 2 antes de ela estar provada.

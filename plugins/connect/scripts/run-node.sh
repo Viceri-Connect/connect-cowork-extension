@@ -6,7 +6,8 @@
 # pacote, em $CONNECT_HOME/bin - atualizar o plugin nunca toca arquivo em uso.
 #
 # Quem chama: mcp/launcher.cmd e scripts/run-node.bat (linha `:;` poliglota),
-# quando o interpretador e `sh`. No Windows este arquivo nunca executa.
+# quando o interpretador e `sh`; scripts/connect-mcp e os hooks de Codex, Copilot e
+# Antigravity (0.41.0). No Windows este arquivo nunca executa.
 #
 # Uso: run-node.sh <caminho-do-script.mjs> [args...]
 
@@ -28,6 +29,21 @@ if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ] && command -v node >/dev/null 2>&1; th
 fi
 
 BIN_DIR="$CONNECT_HOME/bin"
+
+# 0.41.0 - Host em SANDBOX (Copilot CLI com sandbox de sessao, Codex): o processo pode
+# nao ter escrita no CONNECT_HOME e so alcancar a pasta de dados que o host da ao
+# plugin. Sem runtime ja instalado e sem escrita aqui, o Node portatil vai para essa
+# pasta (PLUGIN_DATA do Agent Plugins/Codex, COPILOT_PLUGIN_DATA, CLAUDE_PLUGIN_DATA).
+# Texto literal com "${" e variavel nao definida, como no CONNECT_HOME.
+dados_do_host() {
+  for v in "${PLUGIN_DATA:-}" "${COPILOT_PLUGIN_DATA:-}" "${CLAUDE_PLUGIN_DATA:-}"; do
+    case "$v" in ""|*'${'*) ;; *) printf '%s' "$v"; return 0 ;; esac
+  done
+  return 1
+}
+if [ ! -x "$BIN_DIR/node" ] && ! { mkdir -p "$BIN_DIR" 2>/dev/null && [ -w "$BIN_DIR" ]; }; then
+  if ALT=$(dados_do_host); then BIN_DIR="$ALT/bin"; fi
+fi
 NODE_BIN="$BIN_DIR/node"
 
 erro() { printf '[connect] %s\n' "$*" >&2; }

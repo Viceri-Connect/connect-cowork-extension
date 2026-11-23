@@ -10,6 +10,9 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PLUGIN="$ROOT/plugins/connect"
 OUT="${1:-$ROOT/dist}"
 mkdir -p "$OUT"
+# Absoluto antes do `cd` abaixo: com caminho relativo (o CI passa `dist`), o `cp` final
+# procurava a pasta dentro de plugins/connect e falhava.
+OUT="$(cd "$OUT" && pwd)"
 
 [ -f "$PLUGIN/.claude-plugin/plugin.json" ] || { echo "ERRO: plugin.json não encontrado em $PLUGIN/.claude-plugin/"; exit 1; }
 

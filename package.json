@@ -1,0 +1,25 @@
+{
+  "name": "connect-cowork-extension-dev",
+  "private": true,
+  "type": "module",
+  "description": "Ferramental de desenvolvimento (testes e CI). NAO faz parte do plugin: o bundle empacota apenas plugins/connect/.",
+  "engines": { "node": ">=20.11" },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:e2e": "vitest run tests/e2e",
+    "test:architecture": "vitest run tests/architecture",
+    "test:regressao": "vitest run tests/regressao",
+    "check:harnesses": "node tests/architecture/harness-checks.mjs",
+    "build:copilot": "node scripts/build-copilot.mjs",
+    "gerar:regras": "node scripts/gerar-regras.mjs",
+    "gerar:paridade": "node scripts/gerar-paridade.mjs",
+    "test:ci": "vitest run --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4",
+    "yaml": "^2.9.1"
+  }
+}

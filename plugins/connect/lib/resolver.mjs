@@ -33,7 +33,7 @@ import { parseFrontmatter } from './frontmatter.mjs';
 import { lerOrigem, capturarOrigem, host as hostOneDrive, PLATAFORMAS_SYNC } from './onedrive.mjs';
 import { resolverEntrada } from './navegacao.mjs';
 import { lerTabela, casarPonteiro, vizinhos } from './ponteiro.mjs';
-import { lerVinculoDaEntidade } from './vinculo.mjs';
+import { lerVinculoDaEntidade, coletivosDaPista, coletivosComVinculo } from './vinculo.mjs';
 
 // ---------------------------------------------------------------------------
 // CLASSE DE ARTEFATO — declarada, nunca inferida.
@@ -84,6 +84,33 @@ function readHead(p, bytes = 4096) {
     fs.closeSync(fd);
     return buf.slice(0, n).toString('utf8').replace(/^﻿/, '');
   } catch { return null; }
+}
+
+// ---------------------------------------------------------------------------
+// lerMapa — o MAPA de um diretorio de output, declarado no corpo do manifesto.
+//
+// Diretorio nao tem carta de navegacao (nao e vault), mas "onde gravar" tem
+// resposta: a estrutura interna e delta do coletivo (`sdd-o-que-e` § Delivery Hub).
+// Medido em 13/11 no Copilot: o `resolver` do Delivery Hub devolvia so "montado", e a
+// estrutura (pasta do card, diario, relatorio) morava numa skill de encerramento que
+// o agente ainda nao tinha lido quando ia gerar o relatorio. O mapa e a secao
+// `## Mapa` do proprio manifesto da entidade: curta, sem path de maquina, devolvida
+// junto da resolucao. Ausente = null (o render avisa para perguntar, nunca inventar).
+// ---------------------------------------------------------------------------
+export const TETO_MAPA = 1500;
+
+export function lerMapa(arquivo) {
+  let texto;
+  try { texto = fs.readFileSync(arquivo, 'utf8').replace(/^﻿/, ''); } catch { return null; }
+  const corpo = texto.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '').replace(/\r\n/g, '\n');
+  // `## Mapa`, ou `## Estrutura interna` — o nome que os manifestos de Delivery Hub ja
+  // usavam para a mesma coisa (sem renomear secao em campo).
+  const secao = (titulo) => corpo.match(new RegExp(`^##[ \\t]+${titulo}\\b[^\\n]*\\n([\\s\\S]*?)(?=^##[ \\t]|^<!--|(?![\\s\\S]))`, 'm'));
+  const m = secao('Mapa') || secao('Estrutura interna');
+  if (!m) return null;
+  const mapa = m[1].replace(/\r\n/g, '\n').trim();
+  if (!mapa) return null;
+  return mapa.length > TETO_MAPA ? `${mapa.slice(0, TETO_MAPA)}\n… (mapa cortado em ${TETO_MAPA} caracteres — o resto esta no manifesto)` : mapa;
 }
 
 // Extrai o bloco de frontmatter (entre o primeiro par de linhas "---").
@@ -196,6 +223,9 @@ export function lerRegistro(roots = []) {
         // Onde o manifesto mora, relativo a raiz que o declarou — e o destino da
         // escrita quando a `origem` e capturada no uso.
         manifesto: path.relative(root, file).split(path.sep).join('/'),
+        // Caminho absoluto, so para leitura do corpo (mapa do diretorio). Nunca sai
+        // na resposta: path e por maquina.
+        _arquivo: file,
       });
     }
   }
@@ -358,7 +388,7 @@ function origemCapturavel(entry, caminhoLocal, cfg, host) {
   };
 }
 
-export function resolver({ conceito, workspaceDir, alias, replace = false, coletivo = null, escopo = null, hostOneDrive: hostOD = hostOneDrive, ...override } = {}) {
+export function resolver({ conceito, workspaceDir, alias, replace = false, coletivo = null, escopo = null, pista = null, hostOneDrive: hostOD = hostOneDrive, ...override } = {}) {
   const cfg = resolveConfig(override);
   const roots = [cfg.cerebroPessoal, cfg.vaultMatriz].filter(Boolean);
   const registro = lerRegistro(roots);
@@ -368,15 +398,32 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, colet
     return { status: 'erro', motivo: 'conceito ausente', disponiveis: vizinhos(todos, '', 20) };
   }
 
-  const m = casarMuitos(registro, conceito, coletivo);
+  let m = casarMuitos(registro, conceito, coletivo);
+  const avisosDesempate = [];
+
+  // Pista (um ID do pedido: card, ticket): desempata pelo que o OPERADOR registrou no
+  // vinculo — nunca pela ordem da varredura nem pela ultima escolha. Um coletivo so entre
+  // os candidatos -> resolve; dois ou nenhum -> continua ambiguo e pergunta.
+  if (m.status === 'ambigua' && pista) {
+    const doVinculo = new Set(coletivosDaPista(cfg.perfilOperador || null, pista));
+    const daPista = m.candidatos.filter((e) => doVinculo.has(String(e.escopo || '').toLowerCase()) || doVinculo.has(e.conceito));
+    if (daPista.length === 1) {
+      m = { status: 'unico', entrada: daPista[0] };
+      avisosDesempate.push(`desempatado pela pista "${pista}", registrada no seu vinculo com "${daPista[0].escopo || daPista[0].conceito}"`);
+    }
+  }
 
   if (m.status === 'ambigua') {
-    const candidatos = m.candidatos.map((e) => e.conceito);
+    // Ordem alfabetica: previsivel e estavel entre sessoes (decisao do operador, 10/11).
+    const candidatos = m.candidatos.map((e) => e.conceito).sort((a, b) => a.localeCompare(b));
+    const comVinculo = new Set(coletivosComVinculo(cfg.perfilOperador || null));
+    const seusVinculos = m.candidatos.filter((e) => comVinculo.has(String(e.escopo || '').toLowerCase()) || comVinculo.has(e.conceito)).map((e) => e.conceito).sort((a, b) => a.localeCompare(b));
     return {
       status: 'ambigua',
       conceito,
       candidatos,
-      avisos: [`"${conceito}" casa com ${candidatos.length} entidades (${candidatos.join(', ')}) — pergunte ao operador qual, ou chame de novo com o conceito exato. Escolher pela ordem da varredura ja resolveu para a entidade errada antes.`],
+      seusVinculos,
+      avisos: [`"${conceito}" casa com ${candidatos.length} entidades (${candidatos.join(', ')}) — ${pista ? `a pista "${pista}" nao aparece no vinculo de um unico candidato; ` : 'se o pedido cita um ID (card, ticket), chame de novo com `pista`: o mecanismo procura o ID nos seus vinculos; '}senao, pergunte ao operador qual (os candidatos com vinculo seu estao em \`seusVinculos\`), ou chame com o conceito exato. Nunca escolha pela ordem da lista.`],
     };
   }
 
@@ -502,10 +549,11 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, colet
       caminhoRelativo: `./${aliasFinal}`,
       mount: mountReport,
       nota: `${entry.nota} — diretorio de OUTPUT do processo, nao vault: nao tem camada 1, nao herda processo, e nao e fonte para outro artefato de saida`,
+      mapa: entry._arquivo ? lerMapa(entry._arquivo) : null,
       concessao,
       vinculo: lerVinculoDaEntidade(cfg.perfilOperador || null, entry.conceito, local.entrada.coletivo),
       origemCapturavel: origemCapturavel(entry, caminhoLocal, cfg, hostOD) || undefined,
-      avisos: local.desempatadoPor ? [`desempatado pelo coletivo "${local.desempatadoPor}"`] : [],
+      avisos: [...avisosDesempate, ...(local.desempatadoPor ? [`desempatado pelo coletivo "${local.desempatadoPor}"`] : [])],
     };
   }
 
@@ -549,6 +597,7 @@ export function resolver({ conceito, workspaceDir, alias, replace = false, colet
   // `chaveDoVinculo`): uma area registrada sob a matriz recebia o vinculo da matriz.
   const vinculo = lerVinculoDaEntidade(cfg.perfilOperador || null, entry.conceito, local.entrada.coletivo);
   if (vinculo.avisos?.length) avisos.push(...vinculo.avisos);
+  avisos.unshift(...avisosDesempate);
   if (local.desempatadoPor) avisos.push(`desempatado pelo coletivo "${local.desempatadoPor}"`);
 
   return {

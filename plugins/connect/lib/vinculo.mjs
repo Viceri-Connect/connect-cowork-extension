@@ -138,6 +138,52 @@ export function lerVinculoDaEntidade(perfilOperadorRoot, conceitoEntidade, colet
 }
 
 // ---------------------------------------------------------------------------
+// IDs (card, ticket, PR) que o operador registrou no vinculo com cada coletivo.
+//
+// Medido em 16/11 no Copilot: "recap do card 149073" + "puxe o relatorio do Delivery
+// Hub" terminou em `resolver("delivery-hub")` ambiguo entre 7 Hubs — e o card estava no
+// `estado.md` do vinculo com o IU. O agente nao tinha como saber: o vinculo so chega
+// DEPOIS de resolver o coletivo. Os IDs do vinculo sao o que liga um pedido ao coletivo
+// sem adivinhar: e o que o proprio operador registrou.
+// ---------------------------------------------------------------------------
+const ARQUIVOS_COM_IDS = ['config.md', 'estado.md'];
+// 5 a 7 digitos soltos: card, ticket, PR. Lista "145215, 146127" conta; numero decimal
+// ou com separador ("12.345", "1/23456") nao.
+const RE_ID = /(?<!\d|\d[.,/-])\d{5,7}(?!\d|[.,/-]\d)/g;
+
+export function idsDoVinculo(perfilOperadorRoot, coletivo) {
+  const casa = path.join(perfilOperadorRoot || '', ...CASA, String(coletivo || ''));
+  const ids = new Set();
+  for (const nome of ARQUIVOS_COM_IDS) {
+    let texto = '';
+    try { texto = fs.readFileSync(path.join(casa, nome), 'utf8'); } catch { continue; }
+    for (const m of texto.replace(/^---[\s\S]*?\n---/, '').matchAll(RE_ID)) ids.add(m[0]);
+  }
+  return [...ids].sort();
+}
+
+// Coletivos cujo vinculo cita a pista (um ID do pedido). Vazio sem pista ou sem perfil.
+export function coletivosDaPista(perfilOperadorRoot, pista) {
+  const p = String(pista || '').trim();
+  if (!p || !perfilOperadorRoot) return [];
+  const ids = p.match(RE_ID) || [];
+  if (!ids.length) return [];
+  return coletivosComVinculo(perfilOperadorRoot).filter((c) => {
+    const doVinculo = new Set(idsDoVinculo(perfilOperadorRoot, c));
+    return ids.some((id) => doVinculo.has(id));
+  });
+}
+
+// Resumo para o bloco de inicio de sessao: um coletivo por linha, com os IDs que o
+// operador registrou. Curto por desenho (teto por coletivo e no total).
+export function resumoDosVinculos(perfilOperadorRoot, { idsPorColetivo = 20 } = {}) {
+  return coletivosComVinculo(perfilOperadorRoot).map((coletivo) => {
+    const ids = idsDoVinculo(perfilOperadorRoot, coletivo);
+    return { coletivo, ids: ids.slice(0, idsPorColetivo), mais: Math.max(0, ids.length - idsPorColetivo) };
+  });
+}
+
+// ---------------------------------------------------------------------------
 // coletivosComVinculo — o que ja existe, para o operador conferir e para a skill
 // saber o que ha sem abrir nada.
 // ---------------------------------------------------------------------------

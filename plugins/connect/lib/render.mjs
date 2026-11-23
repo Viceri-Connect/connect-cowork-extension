@@ -71,8 +71,15 @@ export function blocoHeranca(heranca, rotulo = 'vault') {
   L.push(`> \`${cp?.caminhoRelativo}\`, injetada verbatim **uma vez nesta sessao** (vale para todo vault`);
   L.push('> que declare o mesmo processo; os proximos recebem so o ponteiro):');
   L.push('');
-  L.push(cp?.corpo ?? cp?.inline ?? '');
+  L.push(semHistorico(cp?.corpo ?? cp?.inline ?? ''));
   return L;
+}
+
+// O "## Histórico" de uma carta e registro de como ela chegou ali, nao instrucao de
+// navegacao: ~900 caracteres da carta do SDD que o agente nao usa (medido em 16/11).
+// Sai so do que e INJETADO; o arquivo continua com ele.
+export function semHistorico(texto) {
+  return String(texto || '').replace(/^##[ \t]+Hist[oó]rico\b[\s\S]*?(?=^##[ \t]|^<!--|(?![\s\S]))/m, '').replace(/\n{3,}/g, '\n\n');
 }
 
 // ---------------------------------------------------------------------------
@@ -263,6 +270,18 @@ export function renderResolucao(res, { cartaInline = true, cartaJaEntregue = fal
   if (res.concessao?.necessaria) {
     L.push(`- 🔑 Acesso: se \`${res.caminhoRelativo}\` nao abrir, solicite ao operador a pasta \`${res.concessao.caminho}\` — montar nao e alcancar. Nao contorne por varredura.`);
   }
+  // Diretorio de output (Delivery Hub): nao tem carta, mas tem MAPA — onde gravar,
+  // declarado no manifesto. Sem mapa, perguntar; nunca inventar estrutura.
+  if (res.classe === 'diretorio') {
+    if (res.mapa) {
+      L.push('');
+      L.push(`### Mapa de \`${res.caminhoRelativo}\` (declarado no manifesto — siga antes de criar pasta ou arquivo)`);
+      L.push('');
+      L.push(res.mapa);
+    } else {
+      L.push('- Mapa: o manifesto nao declara `## Mapa`. Antes de criar pasta ou arquivo aqui, pergunte ao operador onde gravar — nunca invente estrutura.');
+    }
+  }
   L.push('');
   // Vinculo do operador com este coletivo: pela `curadoria-pessoal-coletivo` vale
   // ANTES da carta, por isso vem antes dela. So os blocos ainda nao entregues nesta
@@ -326,7 +345,62 @@ export function renderResolucao(res, { cartaInline = true, cartaJaEntregue = fal
 // Extraido de renderContexto para ser reusado pelo bloco curto (M1) sem duplicar
 // texto: as tres secoes abaixo sao precondicao ou acao obrigatoria, nunca leitura.
 // ---------------------------------------------------------------------------
-function blocoAcionavel(report) {
+// ---------------------------------------------------------------------------
+// Pedido de acesso FORA do Cowork (0.41.0).
+//
+// No Cowork a concessao e por sessao e o bloco vai inteiro toda vez (abaixo). Codex,
+// Copilot e Antigravity guardam a permissao do operador: pedir de novo a cada sessao e
+// ruido que ensina o operador a ignorar o pedido. Entao o bloco inteiro vai na 1a sessao
+// do host e sempre que as pastas mudam (lib/bootstrap.mjs decide e registra); nas outras,
+// uma linha de lembrete que mantem a regra "pede, nunca contorna".
+// ---------------------------------------------------------------------------
+const HOSTS_FORA_DO_COWORK = {
+  codex: {
+    rotulo: 'Codex',
+    dica: 'aprove quando o Codex pedir permissao, ou inclua as pastas nas raizes gravaveis do sandbox da sessao',
+  },
+  copilot: {
+    rotulo: 'Copilot',
+    dica: 'aprove quando o Copilot pedir; com o sandbox da sessao ligado, inclua as pastas em `sandbox.userPolicy` nas configuracoes do Copilot',
+  },
+  antigravity: {
+    rotulo: 'Antigravity',
+    dica: 'peca pela ferramenta `ask_permission` do Antigravity, com cada pasta como alvo',
+  },
+};
+
+export const MARCA_ACESSO_COMPLETO = 'acesso de pasta (1a sessao neste host)';
+export const MARCA_ACESSO_LEMBRETE = 'acesso ja orientado neste host';
+
+function blocoAcessoForaDoCowork(report, host, acesso) {
+  const L = [];
+  const h = HOSTS_FORA_DO_COWORK[host];
+  const c = report.concessao;
+  const pastas = [c.caminho, ...(c.origens || []).map((o) => o.caminho)];
+  if (acesso === 'lembrete') {
+    L.push(`## Connect — ${MARCA_ACESSO_LEMBRETE}`);
+    L.push('');
+    L.push(`🔑 Se uma pasta do Connect nao abrir no ${h.rotulo}, peca ao operador para liberar a pasta exata — ${pastas.map((p) => `\`${p}\``).join(', ')}. Nao contorne por varredura.`);
+    L.push('');
+    return L;
+  }
+  L.push(`## Connect — ${MARCA_ACESSO_COMPLETO}`);
+  L.push('');
+  L.push(`🔑 O Connect le e escreve nestas pastas. Se o ${h.rotulo} bloquear o acesso a elas, peca ao`);
+  L.push(`operador para libera-las UMA VEZ — ${h.dica}:`);
+  for (const p of pastas) L.push(`- \`${p}\``);
+  L.push('');
+  L.push('Nas proximas sessoes neste host este bloco vira um lembrete de uma linha; ele volta inteiro');
+  L.push('se as pastas mudarem. Pergunte ao operador antes de assumir que ja esta liberado.');
+  L.push('');
+  L.push('**Se um caminho declarado nao abrir, reporte a lacuna — nao contorne.** Varredura de');
+  L.push('sistema de arquivos e `grep` exploratorio para ler vault sao contorno: produzem resposta');
+  L.push('errada a partir de nota que so o grep acha — que e, por definicao, nota orfa.');
+  L.push('');
+  return L;
+}
+
+function blocoAcionavel(report, { host = 'claude', acesso = 'completo' } = {}) {
   const L = [];
 
   // Conteudo nao governado no slot de maior precedencia (`canal-injetado-governado`) — vai antes
@@ -338,13 +412,27 @@ function blocoAcionavel(report) {
   // Depois da deteccao (que e sobre risco) vem a preparacao do canal (que e sobre
   // alcance). So aparece quando ha acao: matriz governada pede a auto-checagem do
   // marcador; matriz sem governanca pede a fabrica.
-  if (report.matrizConfigurada) L.push(...blocoCanalInjetado(report.l1?.governanca, 'matriz'));
+  // 0.41.0 — fora do Cowork o arquivo de governanca da matriz nao entra sozinho (nao ha
+  // "pasta conectada ao projeto"): procurar o marcador e mandar conectar a pasta seria
+  // instrucao impossivel. Ali, o agente le o arquivo pelo caminho do workspace da sessao.
+  if (report.matrizConfigurada && HOSTS_FORA_DO_COWORK[host] && report.l1?.governanca?.estado === 'governado') {
+    const g = report.l1.governanca;
+    L.push('## Connect — governanca da matriz');
+    L.push('');
+    L.push(`Neste host o arquivo de governanca da matriz (marcador \`CNCT-GOV-${g.marcador?.vault || 'matriz'}\`) nao entra`);
+    L.push(`sozinho no contexto. Leia \`${report.workspace}/matriz/CLAUDE.md\` no inicio da sessao, antes da carta de navegacao.`);
+    L.push('');
+  } else if (report.matrizConfigurada) {
+    L.push(...blocoCanalInjetado(report.l1?.governanca, 'matriz'));
+  }
 
   // Concessao de acesso — vai ANTES de tudo, inclusive do estado
   // zero da matriz, porque e a precondicao de qualquer leitura: sem ela o agente
   // monta e nao alcanca. Ate a 0.12.2 a exigencia vivia so em prosa dentro da
   // skill, e tres agentes independentes a contornaram (`bloqueio-reporta-nunca-contorna`).
-  if (report.concessao?.necessaria) {
+  if (report.concessao?.necessaria && HOSTS_FORA_DO_COWORK[host]) {
+    L.push(...blocoAcessoForaDoCowork(report, host, acesso));
+  } else if (report.concessao?.necessaria) {
     L.push('## Connect — acesso de pasta (faca isto primeiro)');
     L.push('');
     L.push(`🔑 Solicite ao operador acesso a **uma** pasta: \`${report.concessao.caminho}\``);
@@ -448,13 +536,32 @@ export function camadaZeroInjetavel(texto) {
     .trim();
 }
 
-export function renderContextoCurto(report, { teto = TETO_INJETADO } = {}) {
+// As skills do pacote e o gatilho de cada uma, em uma linha. O teste de skills por
+// host confere que a lista bate com plugins/connect/skills/.
+export const SKILLS_DO_CONNECT = [
+  ['cnct-nucleo-sessao', 'inicio de trabalho, retomar tarefa, 1o uso, aprofundar contexto do vault'],
+  ['cnct-nucleo-escrita', 'ANTES de criar ou editar qualquer arquivo em vault (onde mora, forma)'],
+  ['cnct-nucleo-encerramento', 'encerrar a sessao, consolidar estado, diario de task'],
+  ['cnct-nucleo-conhecimento', 'duvida sobre junction, alias montado ou ordem de resolucao'],
+  ['cnct-nucleo-audit', 'saude de vault, auditoria, repair'],
+  ['cnct-fabrica', 'criar ou estruturar processo, papel, glossario, contexto novo'],
+  ['cnct-fabrica-navegacao', 'criar ou completar a carta de navegacao de um vault'],
+  ['cnct-fabrica-operador', 'perfil do operador, rotina, briefing diario'],
+  ['cnct-elicitacao', 'destilar o que se aprendeu construindo'],
+];
+
+export function renderContextoCurto(report, { teto = TETO_INJETADO, host = 'claude', acesso = 'completo' } = {}) {
   const L = [];
-  L.push(...blocoAcionavel(report));
+  L.push(...blocoAcionavel(report, { host, acesso }));
 
   L.push('## Connect — sessao iniciada');
   L.push('');
   L.push(`Workspace da sessao: \`${report.workspace}\``);
+  // Fora do Cowork o diretorio de trabalho e o do projeto, nao o workspace da sessao:
+  // `./matriz` relativo ao cwd nao existe ali.
+  if (HOSTS_FORA_DO_COWORK[host]) {
+    L.push(`Neste host o diretorio de trabalho e o do projeto: os atalhos abaixo ficam dentro do workspace da sessao (ex.: \`${report.workspace}/matriz\`).`);
+  }
   L.push('');
 
   const id = report.identidade;
@@ -481,12 +588,41 @@ export function renderContextoCurto(report, { teto = TETO_INJETADO } = {}) {
   // ao projeto (o CLAUDE.md de governanca manda ler a carta, e o arquivo abre por
   // construcao). O protocolo inteiro e a carta verbatim seguem disponiveis pela
   // tool — que e o "releia quando o contexto ficar distante" sem arquivo.
-  if (report.matrizConfigurada) {
+  if (report.matrizConfigurada && HOSTS_FORA_DO_COWORK[host]) {
+    L.push('### Camada 1 e protocolo completo');
+    L.push(`- Carta de navegacao da matriz: \`${report.workspace}/matriz/_cerebro/camada-1.md\`. Leia antes de navegar no vault.`);
+    L.push('- Contexto distante, ou carta inalcancavel: chame a tool `iniciar_sessao` — ela devolve o');
+    L.push('  protocolo do mecanismo, a carta verbatim e esta camada 0 pelo canal da tool.');
+    L.push('');
+  } else if (report.matrizConfigurada) {
     L.push('### Camada 1 e protocolo completo');
     L.push('- Carta de navegacao da matriz: `_cerebro/camada-1.md` na pasta da matriz (conectada ao');
     L.push('  projeto; tambem em `./matriz/_cerebro/camada-1.md`). Leia antes de navegar no vault.');
     L.push('- Contexto distante, ou carta inalcancavel: chame a tool `iniciar_sessao` — ela devolve o');
     L.push('  protocolo do mecanismo, a carta verbatim e esta camada 0 pelo canal da tool.');
+    L.push('');
+  }
+
+  // Fora do Cowork o host pode cortar a lista de skills do prompt: medido em 12/11 no
+  // Copilot, 5 das 9 do Connect ficaram de fora (sessao, escrita, encerramento,
+  // conhecimento, fabrica-navegacao). Listadas aqui, o agente sabe que existem e as
+  // carrega pelo nome. No Cowork a lista do host vem inteira.
+  if (report.matrizConfigurada && HOSTS_FORA_DO_COWORK[host]) {
+    L.push('### Skills do Connect (carregue pelo nome quando o gatilho bater)');
+    for (const [nome, gatilho] of SKILLS_DO_CONNECT) L.push(`- \`${nome}\` — ${gatilho}`);
+    L.push('');
+  }
+
+  // Os coletivos do operador e os IDs registrados em cada vinculo: e o que liga um
+  // pedido ("card 149073") ao cliente sem perguntar. Medido em 16/11 no Copilot.
+  const vinculos = (report.vinculosResumo || []).filter((v) => v && v.coletivo);
+  if (HOSTS_FORA_DO_COWORK[host] && vinculos.length) {
+    L.push('### Seus vinculos (o ID do pedido diz o coletivo — confira aqui antes de perguntar)');
+    for (const v of vinculos) {
+      const ids = v.ids?.length ? `IDs registrados: ${v.ids.join(', ')}${v.mais ? ` (+${v.mais})` : ''}` : 'sem IDs registrados';
+      L.push(`- \`${v.coletivo}\` — ${ids}`);
+    }
+    L.push('- Pedido com ID: chame o `resolver` com `pista: "<ID>"` (ou com o `coletivo` acima). So pergunte se o ID nao estiver aqui.');
     L.push('');
   }
 

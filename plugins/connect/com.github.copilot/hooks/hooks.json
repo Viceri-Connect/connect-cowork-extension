@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "type": "command",
+        "bash": "/bin/sh \"${PLUGIN_ROOT}/scripts/run-node.sh\" \"${PLUGIN_ROOT}/copilot/session-start.mjs\"",
+        "powershell": "powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"${PLUGIN_ROOT}/scripts/run-node.ps1\" \"${PLUGIN_ROOT}/copilot/session-start.mjs\"",
+        "timeoutSec": 120
+      }
+    ]
+  }
+}

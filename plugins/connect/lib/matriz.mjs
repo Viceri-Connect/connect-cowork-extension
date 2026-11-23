@@ -21,7 +21,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { lerCarta } from './navegacao.mjs';
-import { verificarRaiz } from './governanca.mjs';
+import { verificarRaiz, publicarEspelhoAgents, NOME_ARQUIVO_GOVERNANCA } from './governanca.mjs';
 import { resolverHeranca } from './heranca.mjs';
 import { parseFrontmatter } from './frontmatter.mjs';
 
@@ -160,6 +160,12 @@ export function montarL1(matrizRoot, aliasMatriz = 'matriz', opcoes = {}) {
   // em check de procedencia queima a confianca no check. Fica para quando a
   // identidade de vault tiver casa declarada.
   const governanca = verificarRaiz(matrizRoot);
+  // Vault ja governado: garante o AGENTS.md espelho do CLAUDE.md (Codex e Copilot quando o
+  // vault e pasta aberta). Copia o arquivo como esta — so escreve se faltar ou divergir, e
+  // nunca sobre AGENTS.md alheio. Falha aqui nunca derruba a montagem.
+  if (governanca?.estado === 'governado') {
+    try { governanca.espelho = publicarEspelhoAgents(matrizRoot, fs.readFileSync(path.join(matrizRoot, NOME_ARQUIVO_GOVERNANCA), 'utf8')); } catch { /* sem leitura ou escrita: segue */ }
+  }
 
   const heranca = resolverHeranca({
     carta,

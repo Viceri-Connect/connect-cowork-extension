@@ -29,3 +29,36 @@ export const REGRAS_DURAS = [
   '4. Dentro de um vault, navegue na ordem: carta de navegacao -> ponto de pouso declarado -> ponteiro declarado. Varredura e ultimo recurso e DEIXA MARCA (reporte).',
   '5. Antes de criar ou editar arquivo em qualquer vault, carregue o protocolo de escrita (`cnct-nucleo-escrita`). Nao pule, mesmo com destino obvio.',
 ];
+
+// ---------------------------------------------------------------------------
+// Terceiro consumidor (0.41.0): regra SEMPRE ATIVA do Antigravity (`rules/AGENTS.md`
+// no pacote). O SessionStart do Antigravity roda uma vez por conversa, sem resume nem
+// compact: numa conversa longa as regras injetadas no inicio ficam distantes. A regra
+// sempre ativa entra em toda conversa com o plugin ligado. Gerada daqui por
+// scripts/gerar-regras.mjs; o teste de arquitetura exige o arquivo em sincronia.
+// ---------------------------------------------------------------------------
+export const ARQUIVO_REGRAS_SEMPRE_ATIVAS = 'rules/AGENTS.md';
+// Quarto consumidor (0.41.0): regra do plugin no Copilot (`com.github.copilot/rules/`).
+// O CLAUDE.md de governanca da matriz so entra sozinho no Cowork (pasta conectada); no
+// Copilot, o mesmo texto vai como regra do plugin, sem depender de pasta aberta.
+export const ARQUIVO_REGRAS_COPILOT = 'com.github.copilot/rules/connect.md';
+export const ARQUIVOS_REGRAS_SEMPRE_ATIVAS = [ARQUIVO_REGRAS_SEMPRE_ATIVAS, ARQUIVO_REGRAS_COPILOT];
+
+export function textoRegrasSempreAtivas() {
+  return [
+    '# Connect — regras duras (sempre ativas)',
+    '',
+    '<!-- Gerado de plugins/connect/lib/regras.mjs por scripts/gerar-regras.mjs. Nao edite aqui. -->',
+    '',
+    'Valem em toda conversa com o plugin Connect ativo, inclusive quando o contexto injetado no',
+    'inicio da sessao ja ficou distante. Sao nao negociaveis.',
+    '',
+    ...REGRAS_DURAS,
+    '',
+    'Antes de navegar num vault, leia a carta de navegacao dele (`_cerebro/camada-1.md`); o bloco de',
+    'inicio da sessao da o caminho completo da carta da matriz e o do arquivo de governanca.',
+    '',
+    'Contexto distante, ou carta de navegacao inalcancavel: chame a tool `iniciar_sessao` do Connect.',
+    '',
+  ].join('\n');
+}

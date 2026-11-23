@@ -17,6 +17,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { ensureDir } from './mount.mjs';
+import { defaultConnectHome as resolveDefaultConnectHome } from './environment.mjs';
 
 const clean = (v) => (typeof v === 'string' && v.trim() && !v.includes('${') ? v.trim() : null);
 
@@ -37,8 +38,7 @@ const clean = (v) => (typeof v === 'string' && v.trim() && !v.includes('${') ? v
 // Com o home no perfil do usuario, UMA concessao (a propria CONNECT_HOME) alcanca o
 // workspace e, por tabela, todas as origens montadas nele.
 export function defaultConnectHome() {
-  if (process.platform === 'win32') return path.join(os.homedir(), 'Connect');
-  return path.join(os.homedir(), '.connect');
+  return resolveDefaultConnectHome();
 }
 
 // Home das versoes <= 0.12.2 (pasta de aplicativo). Existe so para a migracao —
